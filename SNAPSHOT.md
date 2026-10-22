@@ -18,3 +18,8 @@ review the code, and all of it is the operator's data rather than the app's.
 
 `snapshot.sh` re-exports the tracked source from the live tree and commits it here. It reads the
 live tree and writes only into this repository.
+
+## Redactions for public review
+
+The operator's personal email address and messaging identifier are replaced with placeholders.
+Logic is untouched; only those literals differ from the private live tree.
