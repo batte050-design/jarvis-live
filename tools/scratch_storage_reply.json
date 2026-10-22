@@ -1,0 +1,22 @@
+{
+  "title": "Object storage: S3 vs Cloud Storage vs Azure Blob",
+  "intro": "Standard / Hot tier, single US region, list prices. Per GB-month stored, per GB out to the internet, and per 1,000 requests. Read 10 Oct 2026.",
+  "sections": [
+    {"type": "heading", "text": "Pricing matrix"},
+    {"type": "cards", "items": [
+      {"title": "AWS S3 Standard", "badge": "us-east-1",
+       "description": "Storage $0.023 per GB-month (first 50 TB). Egress $0.09 per GB. Requests $0.005 per 1,000 puts, $0.0004 per 1,000 gets. Uptime commitment 99.9%."},
+      {"title": "Google Cloud Storage Standard", "badge": "us-central1",
+       "description": "Storage $0.020 per GB-month. Egress $0.12 per GB. Requests $0.005 per 1,000 Class A, $0.0004 per 1,000 Class B. Uptime commitment 99.9% regional, 99.95% multi-region."},
+      {"title": "Azure Blob Hot", "badge": "East US, LRS",
+       "description": "Storage $0.0208 per GB-month (first 50 TB). Egress $0.087 per GB. Requests $0.005 per 1,000 writes, $0.0004 per 1,000 reads. Uptime commitment 99.9%, 99.99% on RA-GRS reads."}
+    ]},
+    {"type": "divider"},
+    {"type": "heading", "text": "Best pick for a low-bandwidth media archive"},
+    {"type": "cards", "items": [
+      {"title": "Google Cloud Storage Standard", "badge": "Best pick",
+       "description": "Cheapest storage of the three at $0.020 per GB-month, and an archive that is barely read pays almost nothing but storage. 1 TB archived costs $20.48 a month, against $21.30 on Azure and $23.55 on AWS. No minimum storage duration and no retrieval fee. Its $0.12 per GB egress is the highest here, so keep any bulk re-download off the critical path."}
+    ]}
+  ],
+  "closing": "Storage decides it: GCS $20.48, Azure $21.30, AWS $23.55 per TB-month. Request costs are identical, so they break no tie."
+}

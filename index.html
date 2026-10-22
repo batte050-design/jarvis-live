@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>JARVIS</title>
+<link rel="icon" href="/static/icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<style>
+  :root{ --bg:#05070A; --cyan:#22D3EE; --amber:#E8A020; --line:#182231; --ink:#DDE6F0;
+         --muted:#66748A; --red:#F87171; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,'Inter',system-ui,'Segoe UI',Roboto,sans-serif;
+    overflow:hidden; overscroll-behavior:none; }
+  canvas{ display:block; width:100%; height:100%; }
+  #heard{ position:fixed; left:0; right:0; bottom:calc(112px + env(safe-area-inset-bottom,0));
+    text-align:center; font-size:14px; color:var(--muted); padding:0 30px; opacity:0;
+    transition:opacity .4s ease; pointer-events:none; }
+  #heard.show{ opacity:1; }
+  #err{ position:fixed; left:0; right:0; bottom:calc(112px + env(safe-area-inset-bottom,0));
+    text-align:center; font-size:13px; color:var(--red); padding:0 30px; display:none; }
+  #dock{ position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center;
+    gap:16px; padding:14px 0 calc(18px + env(safe-area-inset-bottom,0)); pointer-events:none; }
+  #mic{ pointer-events:auto; width:68px; height:68px; border-radius:50%; border:1px solid var(--line);
+    background:rgba(17,23,32,.72); color:var(--ink); display:grid; place-items:center;
+    backdrop-filter:blur(12px); transition:background .22s, color .22s, box-shadow .22s, transform .12s;
+    box-shadow:0 0 0 0 rgba(232,160,32,0); }
+  #mic svg{ width:26px; height:26px; }
+  /* the way in when talking is not possible: a television has no microphone at all */
+  #typing, #reset{ pointer-events:auto; width:68px; height:68px; border-radius:50%; border:1px solid var(--line);
+    background:rgba(17,23,32,.72); color:var(--muted); display:grid; place-items:center;
+    backdrop-filter:blur(12px); transition:background .22s, color .22s, transform .12s; }
+  #typing svg, #reset svg{ width:27px; height:27px; }
+  #typing:active, #reset:active{ transform:scale(.96); }
+  /* start a new conversation: quiet, so it never competes with talking */
+  #reset{ opacity:.5; }
+  #reset:active{ opacity:1; }
+  #mic:active{ transform:scale(.96); }
+  #mic.earArmed{ background:var(--amber); color:#241703; border-color:transparent;
+    box-shadow:0 0 0 6px rgba(232,160,32,.14); }
+  #mic.earArmed.live{ animation:pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 6px rgba(232,160,32,.14); }
+                    50%{ box-shadow:0 0 0 13px rgba(232,160,32,.05); } }
+  /* a way in, but only if the microphone is unavailable: otherwise there is no text box */
+  #fallback{ position:fixed; left:0; right:0; bottom:0; display:none; gap:9px; align-items:center;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom,0)) 16px; }
+  #fallback.show{ display:flex; }
+  #fallback input{ flex:1; min-width:0; height:46px; border-radius:23px; padding:0 17px; font-size:16px;
+    color:var(--ink); background:rgba(17,23,32,.72); border:1px solid var(--line); outline:none; }
+  #fallback button{ height:46px; padding:0 18px; border-radius:23px; font-weight:600;
+    background:var(--cyan); color:#04141A; border:0; }
+  /* a television is read from a couch and typed on with a remote: give the box room */
+  @media (min-width:900px){
+    #fallback{ padding:22px 52px calc(28px + env(safe-area-inset-bottom,0)) 52px; gap:14px; }
+    #fallback input{ height:64px; font-size:25px; border-radius:32px; padding:0 28px; }
+    #fallback button{ height:64px; font-size:20px; border-radius:32px; padding:0 32px; }
+    #dock{ gap:22px; }
+  }
+#doing{ position:fixed; left:0; right:0; text-align:center; font-size:15px;
+    letter-spacing:.045em; color:var(--muted); opacity:.82; pointer-events:none;
+    transition:opacity .35s ease; }
+</style>
+<link rel="stylesheet" href="/static/workview.css?v=8d2e31c18d">
+<link rel="stylesheet" href="/static/hud.css?v=a286900c7c">
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="heard"></div>
+<div id="doing"></div>
+<div id="err"></div>
+<div id="dock">
+  <button id="mic" type="button" title="Talk" aria-label="Talk to JARVIS">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/>
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
+    </svg>
+  </button>
+  <button id="typing" type="button" title="Type instead" aria-label="Type to JARVIS instead of talking">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="1.6" y="6" width="20.8" height="12" rx="2.6"/>
+      <path d="M5.6 9.6h.01M9.2 9.6h.01M12.8 9.6h.01M16.4 9.6h.01M6.6 14.4h10.8"/>
+    </svg>
+  </button>
+  <button id="reset" type="button" title="Start a new conversation" aria-label="Start a new conversation. Press twice to confirm.">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 11a8 8 0 1 0-2.6 5.9"/>
+      <path d="M20 4.5V11h-6.5"/>
+    </svg>
+  </button>
+</div>
+<div id="fallback">
+  <input id="q" type="text" autocomplete="off" placeholder="Type to JARVIS..." />
+  <button id="send" type="button">Send</button>
+</div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const heard = document.getElementById('heard'), errEl = document.getElementById('err');
+const mic = document.getElementById('mic'), fallback = document.getElementById('fallback');
+const input = document.getElementById('q'), sendBtn = document.getElementById('send');
+const typingBtn = document.getElementById('typing');
+const resetBtn = document.getElementById('reset');
+
+// audio state, declared before the renderer because draw() reads the analysers on load
+let AC = null, analyser = null, freq = null, playing = false;
+
+// Thinking orbs — Jakub Antalik's engine (MIT), loaded dynamically so any failure
+// leaves the page exactly as it was. See vendor/orbs.js and ORBS-INTEGRATION.md.
+let ORBS = null;
+window.__orbsError = null;
+let BEAM = null, BEAMSTATE = null;
+import('./vendor/beam.v15.js').then(m => { BEAM = m; BEAMSTATE = m.createBeam(); })
+  .catch(e => { window.__beamError = String(e && (e.message || e)); });
+import('./vendor/orbs.v15.js').then(m => { ORBS = m; }).catch(e => {
+  // Never fatal: the iris stays if this fails. But record why, so the failure is visible.
+  window.__orbsError = String(e && (e.message || e));
+  console.warn('[orbs] engine did not load:', e);
+});
+let micAnalyser = null, micFreq = null;
+let spokenText = "", lastAudioAt = 0;
+
+// The wait, made audible. A turn that reaches its first token quickly needs no filler, so the timer is
+// short and it is cancelled the moment anything real arrives: a token, or audio. A slow one gets a line
+// in the cloned voice, and a very slow one gets a second, so a long job is never a dead telephone.
+let cueT1 = null, cueT2 = null;          // the two wait timers for the turn in flight
+function clearCues(){
+  if (cueT1 !== null) { clearTimeout(cueT1); cueT1 = null; }
+  if (cueT2 !== null) { clearTimeout(cueT2); cueT2 = null; }
+}
+function armCues(ctx){
+  clearCues();
+  if (VOICE_PARKED) return;               // parked: no cue, whichever mode a turn claims
+  if (turnMode === 'text') return;       // he asked for words on the screen, not for a voice
+  cueT1 = setTimeout(function(){
+    if (ctx.sawTok || ctx.sawAudio) return;
+    cue('working');
+  }, 800);
+  cueT2 = setTimeout(function(){
+    if (ctx.sawTok || ctx.sawAudio) return;
+    cue('stillworking');
+  }, 15000);
+}
+
+let W = 0, H = 0, DPR = 1, phase = 0, state = 'idle';
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.width = Math.floor(innerWidth * DPR);
+  H = cv.height = Math.floor(innerHeight * DPR);
+  cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+}
+addEventListener('resize', resize); resize();
+
+// ================================================================
+// JARVIS NEURAL IRIS
+// A dark computational aperture. Spectral energy enters at the core
+// and travels outward through iris, ribbons, filaments and particles.
+// Everything is preallocated: nothing is created inside the frame loop.
+// ================================================================
+
+const TAU = Math.PI * 2;
+const IRIS_POINTS = 192;
+const FILAMENT_COUNT = 34;
+const RIBBON_COUNT = 4;
+const MAX_PARTICLES = 300;
+
+const ACC_CYAN = [34, 211, 238], ACC_AMBER = [232, 160, 32];
+let accentRGB = ACC_CYAN;
+function accent(){
+  const want = (state === 'listening' || state === 'capturing' || state === 'recording')
+    ? ACC_AMBER : ACC_CYAN;
+  for (let i = 0; i < 3; i++) accentRGB[i] += (want[i] - accentRGB[i]) * 0.06;
+  return accentRGB;
+}
+function rgba(a){
+  const c = accent();
+  return 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' +
+         Math.max(0, Math.min(1, a)) + ')';
+}
+
+const irisBase = new Float32Array(IRIS_POINTS);
+const irisAmp = new Float32Array(IRIS_POINTS);
+const irisPhase = new Float32Array(IRIS_POINTS);
+for (let i = 0; i < IRIS_POINTS; i++){
+  const a = i / IRIS_POINTS * TAU;
+  irisBase[i] = 0.92 + Math.sin(a * 3.0) * 0.025 + Math.sin(a * 7.0) * 0.012;
+  irisAmp[i] = 0;
+  irisPhase[i] = Math.random() * TAU;
+}
+
+const particles = new Array(MAX_PARTICLES);
+for (let i = 0; i < MAX_PARTICLES; i++){
+  particles[i] = {
+    a: Math.random() * TAU,
+    r: Math.pow(Math.random(), 0.65),
+    z: 0.25 + Math.random() * 0.95,
+    speed: (0.00025 + Math.random() * 0.0011) * (Math.random() < 0.5 ? -1 : 1),
+    push: 0, flash: 0,
+    size: 0.35 + Math.random() * 1.5,
+    seed: Math.random() * 1000
+  };
+}
+
+const filaments = new Array(FILAMENT_COUNT);
+for (let i = 0; i < FILAMENT_COUNT; i++){
+  filaments[i] = {
+    a: Math.random() * TAU,
+    radius: 0.65 + Math.random() * 0.52,
+    phase: Math.random() * TAU,
+    speed: (Math.random() * 0.001 + 0.0003) * (Math.random() < 0.5 ? -1 : 1),
+    strength: 0.15 + Math.random() * 0.35,
+    flash: 0
+  };
+}
+
+const ribbons = new Array(RIBBON_COUNT);
+for (let i = 0; i < RIBBON_COUNT; i++){
+  ribbons[i] = {
+    phase: Math.random() * TAU,
+    speed: 0.001 + Math.random() * 0.0015,
+    radius: 0.92 + i * 0.075,
+    wobble: 0.025 + Math.random() * 0.035
+  };
+}
+
+// shockwaves are preallocated; only their birth time moves
+const SHOCKS = 6;
+const shocks = new Array(SHOCKS);
+for (let i = 0; i < SHOCKS; i++) shocks[i] = { born: -1e9, strength: 0 };
+let shockCursor = 0;
+let lastShock = 0;
+function shock(strength){
+  const now = performance.now();
+  if (now - lastShock < 90) return;
+  lastShock = now;
+  const s = shocks[shockCursor = (shockCursor + 1) % SHOCKS];
+  s.born = now; s.strength = strength;
+}
+
+const reactor = {
+  energy: 0, bass: 0, mids: 0, highs: 0, centroid: 0, flux: 0, transient: 0, voiceActive: 0,
+  tEnergy: 0, tBass: 0, tMids: 0, tHighs: 0, tCentroid: 0, tFlux: 0,
+  out: 0,             // energy travelling away from the core
+  compute: 0,         // thinking activity
+  error: 0,
+  lastFlux: 0
+};
+
+let fps = 60, particleLimit = MAX_PARTICLES;
+
+function featureFromFFT(data){
+  if (!data || !data.length){
+    reactor.tEnergy = 0; reactor.tBass = 0; reactor.tMids = 0;
+    reactor.tHighs = 0; reactor.tCentroid = 0; reactor.tFlux = 0;
+    return;
+  }
+  let sum = 0, weighted = 0, bass = 0, mids = 0, highs = 0, flux = 0, previous = 0;
+  for (let i = 0; i < data.length; i++){
+    const v = data[i] / 255, f = i / data.length;
+    sum += v; weighted += v * f;
+    if (f < 0.12) bass += v;
+    else if (f < 0.48) mids += v;
+    else highs += v;
+    const diff = v - previous;
+    if (diff > 0) flux += diff;
+    previous = v;
+  }
+  const n = data.length;
+  reactor.tEnergy = Math.min(1, sum / n * 2.7);
+  reactor.tBass = Math.min(1, bass / Math.max(1, n * 0.12) * 1.7);
+  reactor.tMids = Math.min(1, mids / Math.max(1, n * 0.36) * 1.6);
+  reactor.tHighs = Math.min(1, highs / Math.max(1, n * 0.52) * 1.9);
+  reactor.tCentroid = Math.min(1, weighted / Math.max(0.0001, sum) * 2);
+  reactor.tFlux = Math.min(1, flux / Math.max(1, n * 0.035));
+}
+
+function updateReactor(dt){
+  const speaking = state === 'speaking';
+  const listening = state === 'listening' || state === 'capturing' || state === 'recording';
+  const working = state === 'thinking' || state === 'transcribing';
+
+  if (working){                                   // computation is implied, not measured
+    reactor.compute += (1 - reactor.compute) * 0.03;
+  } else {
+    reactor.compute += (0 - reactor.compute) * 0.05;
+  }
+
+  const attack = speaking ? 0.42 : 0.20;
+  const release = speaking ? 0.075 : 0.12;
+
+  reactor.energy += (reactor.tEnergy - reactor.energy) * (reactor.tEnergy > reactor.energy ? attack : release);
+  reactor.bass += (reactor.tBass - reactor.bass) * (reactor.tBass > reactor.bass ? attack : release);
+  reactor.mids += (reactor.tMids - reactor.mids) * (reactor.tMids > reactor.mids ? attack : release);
+  reactor.highs += (reactor.tHighs - reactor.highs) * (reactor.tHighs > reactor.highs ? attack : release);
+  reactor.centroid += (reactor.tCentroid - reactor.centroid) * 0.10;
+  reactor.flux += (reactor.tFlux - reactor.flux) * 0.30;
+
+  // a transient is a sudden rise in flux: it becomes a shockwave and a particle flash
+  const rise = reactor.flux - reactor.lastFlux;
+  reactor.lastFlux = reactor.flux;
+  if (rise > 0.12 && reactor.energy > 0.12) shock(Math.min(1, rise * 2.2));
+  if (reactor.error > 0) reactor.error = Math.max(0, reactor.error - 0.006);
+
+  // energy leaves the core and travels outward, then decays
+  const drive = (speaking || listening) ? reactor.energy : reactor.compute * 0.35;
+  reactor.out += (drive - reactor.out) * 0.06;
+
+  reactor.voiceActive += ((reactor.energy > 0.10 ? 1 : 0) - reactor.voiceActive) * 0.08;
+}
+
+// What it is doing, in words. Short and plain: the orb shows the state, this names it.
+const DOING = {
+  idle: 'Ready', connecting: 'Connecting', listening: 'Listening',
+  capturing: 'Recording', recording: 'Recording', transcribing: 'Writing it down',
+  thinking: 'Thinking', speaking: 'Speaking', interrupted: 'Stopped',
+  error: 'Something went wrong'
+};
+const doingEl = document.getElementById('doing');
+let doingShown = '';
+function setDoing(label, y){
+  if (label !== doingShown){ doingEl.textContent = label; doingShown = label; }
+  if (y != null) doingEl.style.top = Math.round(y) + 'px';
+}
+
+function draw(){
+  const now = performance.now();
+  const dt = Math.min(50, now - (draw.last || now)); draw.last = now;
+  if (dt > 0) fps += ((1000 / dt) - fps) * 0.05;
+  particleLimit = fps < 42 ? 150 : (fps < 52 ? 220 : MAX_PARTICLES);
+
+  updateReactor(dt);
+  phase += dt / 1000;
+
+  // The console measures itself (static/hud.js), so the orb is centred in the space
+  // actually left for it rather than in a guessed band above the dock.
+  let dock = 138 * DPR + 20;
+  let topPad = 0;
+  if (window.__jarvisLayout){
+    const L = window.__jarvisLayout();
+    if (L){
+      if (L.consoleTop > 0) dock = Math.max(dock, (innerHeight - L.consoleTop) * DPR + 14 * DPR);
+      if (L.topBarBottom > 0) topPad = L.topBarBottom * DPR;
+    }
+  }
+  const avail = Math.max(150 * DPR, H - dock - topPad);
+  const cx = W / 2, cy = topPad + avail / 2;
+  const R = Math.min(W * 0.22, Math.max(46 * DPR, avail * 0.30));
+
+  // read the live audio for the state that owns the microphone or the speaker
+  if (state === 'speaking' && analyser && freq){
+    analyser.getByteFrequencyData(freq);
+    featureFromFFT(freq);
+    if (reactor.tEnergy < 0.06){                 // silent graph: keep it alive, honestly drawn
+      const p1 = 0.30 + 0.42 * Math.abs(Math.sin(phase * 2.1));
+      reactor.tEnergy = p1 * 0.55; reactor.tBass = p1 * 0.7; reactor.tMids = p1 * 0.45;
+      reactor.tHighs = p1 * 0.3; reactor.tCentroid = 0.35 + 0.2 * Math.sin(phase * 1.3);
+      reactor.tFlux = 0.10 * Math.abs(Math.sin(phase * 3.4));
+    }
+  } else if ((state === 'listening' || state === 'capturing') && micAnalyser && micFreq){
+    micAnalyser.getByteFrequencyData(micFreq);
+    featureFromFFT(micFreq);
+  } else if (state === 'transcribing'){
+    const pulse = 0.10 + 0.10 * Math.abs(Math.sin(phase * 2.2));
+    reactor.tEnergy = pulse; reactor.tBass = pulse * 0.4; reactor.tMids = pulse;
+    reactor.tHighs = pulse * 0.6; reactor.tCentroid = 0.4 + 0.2 * Math.sin(phase); reactor.tFlux = 0.05;
+  } else if (state === 'thinking'){
+    const pulse = 0.16 + 0.22 * Math.abs(Math.sin(phase * 1.5));
+    reactor.tEnergy = pulse; reactor.tBass = pulse * 0.5; reactor.tMids = pulse; reactor.tHighs = pulse;
+    reactor.tCentroid = 0.5 + 0.25 * Math.sin(phase * 0.7); reactor.tFlux = 0.12 * Math.abs(Math.sin(phase * 3.1));
+  } else {
+    reactor.tEnergy = 0.02; reactor.tBass = 0.01; reactor.tMids = 0.015;
+    reactor.tHighs = 0.01; reactor.tCentroid = 0.2; reactor.tFlux = 0.01;
+  }
+
+  const e = reactor.energy, bass = reactor.bass, mids = reactor.mids, highs = reactor.highs;
+  const breath = 1 + Math.sin(phase * 0.55) * (0.010 + 0.012 * (1 - e));
+  const openIris = 0.55 + 0.45 * Math.min(1, e * 1.4);       // closed when dormant, open when alive
+  const compress = state === 'transcribing' ? 0.90 : (state === 'interrupted' ? 0.72 : 1);
+  const scroll = state === 'thinking' ? phase * 0.85 : (state === 'speaking' ? phase * 0.16 : phase * 0.05);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // ---- background wash: energy pooled around the core
+  const washR = R * (2.0 + 0.3 * e);
+  const wash = ctx.createRadialGradient(cx, cy, 0, cx, cy, washR);
+  wash.addColorStop(0, rgba(0.05 + 0.10 * reactor.out));
+  wash.addColorStop(0.45, rgba(0.016 + 0.03 * reactor.out));
+  wash.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = wash;
+  ctx.beginPath(); ctx.arc(cx, cy, washR, 0, TAU); ctx.fill();
+
+  if (!window.HARDLIGHT && !ORBS){
+  // ---- shockwaves travel outward
+  for (let i = 0; i < SHOCKS; i++){
+    const s = shocks[i];
+    const age = (now - s.born) / 1000;
+    if (age > 1.6 || s.strength <= 0) continue;
+    const t = age / 1.6;
+    const rr = R * (0.42 + t * 1.5);
+    ctx.strokeStyle = rgba(s.strength * (1 - t) * 0.5);
+    ctx.lineWidth = (2.4 * (1 - t) + 0.4) * DPR;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke();
+  }
+
+  // ---- ribbons: mids, slow, outside the iris
+  for (let i = 0; i < RIBBON_COUNT; i++){
+    const rb = ribbons[i];
+    rb.phase += rb.speed * dt;
+    ctx.beginPath();
+    for (let k = 0; k <= IRIS_POINTS; k += 4){
+      const a = k / IRIS_POINTS * TAU;
+      const wob = Math.sin(a * 3 + rb.phase) * rb.wobble * (0.5 + mids * 2.2);
+      const rr = R * (rb.radius + wob) * breath * compress;
+      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = rgba(0.05 + mids * 0.22);
+    ctx.lineWidth = (1 + mids * 1.4) * DPR;
+    ctx.stroke();
+  }
+
+  // ---- filaments: fine detail, mostly visible while computing or loud
+  for (let i = 0; i < FILAMENT_COUNT; i++){
+    const f = filaments[i];
+    f.a += f.speed * dt * (1 + reactor.compute * 6);
+    f.flash = Math.max(0, f.flash - 0.02);
+    if (reactor.compute > 0.4 && Math.random() < 0.012 * reactor.compute) f.flash = 1;
+    const strength = Math.max(f.strength * (0.25 + highs * 1.8), f.flash);
+    if (strength < 0.05) continue;
+    const rr = R * f.radius * breath * compress;
+    const span = 0.10 + 0.35 * strength;
+    ctx.strokeStyle = rgba(strength * 0.42);
+    ctx.lineWidth = (0.8 + strength * 1.8) * DPR;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, f.a, f.a + span); ctx.stroke();
+  }
+
+  // ---- particles: pushed outward from the core by energy, drawn inward while computing
+  const count = particleLimit;
+  for (let i = 0; i < count; i++){
+    const p = particles[i];
+    p.a += p.speed * dt * (1 + e * 2.4 + reactor.compute * 3);
+    p.flash = Math.max(0, p.flash - 0.02);
+    const target = reactor.out * 0.55 + reactor.compute * -0.12;
+    p.push += (target - p.push) * 0.05;
+    if (Math.random() < 0.0009 + e * 0.004) p.flash = 1;
+    const rr = R * (0.30 + p.r * 1.05 + p.push * (0.5 + p.r));
+    const x = cx + Math.cos(p.a) * rr, y = cy + Math.sin(p.a) * rr;
+    const alpha = (0.05 + 0.38 * (p.z * 0.7 + p.flash)) * (0.35 + 0.65 * Math.min(1, e * 2 + 0.25));
+    ctx.fillStyle = rgba(alpha);
+    const size = p.size * (0.7 + p.flash * 1.6) * DPR;
+    ctx.fillRect(x - size * 0.5, y - size * 0.5, size, size);
+  }
+
+  // ---- the iris itself: bass moves it, highs give it fine detail
+  const detail = highs;
+  for (let i = 0; i < IRIS_POINTS; i++){
+    const a = i / IRIS_POINTS * TAU;
+    const spec = Math.sin(a * 2 + scroll * 2.0) * 0.5 + Math.sin(a * 5 - scroll * 3.0) * 0.3;
+    irisAmp[i] += ((bass * 0.10 + e * 0.05) * (0.6 + spec * 0.7) +
+                   detail * 0.028 * Math.sin(a * 11 + phase * 4)) * openIris
+                  - irisAmp[i] * 0.12;
+  }
+  ctx.beginPath();
+  for (let i = 0; i <= IRIS_POINTS; i++){
+    const k = i % IRIS_POINTS;
+    const a = k / IRIS_POINTS * TAU;
+    const rr = R * (irisBase[k] * (0.86 + 0.14 * openIris) + irisAmp[k]) * breath * compress;
+    const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.save();
+  ctx.shadowBlur = (10 + 18 * e) * DPR;
+  ctx.shadowColor = rgba(0.5);
+  ctx.strokeStyle = rgba(0.16 + 0.55 * openIris + 0.2 * e);
+  ctx.lineWidth = (1.0 + 1.5 * e) * DPR;
+  ctx.stroke();
+  ctx.restore();
+
+  // ---- inner ring, the aperture edge
+  ctx.strokeStyle = rgba(0.10 + 0.28 * openIris);
+  ctx.lineWidth = (0.8 + 0.6 * e) * DPR;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.60 * breath * compress, 0, TAU);
+  ctx.stroke();
+
+  // ---- scanning arc: computation while thinking, a slow sweep while transcribing
+  if (state === 'thinking' || state === 'transcribing'){
+    const len = state === 'thinking' ? 0.70 : 0.34;
+    const start = scroll % TAU;
+    ctx.save();
+    ctx.shadowBlur = 14 * DPR; ctx.shadowColor = rgba(0.7);
+    ctx.strokeStyle = rgba(state === 'thinking' ? 0.55 : 0.34);
+    ctx.lineWidth = (state === 'thinking' ? 2.0 : 1.4) * DPR;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.10 * compress, start, start + len); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- listening: a ring that expands from the iris, so it reads as awake
+  if (state === 'listening' || state === 'capturing'){
+    const t = (phase * 0.55) % 1;
+    ctx.strokeStyle = rgba(0.30 * (1 - t) + e * 0.25);
+    ctx.lineWidth = 1.6 * DPR;
+    ctx.beginPath(); ctx.arc(cx, cy, R * (0.95 + t * 0.6), 0, TAU); ctx.stroke();
+  }
+
+  // ---- core: energy originates here
+  const coreR = R * (0.10 + 0.26 * reactor.out + 0.05 * bass);
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3.2);
+  glow.addColorStop(0, rgba(0.10 + 0.35 * reactor.out));
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx, cy, coreR * 3.2, 0, TAU); ctx.fill();
+
+  const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+  core.addColorStop(0, 'rgba(255,255,255,' + (0.55 + 0.45 * reactor.out) + ')');
+  core.addColorStop(0.35, rgba(0.35 + 0.45 * reactor.out));
+  core.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = core;
+  ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, TAU); ctx.fill();
+
+  }   // end of the iris blocks — replaced by the orbs when the engine loads
+
+  // the beam: the voice, under the state. Only while something is being heard or said.
+  if (BEAM && BEAMSTATE){
+    const audible = (state === 'listening' || state === 'capturing' || state === 'recording'
+                     || state === 'speaking');
+    BEAM.drawBeam(ctx, BEAMSTATE, reactor.energy, [bass, mids, highs], cx, cy, R, audible);
+  }
+
+  if (window.HARDLIGHT){
+    window.HARDLIGHT.paint(ctx, cx, cy, R, {
+      dpr: DPR, dt: dt, phase: phase, state: state,
+      energy: e, bass: bass, mids: mids, highs: highs,
+      out: reactor.out, accent: accentRGB
+    });
+  } else if (ORBS) ORBS.paintOrb(ctx, state, cx, cy, R);
+
+  setDoing(DOING[state] || '', cy + R * 1.55);
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ---------------------------------------------------------------- audio, decoded
+
+function audio(){
+  if (!AC){
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = AC.createAnalyser();
+    analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.7;
+    freq = new Uint8Array(analyser.frequencyBinCount);
+    analyser.connect(AC.destination);
+  }
+  // A context created before the first gesture starts suspended, its clock frozen at zero and
+  // nothing audible: the turn then looks stuck on "speaking" for ever. Ask it to run every time
+  // sound is wanted; if the browser still refuses, the caption falls back to its own clock.
+  if (AC.state === "suspended"){
+    try { const p = AC.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+
+// A short spoken line for the moments when there is nothing else to say. Fetched from the
+// server so the words are in the cloned voice and nothing has to be synthesised on the phone.
+function cue(name){
+  fetch('/cue/' + name).then(r => r.ok ? r.arrayBuffer() : null).then(b => {
+    if (!b) return;
+    const u = new Uint8Array(b);
+    let s = '';
+    for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]);
+    enqueue(btoa(s));
+  }).catch(() => {});
+}
+
+// ---------------------------------------------------------------- the player
+// Speech arrives as small MP3 parts, one unit of speech at a time, and has to start sounding
+// long before that unit is finished. Measured against the speech service: the first byte lands
+// in about a second whatever the length, while the last byte of a fifteen word unit takes
+// five, so waiting for the whole unit is what put six seconds between his question and the
+// first sound. MP3 frames are self-contained (a frame may borrow from earlier frames, never
+// later), so every complete-frame prefix decodes on its own: decode what has arrived, play it
+// from the point the previous sound reached, and repeat.
+const MP3_BITRATES = {
+  1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],   // MPEG 1, layer III
+  2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],       // MPEG 2 / 2.5
+};
+const MP3_RATES = { 1: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
+
+// How many bytes of an MP3 are whole frames. 0 when nothing is decodable yet.
+function mp3PrefixLength(bytes){
+  let off = 0, frames = 0;
+  while (off + 4 <= bytes.length){
+    if (bytes[off] !== 0xFF || (bytes[off + 1] & 0xE0) !== 0xE0) break;
+    const versionBits = (bytes[off + 1] >> 3) & 3;        // 3 = MPEG 1, 2 = MPEG 2, 0 = 2.5
+    const layerBits = (bytes[off + 1] >> 1) & 3;          // 1 = layer III
+    const rateIndex = (bytes[off + 2] >> 2) & 3;
+    const bitrateIndex = (bytes[off + 2] >> 4) & 0xF;
+    const padding = (bytes[off + 2] >> 1) & 1;
+    if (layerBits !== 1 || versionBits === 1 || rateIndex === 3 || bitrateIndex === 0
+        || bitrateIndex === 15) break;
+    const family = versionBits === 3 ? 1 : 2;
+    const bitrate = MP3_BITRATES[family][bitrateIndex] * 1000;
+    const rate = MP3_RATES[versionBits === 3 ? 1 : (versionBits === 2 ? 2 : 0)][rateIndex];
+    const perFrame = versionBits === 3 ? 1152 : 576;
+    const len = Math.floor(perFrame / 8 * bitrate / rate) + padding;
+    if (len < 24 || off + len > bytes.length) break;
+    off += len; frames++;
+  }
+  return off;
+}
+
+let sources = [], unitsOpen = new Set(), unitStreams = {}, at = 0, scheduled = 0;
+let voiceUnits = {};                       // unit number -> the words being spoken, and when
+// Diagnostic ring for the player: every scheduled chunk with the clock it was placed against,
+// so a cut can be seen as numbers instead of guessed at.
+let schedLog = [];
+
+function audioBusy(){ return sources.length > 0 || unitsOpen.size > 0; }
+
+function audioDone(){
+  playing = false; earTurnOpen = false;
+  setState(earArmed ? 'listening' : 'idle');
+}
+
+// Play one decoded buffer from an offset, hard against whatever is already scheduled.
+function schedule(buf, from, n){
+  from = Math.max(0, Math.min(from || 0, Math.max(0, buf.duration - 0.01)));
+  const ac = audio();
+  const src = ac.createBufferSource();
+  src.buffer = buf; src.connect(analyser);
+  // A 20ms lead is not a lead. Measured with the parts replayed at their true arrival times, the
+  // cushion in front of the playhead settles at 0.7-1.1s after the first burst, but the FIRST
+  // chunk is scheduled while the main thread is busiest (the stream burst, JSON, base64 and the
+  // canvas all at once). If the start time is already in the past when the audio thread sees it,
+  // the head of that chunk is cut or doubled, which is the cut heard in the opening seconds.
+  // Only ever affects the first chunk or two of a turn: roughly 0.13s of extra wait, once.
+  const startAt = Math.max(ac.currentTime + 0.15, at);
+  // Where this unit begins on the audio clock. The caption is driven from here, not from the
+  // model's tokens, so the words land with the voice instead of seconds ahead of it.
+  if (n != null){
+    const v = voiceUnits[n] || (voiceUnits[n] = { text: "", start: null, shown: 0, u: null,
+                                                  kind: "" });
+    if (v.start == null) v.start = startAt;
+    v.u = unitStreams[n] || null;
+  }
+  schedLog.push({ ctx: +ac.currentTime.toFixed(3), from: +from.toFixed(3),
+                  dur: +buf.duration.toFixed(3), start: +startAt.toFixed(3),
+                  end: +(startAt + (buf.duration - from)).toFixed(3),
+                  late: +(ac.currentTime - at).toFixed(3) });
+  if (schedLog.length > 400) schedLog.shift();
+  src.start(startAt, from);
+  at = startAt + (buf.duration - from);
+  scheduled += (buf.duration - from);
+  playing = true; setState('speaking'); lastAudioAt = Date.now();
+  sources.push(src);
+  src.onended = () => {
+    sources = sources.filter(s => s !== src);
+    if (!audioBusy()) audioDone();
+  };
+  return src;
+}
+
+function pushUnit(n, bytes){
+  const u = unitStreams[n] || (unitStreams[n] = { parts: [], nbytes: 0, played: 0,
+                                                  ended: false, chain: Promise.resolve() });
+  unitsOpen.add(n);
+  if (bytes && bytes.length){ u.parts.push(bytes); u.nbytes += bytes.length; }
+  u.chain = u.chain.then(() => decodeUnit(n)).catch(() => {});
+}
+
+function joinParts(u){
+  const all = new Uint8Array(u.nbytes);
+  let off = 0;
+  for (const p of u.parts){ all.set(p, off); off += p.length; }
+  return all;
+}
+
+// A unit may only take the playhead once every earlier unit has arrived in full.
+// Measured on a real three-sentence answer: unit 3's opening 209ms was scheduled BETWEEN unit 2's
+// chunks, so his ear got the end of one sentence, a fragment of the next, then the rest of the
+// first. That is heard as the current sentence being cut off by the next one.
+function canSchedule(n){
+  // `done`, not `ended`: a unit's parts can all have arrived while its last chunks are still being
+  // decoded, and a later unit that schedules during that window still cuts into it (measured after
+  // the first attempt at this gate, which used `ended` and left the interleaving in place).
+  for (const k of Object.keys(unitStreams)){
+    if (+k < n && !unitStreams[k].done) return false;
+  }
+  return true;
+}
+
+function flushWaiting(){
+  const ids = Object.keys(unitStreams).map(Number).sort((a, b) => a - b);
+  for (const n of ids){
+    const u = unitStreams[n];
+    if (!u || !u.waiting) continue;
+    if (!canSchedule(n)) break;              // strictly in order, so the first held unit gates the rest
+    const held = u.waiting;
+    u.waiting = null;
+    if (held.buf.duration > u.played + 0.005){ schedule(held.buf, u.played, n); u.played = held.buf.duration; }
+  }
+}
+
+function decodeUnit(n){
+  const u = unitStreams[n];
+  if (!u) return Promise.resolve();
+  const all = joinParts(u);
+  const usable = u.ended ? all.length : mp3PrefixLength(all);
+  if (usable <= u.played) return Promise.resolve();
+  // slice(), never subarray(): subarray shares the underlying buffer, so .buffer hands the
+  // decoder every byte received so far INCLUDING the partial trailing frame. That decodes a
+  // bad last frame, the played length drifts, and the next chunk then starts in the wrong
+  // place: audible cuts, worst at the start where the chunks are smallest. Measured with the
+  // whole buffer: each part added 0ms of audio instead of the 78ms of frames it carried.
+  const head = all.slice(0, usable);
+  return new Promise(resolve => {
+    audio().decodeAudioData(head.buffer, buf => {
+      if (!unitStreams[n]) return resolve();      // abandoned turn: never let it sound
+      if (buf.duration > u.played + 0.005){
+        if (canSchedule(n)){ schedule(buf, u.played, n); u.played = buf.duration; }
+        else { u.waiting = { buf: buf }; }   // hold it until the units before it have finished
+      }
+      resolve();
+    }, () => {
+      // Not decodable on its own. Once the unit is complete, try the whole thing as it is.
+      if (u.ended && u.played === 0){
+        audio().decodeAudioData(all.buffer,
+          b => { schedule(b, 0, n); u.played = b.duration; resolve(); }, () => resolve());
+      } else resolve();
+    });
+  });
+}
+
+function endUnit(n){
+  const u = unitStreams[n];
+  if (!u){ unitsOpen.delete(n); if (!audioBusy()) audioDone(); return; }
+  u.ended = true;
+  u.chain = u.chain.then(() => decodeUnit(n)).then(() => {
+    u.done = true;                       // every chunk of this unit has been scheduled
+    flushWaiting();                      // later units may take the playhead now
+    unitsOpen.delete(n);
+    if (!audioBusy()) audioDone();
+  }).catch(() => { u.done = true; flushWaiting(); unitsOpen.delete(n); if (!audioBusy()) audioDone(); });
+}
+
+// ---------------------------------------------------------------- the caption keeps step with the voice
+// A unit's words are revealed on the audio clock, paced by that unit's own speaking time, and
+// the pace re-estimates as the rest of the unit is scheduled. Reading speed therefore matches
+// speech speed instead of the whole answer appearing at once, seconds before it is said.
+const CHARS_PER_SEC = 15;                   // only until a unit's audio length is known
+function voiceTick(){
+  const live = (AC && AC.state === "running") ? AC.currentTime : null;
+  const wall = performance.now() / 1000;
+  for (const k of Object.keys(voiceUnits)){
+    const v = voiceUnits[k];
+    // A working line is spoken, never captioned: it belongs in the Summary sheet, and on screen
+    // it would be the largest text on the page while his chart sits under it.
+    if (v.kind === "progress") continue;
+    const chars = v.text.length;
+    if (!chars || v.shown >= chars) continue;
+    let elapsed, est;
+    if (live != null && v.start != null){
+      if (live < v.start) continue;                 // this sentence has not started being said
+      elapsed = live - v.start;
+      est = Math.max((v.u && v.u.played) || 0, chars / CHARS_PER_SEC);
+      if (v.u && v.u.done && elapsed >= ((v.u && v.u.played) || 0)) elapsed = est;  // never drop the tail
+    } else {
+      // No running audio clock: either the context was refused, or this unit's speech failed
+      // and no sound is coming. Pace the words out in real time from when they arrived, so a
+      // caption is never silently missing.
+      elapsed = wall - v.wall;
+      est = chars / CHARS_PER_SEC;
+    }
+    let want = Math.floor((elapsed / est) * chars);
+    want = Math.max(0, Math.min(chars, want));
+    if (want > v.shown){
+      const slice = v.text.slice(v.shown, want);
+      v.shown = want;
+      try { window.__jarvisReply && window.__jarvisReply(slice); } catch(e) {}
+    }
+  }
+}
+setInterval(voiceTick, 40);
+function enqueue(b64){
+  // A complete file rather than a stream: the short spoken cues the server holds.
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  audio().decodeAudioData(bytes.buffer.slice(0), buf => schedule(buf, 0), () => {});
+}
+
+function stopAudio(){
+  clearCues();
+  for (const s of sources){ try{ s.onended = null; s.stop(); }catch(e){} }
+  sources = []; unitsOpen = new Set(); unitStreams = {}; at = 0; scheduled = 0; playing = false;
+  for (const k in voiceUnits) delete voiceUnits[k];
+  reactor.tEnergy = 0; reactor.tBass = 0; reactor.tMids = 0; reactor.tHighs = 0;
+}
+
+// ---------------------------------------------------------------- timeline
+// Recording start, endpoint, upload, upload return, the turn, first token and first sound, so a
+// live turn can be read off the console. "Endpoint to first sound" is the number he feels and it
+// was not measured anywhere before.
+let TL0 = performance.now(), tlEndpoint = null, tlT0 = null, tlMarks = [];
+function tl(name){
+  const at = Math.round(performance.now() - TL0);
+  let extra = '';
+  if (name === 'first sound' && tlEndpoint !== null) extra = '  endpoint->firstSound=' + (at - tlEndpoint) + 'ms';
+  if (name === 'ask called') tlT0 = performance.now();
+  if (name === 'first sound' && tlT0 !== null) extra += '  turn->firstSound=' + (at - Math.round(tlT0 - TL0)) + 'ms';
+  const line = name + '+' + at + 'ms' + extra;
+  console.info('[timeline] ' + line);
+  // The endpoint-to-first-sound figure only exists on this device, and reading a phone console by
+  // hand is not a measurement, so the marks go to the journal as well.
+  tlMarks.push(line);
+  if (name === 'first sound' || tlMarks.length >= 6){
+    try {
+      fetch('/timeline', { method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marks: tlMarks }) });
+    } catch(e){}
+    tlMarks = [];
+  }
+}
+
+// ---------------------------------------------------------------- state
+// ---------------------------------------------------------------- the two modes
+// He asked for this in his own words: the page speaks back only when he presses the live button,
+// and answers in text when he types. One variable, and one function that applies every
+// consequence in one place, so the two modes can never half-apply: text mode never opens the
+// microphone and never plays a sound, and voice mode is exactly what it was.
+let mode = 'voice';
+let turnMode = 'voice';
+function modeArm(next){
+  const want = (next === 'text') ? 'text' : 'voice';
+  if (mode !== want){
+    // One turn, one mode. A switch while a turn is running cuts it, exactly as tapping the live
+    // button does, so an answer is never half-spoken and half-read. With nothing running there is
+    // only leftover sound to stop.
+    if (turnActive || stream){ interrupt(); } else { stopAudio(); }
+  }
+  mode = want;
+  if (mode === 'text'){
+    earArmed = false;                      // never listen while he types
+    earTurnOpen = false;                   // and nothing is left waiting to drain
+    if (earRecording){ try { endCapture(); } catch(e){} }
+    if (spokenText){
+      // Cutting the speech must not erase it: whatever had already been said is readable now.
+      try { window.__jarvisSetReply && window.__jarvisSetReply(spokenText); } catch(e){}
+    }
+  }
+  const btn = document.getElementById('modeBtn');
+  if (btn){
+    btn.textContent = (mode === 'text') ? 'Text' : 'Voice';
+    btn.setAttribute('aria-label', 'Reply mode: ' + (mode === 'text' ? 'text' : 'voice') +
+                     '. Press to switch.');
+    btn.classList.toggle('text', mode === 'text');
+  }
+  try { window.__jarvisMode && window.__jarvisMode(mode); } catch(e){}
+  syncMic();
+  return mode;
+}
+
+let stream = null, earArmed = false, heardTimer = null, turnActive = false;
+let currentTurnId = null;                  // from the stream's open event, for POST /cancel
+
+const stateLog = [];        // kept for tests: the sequence of visual states, in order
+function setState(s){
+  if (state === s) return;
+  const previous = state;
+  state = s;
+  stateLog.push(s);
+  if (stateLog.length > 60) stateLog.shift();
+  // he was speaking and has stopped: energy reverses, which is what an interruption looks like
+  if (previous === 'speaking' &&
+      (s === 'listening' || s === 'capturing' || s === 'recording' || s === 'interrupted')){
+    shock(0.6);
+    reactor.out = Math.min(1.4, reactor.out + 0.35);
+  }
+  if (s === 'error') reactor.error = 1;
+  if (s !== 'speaking'){
+    reactor.tEnergy *= 0.35; reactor.tBass *= 0.35; reactor.tMids *= 0.35; reactor.tHighs *= 0.35;
+  }
+  syncMic();
+}
+// The stylesheet has always carried #mic.earArmed and .earArmed.live, but nothing ever applied
+// the classes: the button looked identical whether the microphone was open or shut. This is the
+// single place that decides how the microphone looks, so it cannot drift out of step again.
+function syncMic(){
+  mic.classList.toggle('earArmed', !!earArmed);
+  mic.classList.toggle('live', !!earArmed && (earRecording || state === 'capturing'));
+}
+
+function say(text){
+  heard.textContent = text; heard.classList.add('show');
+  clearTimeout(heardTimer);
+  heardTimer = setTimeout(() => heard.classList.remove('show'), 4500);
+}
+function fail(text){
+  if (state !== 'error') setState('error');
+  errEl.textContent = text; errEl.style.display = 'block';
+  setTimeout(() => { errEl.style.display = 'none'; }, 7000); }
+function showFallback(hideMic){
+  // The typing box used to be a consolation prize for a refused microphone. On a screen with
+  // no microphone at all it is the only way in, so there is a button for it and this can be
+  // opened without hiding the mic: he may still want to talk on a phone.
+  fallback.classList.add('show');
+  typingBtn.style.display = 'none';
+  if (hideMic !== false) mic.style.display = 'none';
+  setTimeout(() => { try { input.focus(); } catch(e){} }, 60);
+}
+typingBtn.addEventListener('click', () => { modeArm('text'); showFallback(false); });
+
+// One gate for every voice control on the page, the engine's own included. Capture phase, so it runs
+// before any handler that might open the microphone, and it is the notice he sees rather than silence.
+document.addEventListener('click', function(ev){
+  if (!VOICE_PARKED) return;
+  if (!ev.isTrusted) return;         // a press of a finger, not the page clicking itself on load
+  const el = ev.target && ev.target.closest ? ev.target.closest('#mic, #live') : null;
+  if (!el) return;
+  ev.preventDefault(); ev.stopPropagation();
+  try { ev.stopImmediatePropagation(); } catch(e) {}
+  voiceParkedNotice();
+}, true);
+// A television generally has no microphone at all: offer the box straight away.
+if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) showFallback();
+let clientTurn = 0;             // a late event from an abandoned turn must never speak or draw
+
+function interrupt(){
+  clientTurn++;                 // every listener belonging to an older turn now stands down
+  stopAudio();
+  if (stream){ try{ stream.close(); }catch(e){} stream = null; }
+  liveTurn = null;              // nothing is watching a stopped turn's events any more
+  // Tell the server at once rather than waiting for it to notice the closed connection: a tap
+  // should stop the agent, the speech requests and the token stream immediately.
+  if (turnActive && currentTurnId !== null){
+    try {
+      fetch('/cancel', { method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ turn: currentTurnId }) });
+    } catch(e){}
+    currentTurnId = null;
+  }
+  turnActive = false;
+  earTurnOpen = false;          // abandoning a turn MUST release the gate, or the page goes deaf
+  if (state === 'speaking' || state === 'thinking'){
+    setState('interrupted');
+    setTimeout(() => { if (state === 'interrupted') setState(earArmed ? 'listening' : 'idle'); }, 420);
+  } else {
+    setState(earArmed ? 'listening' : 'idle');
+  }
+}
+
+// ------------------------------------------------------- a turn, and the screen that shows it
+// The screen shows ONE conversation; the machine can be answering ANOTHER. Those used to be the same
+// thing — a question was asked and its answer read down that one connection — so anything that moved
+// the view (another conversation, a new chat) had to kill the turn in flight or let it paint into a
+// conversation it did not belong to. A turn now belongs to the conversation it was asked in, and the
+// connection is only how the page watches it: the reader keeps reading, and its events go to the
+// screen while the screen is on that conversation, and to the page's own record when it is not.
+// Nothing is closed and nothing is dropped.
+let liveTurn = null;             // the turn in flight: { turn, conv, detached, spoken, ... }
+let lastSeq = -1;                // the highest event number drawn, so a re-bind never draws twice
+
+let _convFallback = null;
+function convId(){
+  // "current" means "whatever window the machine is in", which is a different conversation after every
+  // switch. A turn named that can be filed into the wrong chat, so it is never used: if the page has not
+  // named the conversation yet, one is minted here and kept.
+  try {
+    const v = String((typeof window.__jarvisConvId === 'function' && window.__jarvisConvId()) || '');
+    if (v && v !== 'current') return v;
+    // No fallback name is invented here. A save that arrives with no conversation is dropped by the
+    // page, because a turn filed under a freshly minted name becomes a second chat holding the same
+    // question — the twin he could not tell apart.
+  } catch (e) {}
+  return 'current';
+}
+
+function newTurnCtx(conv){
+  return { turn: null, conv: conv, detached: false, spoken: "", sawTok: false, sawAudio: false,
+           handle: null, closed: false, running: true };
+}
+
+// The view has moved off the conversation this turn belongs to. Drawing stops; reading does not.
+function detachTurn(){
+  if (!liveTurn || liveTurn.detached) return;
+  liveTurn.detached = true;
+  // A voice turn that keeps talking into a conversation he has walked away from is a noise in another
+  // room, so the sound stops here. The words carry on being written down, and the turn keeps working.
+  try { stopAudio(); } catch (e) {}
+  try { window.__jarvisDetached && window.__jarvisDetached(liveTurn.turn, liveTurn.conv); } catch (e) {}
+}
+
+// One reader serves both ways of watching a turn: asked from its first moment, or re-attached to one
+// already in flight. The framing is the same for both — "event:" and "data:" lines, a blank line
+// between events, ": ping" comments skipped because they carry no data — so a re-attached turn draws
+// itself through exactly the same code as a fresh one.
+async function readSSE(path, body, onEvent, signal){
+  const r = await fetch(path, { method: 'POST', signal, cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok || !r.body){
+    // A refusal is a fact about the chat, not a lost connection: carry its reason and its subject so
+    // the page can act on it instead of telling him the link dropped.
+    let info = null;
+    try { info = await r.json(); } catch (e) {}
+    const err = new Error('stream ' + r.status);
+    err.status = r.status; err.data = info;
+    throw err;
+  }
+  const reader = r.body.getReader(), dec = new TextDecoder();
+  let buf = '';
+  for (;;){
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let cut;
+    while ((cut = buf.indexOf('\n\n')) >= 0){
+      const block = buf.slice(0, cut);
+      buf = buf.slice(cut + 2);
+      let ev = 'message', data = '';
+      for (const line of block.split('\n')){
+        if (line.startsWith('event:')) ev = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (data && ev !== 'message') onEvent(ev, data);
+    }
+  }
+}
+
+async function openStream(q, onEvent, signal){
+  // The turn's own options travel with the question: how hard to think, whether this one wants the web,
+  // whether it should use his stored memory. The page publishes them and the engine merges them here, so
+  // the engine still owns the request and the page still owns the settings.
+  return readSSE('/stream', Object.assign({ q, mode: turnMode },
+    (window.__jarvisTurnOpts ? window.__jarvisTurnOpts() : null) || {}), onEvent, signal);
+}
+
+// Every turn is drawn by this one function: the one just asked, and the one just re-attached. The
+// per-turn flags live on the context, so nothing about the screen depends on which reader is feeding
+// it — a turn read from its first token and a turn re-attached halfway are the same turn.
+function applyEvent(ev, raw, ctx){
+  let d = {};
+  try { d = JSON.parse(raw); } catch(e){ return; }
+  if (typeof d.seq === 'number' && d.seq > lastSeq) lastSeq = d.seq;
+  // What event this is and whose turn it belongs to, readable by the page's painters. A painter that
+  // writes into a block must be able to check it is the right block before it writes.
+  window.__jarvisEvCtx = { ev: ev, turn: ctx.turn, conv: ctx.conv, tid: d.tid || null, seq: d.seq };
+  if (ev === 'open'){
+    currentTurnId = d.turn || null;
+    ctx.turn = d.turn || null;
+    // The turn's number, its conversation, whether this is a re-bind, and — when the machine hands the
+    // turn over — the question it was asked with, so the answer can be filed under its own name.
+    // The machine's own name for this conversation wins when it sends one: the page's may be a placeholder
+    // from before the conversation had a name, and every save has to use the name the machine filed under.
+    if (d.conv) ctx.conv = d.conv;
+    try { window.__jarvisTurnId && window.__jarvisTurnId(ctx.turn, ctx.conv, !!d.attach, d.q, d.tid); } catch(e) {}
+  }
+  // A chunk that names a conversation other than this turn's is not drawn and not recorded. The machine
+  // stamps every chunk with the turn's own conversation, and the opening event has already reconciled the
+  // page's name with the machine's, so this only ever fires on something that does not belong here.
+  if (ev !== 'open' && d.conv && ctx.conv && String(d.conv) !== String(ctx.conv)){
+    tl('chunk from another conversation refused');
+    return;
+  }
+  // The transcript is kept whether or not the screen is on this conversation: it is what the turn
+  // said, and a turn that finishes while he is looking elsewhere is still a turn he asked for.
+  if (ev === 'tok'){
+    ctx.spoken += (d.d || '');
+  }
+  if (ev === 'text' && d.text) ctx.spoken = d.text;
+  if (ctx.detached){
+    // The screen is on another conversation. The turn keeps its own record through the page's own
+    // handler — the steps, the words so far and the ending — so coming back to it shows it whole.
+    if (ev === 'done'){
+      if (stream === ctx.handle) stream = null;
+      ctx.running = false;
+      try { window.__jarvisBackgroundEnd && window.__jarvisBackgroundEnd(ctx.conv, ctx.spoken, ctx.turn); } catch(e){}
+    } else {
+      try { window.__jarvisBackgroundEvent && window.__jarvisBackgroundEvent(ev, d, ctx.conv || (window.__jarvisConvId ? window.__jarvisConvId() : '')); } catch(e){}
+    }
+    return;
+  }
+  if (ev === 'tok'){
+    if (!ctx.sawTok){ ctx.sawTok = true; tl('first token'); }
+    clearCues();
+    spokenText = ctx.spoken;
+    if (turnMode === 'text'){
+      // He is reading this one. There is no sound to pace the words against and no reason to
+      // pace them: they go up as they arrive.
+      try { window.__jarvisReply && window.__jarvisReply(d.d || ''); } catch(e){}
+    }
+    // The caption is written by voiceTick from the clock, never from these tokens: writing it
+    // here is exactly what put the words on screen seconds before the sound.
+  } else if (ev === 'audio'){
+    if (turnMode === 'text'){
+      // A text turn is never spoken. The server synthesises nothing for one; if a stale server
+      // does, it is dropped here rather than played over the words he is reading.
+      return;
+    }
+    if (!ctx.sawAudio && d.part >= 0){ ctx.sawAudio = true; tl('first sound'); }
+    clearCues();
+    if (d.part === 0 && d.d){
+      const v = voiceUnits[d.n] || (voiceUnits[d.n] = { text: "", start: null, shown: 0,
+                                                       u: null, wall: 0, kind: "" });
+      v.text = d.d; v.shown = 0; v.kind = d.kind || "";
+      v.wall = performance.now() / 1000 + 0.35;
+    }
+    if (d.part >= 0 && d.mp3){
+      const raw64 = atob(d.mp3);
+      const bytes = new Uint8Array(raw64.length);
+      for (let i = 0; i < raw64.length; i++) bytes[i] = raw64.charCodeAt(i);
+      pushUnit(d.n, bytes);
+    }
+    if (d.part < 0) endUnit(d.n);
+  } else if (ev === 'work'){
+    if (d.state === 'start') setState('thinking');
+  } else if (ev === 'term'){
+    try { window.__jarvisTerm && window.__jarvisTerm(d); } catch(e) {}
+  } else if (ev === 'format'){
+    try { window.__jarvisFormat && window.__jarvisFormat(d); } catch(e) {}
+  } else if (ev === 'note'){
+    // One line of what the agent is working out, for the Summary sheet. Never the caption.
+    try { window.__jarvisNote && window.__jarvisNote(d); } catch(e) {}
+  } else if (ev === 'warnerr'){
+    // The speech service failed on a unit of the reply: without this it just went quiet.
+    fail('The voice failed on part of that reply.' + (d.err ? ' ' + String(d.err).slice(0, 70) : ''));
+  } else if (ev === 'cue'){
+    // The server asks for a short recorded line when a handoff failed: an error must never be
+    // spoken as if it were the answer, and this says it in his voice without a synthesis call.
+    cue(d.name);
+  } else if (ev === 'err'){
+    fail(d.message || 'JARVIS could not finish that.');
+    setState('error');
+    setTimeout(() => { if (liveTurn === ctx) setState(earArmed ? 'listening' : 'idle'); }, 1400);
+  } else if (ev === 'text'){
+    // The settled answer for a text turn, sent once before done. Last write wins, so a dropped
+    // delta can never leave a truncated answer on the screen.
+    if (turnMode === 'text' && d.text){
+      spokenText = d.text;
+      try { window.__jarvisSetReply && window.__jarvisSetReply(d.text); } catch(e){}
+    }
+  } else if (ev === 'done'){
+    if (stream === ctx.handle) stream = null;
+    ctx.running = false;
+    turnActive = false;
+    try { window.__jarvisTurnEnd && window.__jarvisTurnEnd(ctx.spoken); } catch(e) {}
+    if (!audioBusy()) earTurnOpen = false;   // nothing was spoken, so nothing will drain
+    if (!audioBusy()) setState(earArmed ? 'listening' : 'idle');
+  }
+}
+
+// What the page asks of the engine when the view moves. The engine keeps the one fact the page cannot
+// know for itself — whether the turn in flight belongs to the conversation now on screen.
+window.__jarvisLiveTurn = function () {
+  // "Alive" means the turn is still being worked on, not that its connection object exists. The reader
+  // settles a moment after the last event, and anything watching this — the drawer's golden pulse, the
+  // guard on the send button — was reading a finished turn as a working one for that moment.
+  return liveTurn ? { turn: liveTurn.turn, conv: liveTurn.conv, detached: liveTurn.detached,
+                      spoken: liveTurn.spoken,
+                      alive: liveTurn.running !== false && !liveTurn.closed } : null;
+};
+window.__jarvisViewChanged = function (conv) {
+  if (!liveTurn) return false;
+  if (String(liveTurn.conv) !== String(conv)){ detachTurn(); return true; }
+  if (liveTurn.detached){ liveTurn.detached = false; return true; }   // the screen is back on it
+  return false;
+};
+// The page has come back to a conversation whose turn is still working and whose reader is gone — a
+// reload, a lost signal. This reads the turn from its own log instead of from the connection it was
+// asked down: everything after `since`, then live, drawn by the same painter as a fresh turn.
+window.__jarvisAttachTurn = function (turn, conv, since){
+  if (liveTurn && !liveTurn.closed && !liveTurn.detached) return false;   // still being read
+  const ctx = newTurnCtx(conv);
+  ctx.turn = turn;
+  liveTurn = ctx;
+  const ac = new AbortController();
+  ctx.handle = { close: () => ac.abort() };
+  stream = ctx.handle;
+  turnActive = true;
+  earTurnOpen = true;
+  setState('thinking');
+  readSSE('/stream/attach', { turn: turn, since: (since == null ? lastSeq + 1 : since) },
+    (ev, data) => { if (liveTurn === ctx) applyEvent(ev, data, ctx); }, ac.signal)
+    .then(() => { ctx.closed = true; })
+    .catch(e => {
+      ctx.closed = true;
+      if (ac.signal.aborted) return;
+      // The turn ended between the page deciding to come back and the request landing, or its log has
+      // been swept. That is a turn with nothing left to watch, not a dropped link.
+      if (stream === ctx.handle) stream = null;
+      if (liveTurn === ctx) liveTurn = null;
+      turnActive = false;
+      earTurnOpen = false;
+      if (!audioBusy()) setState(earArmed ? 'listening' : 'idle');
+      try { window.__jarvisRebindFailed && window.__jarvisRebindFailed(conv); } catch (e2) {}
+    });
+  return true;
+};
+
+function ask(q, requestedMode){
+  const conv = convId();
+  // A turn still working in ANOTHER conversation is not superseded by this one: he is reading one
+  // conversation while the machine finishes another, and the page's job is to show him the one he is
+  // reading while the machine finishes the one he left. Asking again in the SAME conversation is a
+  // different act — he is correcting himself — and that one does stop the turn in flight.
+  if (liveTurn && String(liveTurn.conv) !== conv) detachTurn();
+  else interrupt();
+  turnMode = requestedMode === 'text' ? 'text' : mode; // regeneration is silent; other turns use their armed mode
+  const myTurn = ++clientTurn;
+  const mine = () => myTurn === clientTurn;
+  const ctx = newTurnCtx(conv);
+  liveTurn = ctx;
+  lastSeq = -1;                           // a new turn's events start their own numbering
+  earTurnOpen = true;
+  spokenText = "";
+  turnActive = true;
+  setState('thinking');
+  tl('ask called');
+  armCues(ctx);
+  try { window.__jarvisTurnStart && window.__jarvisTurnStart(q, conv); } catch(e) {}
+  const ac = new AbortController();
+  ctx.handle = { close: () => ac.abort() };
+  stream = ctx.handle;
+
+  const onEvent = (ev, raw) => {
+    // A late event from an abandoned turn does nothing; an event from the turn in flight is drawn even
+    // when the screen has moved on, because a detached turn is still the page's to record.
+    if (mine() || ctx.detached) applyEvent(ev, raw, ctx);
+  };
+
+  openStream(q, onEvent, ac.signal).then(() => { ctx.closed = true; }).catch(e => {
+    ctx.closed = true;
+    // Our own abort is not a failure: interrupt() has already moved on.
+    if (ac.signal.aborted) return;
+    // One turn per chat: the machine refused a second one and named the turn in the way.
+    if (e && e.status === 409) {
+      var _mine = String((window.__jarvisTurnOpts() || {}).turn_id || "");
+      if (_mine && e.data && String(e.data.tid || "") === _mine && typeof window.__jarvisAttachTurn === 'function') {
+        // This is the question just sent, already running: the reply to the request was lost, not the
+        // question. Re-bind to it instead of asking him to stop a turn he never saw start.
+        if (stream === ctx.handle) stream = null;
+        if (window.__jarvisAttachTurn(e.data.turn, ctx.conv, 0)) return;
+      }
+      if (stream === ctx.handle) stream = null;
+      turnActive = false;
+      earTurnOpen = false;
+      try { window.__jarvisTurnRefused && window.__jarvisTurnRefused(e.data || {}, q); } catch (_e) {}
+      if (!audioBusy()) setState(earArmed ? 'listening' : 'idle');
+      return;
+    }
+    // A chat that was deleted elsewhere is gone, not busy: drop this copy and say so plainly.
+    if (e && e.status === 410 && e.data && e.data.gone) {
+      if (stream === ctx.handle) stream = null;
+      turnActive = false;
+      earTurnOpen = false;
+      try { window.__jarvisChatGone && window.__jarvisChatGone(String((e.data || {}).conv || ctx.conv || "")); } catch (_e) {}
+      if (!audioBusy()) setState(earArmed ? 'listening' : 'idle');
+      return;
+    }
+    // No answer from the machine at all: the question never arrived. It is held, with its id, and sent
+    // again when the connection returns — once, because the machine knows that id.
+    if (!e || !e.status) {
+      try {
+        if (window.__jarvisHoldQuestion &&
+            window.__jarvisHoldQuestion(q, ctx.conv, (window.__jarvisTurnOpts() || {}).turn_id || "")) {
+          if (stream === ctx.handle) stream = null;
+          turnActive = false;
+          earTurnOpen = false;
+          if (!audioBusy()) setState(earArmed ? 'listening' : 'idle');
+          return;
+        }
+      } catch (_e) {}
+    }
+    // The connection died but the turn did not. The machine is still working and its own log holds
+    // everything this reader missed, so the page re-binds to the turn instead of telling him the link
+    // dropped: nothing was lost except the reading of it, and that is recoverable.
+    if (ctx.turn != null && typeof window.__jarvisAttachTurn === 'function') {
+      console.log('stream cut, re-binding to turn', ctx.turn);
+      if (window.__jarvisAttachTurn(ctx.turn, ctx.conv, lastSeq + 1)) return;
+    }
+    console.log('stream failed', e);
+    fail('Lost the connection to JARVIS.');
+    if (stream === ctx.handle) stream = null;
+    turnActive = false;
+    earTurnOpen = false;                   // a failed turn must not leave the microphone shut
+    if (!audioBusy()) setState(earArmed ? 'listening' : 'idle');
+  });
+}
+
+// ---------------------------------------------------------------- ears
+// Raw audio, not the browser's speech service, and not a chunked earRecording either: a
+// chunked earRecording starts too late and swallows the first words, which is why "read me
+// today's news" arrived as nonsense. We keep a rolling buffer of the last second, so when
+// you start speaking the clip already contains the beginning of what you said.
+
+const earWORKLET = `
+class Capture extends AudioWorkletProcessor {
+  process(inputs){
+    const ch = inputs[0] && inputs[0][0];
+    if (ch && ch.length) this.port.postMessage(ch.slice(0));
+    return true;
+  }
+}
+registerProcessor('earCapture', Capture);
+`;
+
+let earMicStream = null, micCtx = null, rate = 16000;
+// The native ear, when the page is running inside the app. Installed by the shell: it records straight
+// from the hardware, so the phone's echo canceller cannot eat the front of a short utterance the way it
+// does through the webview. In a browser this is null and nothing below changes.
+const NATIVE_EAR = (function(){
+  try { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.JarvisEar) || null; }
+  catch(e) { return null; }
+})();
+// ---------------------------------------------------------------------------------------------
+// THE VOICE BUILD IS PARKED. Everything the voice work added - the wait-line cues, the live partial
+// transcript, the native ear - sits behind this one switch. While it is true no microphone is ever
+// opened, no cue is ever armed, and the two voice controls say so instead of going quiet.
+// To resume: set this to false and read voice-plan/VOICE-PARKED.md.
+const VOICE_PARKED = true;
+
+// The notice the parked controls answer with. Built once, on the page's own tokens, centred on the
+// screen, dismissed by a tap or after a few seconds, and the construction animation keeps building
+// for as long as it is up. It borrows nothing from any other surface: no line of the page's own text
+// is repurposed, and nothing here reads it back.
+let prodNoticeEl = null, prodNoticeTimer = 0, prodNoticeScrollY = null, prodNoticeSeq = 0;
+const prodNoticeScrollRestore = document.body ? document.body.style.overflow : '';
+function voiceParkedNotice(){
+  try {
+    if (!prodNoticeEl){
+      const wrap = document.createElement('div');
+      wrap.id = 'prodNotice';
+      wrap.hidden = true;
+      wrap.setAttribute('role', 'presentation');
+      wrap.innerHTML =
+        '<div class="pn-scrim"></div>' +
+        '<div class="pn-card" role="alertdialog" aria-modal="true" aria-labelledby="pnTitle" aria-describedby="pnBody">' +
+          '<button class="pn-x" type="button" aria-label="Close">' +
+            '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>' +
+          '</button>' +
+          '<div class="pn-top">' +
+            '<svg class="pn-icon" viewBox="0 0 48 48" aria-hidden="true">' +
+              '<rect class="pn-bld" x="3" y="12" width="24" height="28" rx="2.6"/>' +
+              '<rect class="pn-slot" x="7.5" y="17" width="6" height="5.2" rx="1.4"/>' +
+              '<rect class="pn-slot" x="16.5" y="17" width="6" height="5.2" rx="1.4"/>' +
+              '<rect class="pn-slot" x="7.5" y="26" width="6" height="5.2" rx="1.4"/>' +
+              '<rect class="pn-slot" x="16.5" y="26" width="6" height="5.2" rx="1.4"/>' +
+              '<path class="pn-ground" d="M2 41h44"/>' +
+              '<g class="pn-crane"><path d="M37 41V7"/><path d="M32 7h14"/><path d="M43 7v3"/></g>' +
+              '<rect class="pn-load" x="39" y="11.4" width="8" height="6.2" rx="1.5"/>' +
+            '</svg>' +
+            '<div>' +
+              '<div class="pn-title" id="pnTitle">Voice is still in production</div>' +
+              '<div class="pn-sub" id="pnBody">The microphone stays off until we switch it back on. Type your question for now, and everything else works.</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="pn-sweep"></div>' +
+        '</div>';
+      // It locks the screen, so the only way through it is the close control, Escape, the timer, or
+      // closing the app. A tap anywhere else is not an exit: it is swallowed, so nothing behind reacts.
+      wrap.addEventListener('click', function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (ev.target && ev.target.closest && ev.target.closest('.pn-x')) voiceParkedDismiss();
+      }, true);
+      wrap.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); }, true);
+      document.addEventListener('keydown', function(ev){
+        if (!prodNoticeEl || prodNoticeEl.hidden) return;
+        if (ev.key === 'Escape'){ ev.preventDefault(); voiceParkedDismiss(); }
+      }, true);
+      document.body.appendChild(wrap);
+      prodNoticeEl = wrap;
+    }
+    prodNoticeEl.hidden = false;
+    void prodNoticeEl.offsetWidth;              // let the transition see the change rather than snap
+    prodNoticeEl.classList.add('on');
+    prodLockScroll(true);
+    try { prodNoticeEl.querySelector('.pn-x').focus({ preventScroll: true }); } catch(e) {}
+    const seq = ++prodNoticeSeq;
+    clearTimeout(prodNoticeTimer);
+    prodNoticeTimer = setTimeout(function(){ voiceParkedDismiss(seq); }, 6000);
+    window.__jarvisProdNotice = (window.__jarvisProdNotice || 0) + 1;
+    // Names the caller, so a notice that appears when nobody pressed anything can be traced instead of
+    // argued about. Cheap, and it has already earned its place once.
+    try { window.__jarvisProdNoticeWhy = (new Error()).stack || ''; } catch(e) {}
+  } catch(e) {}
+}
+function prodLockScroll(on){
+  // The notice locks the screen, so the page behind it must not scroll under his thumb either.
+  try {
+    if (on){
+      if (prodNoticeScrollY === null) prodNoticeScrollY = window.scrollY || 0;
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = prodNoticeScrollRestore;
+      prodNoticeScrollY = null;
+    }
+  } catch(e) {}
+}
+function voiceParkedDismiss(seq){
+  if (seq !== undefined && seq !== prodNoticeSeq) return;    // a newer notice owns the card now
+  clearTimeout(prodNoticeTimer);
+  if (!prodNoticeEl) return;
+  prodNoticeEl.classList.remove('on');
+  prodLockScroll(false);
+  const mine = prodNoticeSeq;
+  setTimeout(function(){
+    if (mine !== prodNoticeSeq) return;                      // it came back while this one was fading
+    try { prodNoticeEl.hidden = true; } catch(e) {}
+  }, 360);
+}
+// ---------------------------------------------------------------------------------------------
+let nativeEar = null;            // set while a native capture is running
+function closeWebMic(){
+  // One capture at a time. Two microphones on one phone is how a turn ends up with its words from
+  // one stream and its levels from the other.
+  try { if (earMicStream) earMicStream.getTracks().forEach(t => { try { t.stop(); } catch(e) {} }); } catch(e) {}
+  earMicStream = null;
+  try { if (micCtx && micCtx.state !== 'closed') micCtx.close(); } catch(e) {}
+  micCtx = null; micAnalyser = null;
+}
+let nativeLevelHooked = false;   // the level listener is added once, not once per turn
+let nativeFailures = 0;          // after one refusal, the webview path is used for the rest of the session
+let earRing = [];                 // the rolling pre-roll while idle
+let earCapture = [];              // everything from just before you spoke
+// Words while he is still talking. The tick asks the local transcriber about the audio so far, every
+// so often, so the box fills as he speaks rather than after. Local recognition, so repeats cost CPU
+// and nothing else. Only one pass is ever in flight, and only the newest answer is shown.
+let partialAt = 0, partialBusy = false, partialSeq = 0, typedBefore = "";
+let earRecording = false;
+let block = [], blockLen = 0, blockMs = 50;
+let tickMs = 50;   // ms per level event. The worklet sends 50ms blocks; the native ear sends 20ms.
+let quietSince = 0;   // silence is measured against the clock, not by counting blocks: the two
+                      // capture paths publish levels at different rates, and counting one in units of
+                      // the other is how a sentence got cut down to a fifth of a second.
+let floor = 0.01, bleed = 0.02, tripCount = 0, quietBlocks = 0, loudBlocks = 0;
+let EarAudioUntil = 0, EarQuietBlocks = 0;
+let earTurnOpen = false;   // open from your message until the last of his audio finishes
+let earQuietFrom = 0, recordStart = 0, barged = false, ignoreUntil = 0;
+let earLastText = '', lastMeta = '';
+// Item 5: the snapshot that is being recognised while he may still be talking.
+let specAbort = null, specPromise = null, specSamples = 0;
+const BUILD = 'v15-orbs';
+
+function rmsOf(a){
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += a[i] * a[i];
+  return Math.sqrt(s / a.length);
+}
+
+async function openMic(){
+  if (earMicStream) return true;
+  try{
+    earMicStream = await navigator.mediaDevices.getUserMedia({
+      // All three off. Measured on his own recordings: with the echo canceller on, the same
+      // speech came back as "Hello, Gary." instead of "Hello JARVIS.", and one clip was
+      // captured at level 57 while the words were clearly spoken. The phone's audio
+      // processing removes his voice along with the speaker's; the server normalises instead.
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  }catch(e){
+    fail('Microphone refused. Allow it for this site, or type below.');
+    showFallback();
+    return false;
+  }
+  try{
+    micCtx = new AudioContext({ sampleRate: 16000 });
+    if (!micCtx.audioWorklet) throw new Error('no audio worklet');
+    const earUrl = URL.createObjectURL(new Blob([earWORKLET], { type: 'application/javascript' }));
+    await micCtx.audioWorklet.addModule(earUrl);
+    const src = micCtx.createMediaStreamSource(earMicStream);
+    micAnalyser = micCtx.createAnalyser();      // visual only, same stream: no second capture
+    micAnalyser.fftSize = 512;
+    micAnalyser.smoothingTimeConstant = 0.70;
+    micFreq = new Uint8Array(micAnalyser.frequencyBinCount);
+    src.connect(micAnalyser);
+    const earNode = new AudioWorkletNode(micCtx, 'earCapture');
+    earNode.port.onmessage = ev => pushSamples(ev.data);
+    src.connect(earNode);
+    rate = micCtx.sampleRate;
+    return true;
+  }catch(e){
+    fail('This browser cannot record. Use the typing box below.');
+    showFallback();
+    return false;
+  }
+}
+
+function pushSamples(chunk){
+  if (chunk.length > 4){
+    block.push(chunk); blockLen += chunk.length;
+    if (blockLen >= rate * blockMs / 1000){
+      const earFlat = new Float32Array(blockLen);
+      let o = 0;
+      for (const a of block){ earFlat.set(a, o); o += a.length; }
+      block = []; blockLen = 0;
+      onBlock(earFlat, rmsOf(earFlat));
+    }
+  }
+  if (earRecording) earCapture.push(chunk);
+  else {
+    earRing.push(chunk);
+    let n = 0;
+    for (const a of earRing) n += a.length;
+    while (n > rate * 1.0 && earRing.length > 1){ n -= earRing[0].length; earRing.shift(); }   // keep one second
+  }
+}
+
+function onBlock(earFlat, lv){
+  if (!earArmed) return;
+  if (mode === 'text') return;      // text mode: the microphone is shut, whatever the flags say
+
+  if (playing){
+    EarAudioUntil = Date.now() + 500;   // that sound came from the speaker, not from you
+    // A recording already under way when he starts speaking is capturing HIS voice off the
+    // speaker. That produced a 7.8 second clip of his own answer, fed back as the question.
+    if (earRecording && !barged){
+      earRecording = false; earCapture = []; earRing = [];
+      console.log('discarded a recording: he started speaking, so that was his voice');
+      setState('speaking');
+    }
+    // Loudness cannot separate your voice from his coming back off the phone's own speaker
+    // (measured: yours 743-2561, his 2336-5402), and automatic interruption broke the
+    // conversation twice. It is off. Tapping the button stops him, and that always works.
+    if (!barged) bleed = bleed * 0.9 + lv * 0.1;
+    tripCount = 0;
+    return;
+  }
+
+  if (turnActive && !earRecording){
+    // he is thinking: stay quiet and wait
+    return;
+  }
+
+  if (!earRecording){
+    // Do not listen while he is producing: thinking, streaming, speaking, or in the short
+    // gap between his sentences. That is what stops him recording his own voice. A
+    // deliberate interruption is the one exception, and it arrives with barged set.
+    // Requiring quiet here was wrong: it reset itself on the first loud block and made the
+    // page deaf to continuous speech, so the speaker's tail got recorded instead.
+    if ((earTurnOpen || turnActive || Date.now() < EarAudioUntil) && !barged){ loudBlocks = 0; return; }
+    // the quiet level of this room: falls at once, rises very slowly, so a sudden loud
+    // noise (the speaker, a door, a shout) cannot leave the page deaf for seconds after
+    if (lv < floor) floor = floor * 0.5 + lv * 0.5;
+    else floor = floor * 0.995 + lv * 0.005;
+    const gate = Math.max(floor * 3.0, 0.024);
+    if (lv > gate){
+      if (++loudBlocks >= 3){ loudBlocks = 0; beginCapture(); }
+    } else loudBlocks = Math.max(0, loudBlocks - 1);
+    return;
+  }
+
+  // earRecording: stop once you have been quiet for a moment
+  const quiet = lv < Math.max(floor * 2.0, 0.018);
+  if (!quiet && specPromise){
+    // Loud again before the endpoint: he was only pausing between words, so the snapshot holds
+    // half a sentence. Drop it and let the real upload carry all of it.
+    tl('speculation dropped');
+    dropSpeculation();
+  }
+  quietBlocks = quiet ? quietBlocks + 1 : 0;
+  if (quiet){ if (!quietSince) quietSince = Date.now(); } else quietSince = 0;
+  const earQuietMs = quietSince ? (Date.now() - quietSince) : 0;
+  const earSpokeMs = (Date.now() - recordStart);
+  // Start recognising before he stops (item 5): at 600ms of quiet the audio so far goes up, so
+  // the transcriber is already working when the endpoint fires at 1300ms. The endpoint itself is
+  // untouched — shortening it still cuts him off mid-phrase.
+  if (earQuietMs >= 600 && !specPromise && earCapture.length){
+    const snap = flattenAudio(earCapture);
+    if (snap.length / rate >= 0.4){
+      const up = uploadAudio(snap, true);
+      specAbort = up.ctl; specPromise = up.promise; specSamples = snap.length;
+      tl('speculative upload');
+    }
+  }
+  // a natural gap between words used to end the recording and cut him off mid-phrase,
+  // which is why "hello JARVIS" arrived as "Hello."
+  // Every 900ms of continuous speech, ask what he has said so far. Bounded window, one in flight.
+  if (earSpokeMs > 900 && !partialBusy && earRecording && earCapture.length &&
+      Date.now() - partialAt > 900){
+    const win = lastSeconds(earCapture, 10);
+    if (win.length / rate >= 0.8){
+      partialAt = Date.now(); partialBusy = true;
+      const mySeq = ++partialSeq;
+      const up = uploadAudio(win, true);
+      up.promise.then(({ d }) => {
+        if (mySeq !== partialSeq || !earRecording) return;      // a newer pass owns the box now
+        const t = ((d && d.text) || '').trim();
+        if (t.length > 1) showPartial(t);
+      }).catch(() => {}).then(() => { if (mySeq === partialSeq) partialBusy = false; });
+    }
+  }
+  if (earQuietMs >= 1300 && earSpokeMs > 400){ tl('endpoint decided'); tlEndpoint = Math.round(performance.now() - TL0); endCapture(); }
+  else if (earSpokeMs > 20000) endCapture();
+}
+
+function beginCapture(){
+  if (VOICE_PARKED) return;                            // parked: the microphone stays shut, and
+                                                       // nothing is said unless he asked for it
+  if (earRecording) return;
+  earRecording = true; recordStart = Date.now(); quietBlocks = 0; quietSince = 0;
+  tl('recording started');
+  earCapture = earRing.slice();                 // the second before you spoke: nothing gets cut off
+  partialAt = 0; partialBusy = false; partialSeq++;
+  try { typedBefore = (document.getElementById('q') || {}).value || ''; } catch(e) { typedBefore = ""; }
+  earRing = [];
+  setState('capturing');
+  if (NATIVE_EAR && nativeFailures === 0 && mode !== 'text'){
+    nativeEar = NATIVE_EAR;
+    tickMs = 20;                     // reported cadence of the native ear, for the watchdog line
+    closeWebMic();
+    tl('native capture started');
+    if (!nativeLevelHooked){
+      nativeLevelHooked = true;
+      try {
+        nativeEar.addListener('level', function(ev){
+          if (!nativeEar) return;      // nothing of this runs outside a native capture
+          const r = (ev && ev.rms) || 0;
+          try { reactor.tEnergy = Math.min(1, r * 3); } catch(e) {}
+          onBlock([], r);              // the same level path the worklet feeds, so endpointing is unchanged
+        });
+      } catch(e) { console.log('native level listener failed', e); }
+    }
+    nativeEar.start().catch(function(e){
+      console.log('native microphone refused, using the webview', e);
+      // A permission answer is not a broken shell: the next tap may well be granted, so the native ear
+      // stays available. Anything else is a genuine fault and the webview path takes over for good.
+      const msg = String((e && (e.message || e.errorMessage)) || e || '').toLowerCase();
+      const permissionish = msg.indexOf('grant') >= 0 || msg.indexOf('permission') >= 0 || msg.indexOf('denied') >= 0;
+      if (!permissionish) nativeFailures++;
+      nativeEar = null;
+      tickMs = 50;
+      syncMic();
+    });
+    return;
+  }
+  syncMic();
+}
+
+function endCapture(){
+  if (!earRecording) return;
+  earRecording = false;
+  if (nativeEar){ nativeEnd(); return; }      // the native window is the whole capture, pre-roll included
+  syncMic();
+  const earTotal = earCapture.reduce((n, a) => n + a.length, 0);
+  const audio = earCapture;
+  earCapture = [];
+  if (earTotal < rate * 0.25 || Date.now() - recordStart < 300){
+    dropSpeculation();
+    setState(earArmed ? 'listening' : 'idle');
+    return;
+  }
+  const earFlat = flattenAudio(audio);
+  // If the snapshot is still alive, no new speech arrived after it, so its transcript is the whole
+  // question: reuse it rather than uploading the same audio again.
+  if (specPromise){
+    const p = specPromise;
+    specPromise = null; specAbort = null; specSamples = 0;
+    tl('reusing the transcript already in flight');
+    setState('transcribing');
+    handleTranscription(p, earFlat.length / rate, true);
+    return;
+  }
+  submit(earFlat);
+}
+
+// The tail of what he has said, at most, so a long monologue does not re-transcribe itself from the
+// beginning on every pass.
+function lastSeconds(list, sec){
+  const need = Math.round(sec * rate);
+  let total = 0;
+  for (let i = list.length - 1; i >= 0; i--){ total += list[i].length; if (total >= need) return flattenAudio(list.slice(i)); }
+  return flattenAudio(list);
+}
+
+// What he is being heard as, in the box he types in. His own words, so nothing is implied that he did
+// not say, and an empty answer never wipes what he had already typed.
+function showPartial(text){
+  // Never the composer: #q is the page module's, and it decides what to send from that value, so an
+  // engine writing there is how a typed turn loses its text. The "what I heard" line is the page's own
+  // display surface and nothing reads it back, so partials go there and touch nothing.
+  if (!text) return;
+  try { say(text); } catch(e) {}
+  window.__jarvisPartialPasses = (window.__jarvisPartialPasses || 0) + 1;
+}
+
+function flattenAudio(list){
+  const total = list.reduce((n, a) => n + a.length, 0);
+  const out = new Float32Array(total);
+  let o = 0;
+  for (const a of list){ out.set(a, o); o += a.length; }
+  return out;
+}
+
+function toWav(samples, hz){
+  const buf = new ArrayBuffer(44 + samples.length * 2);
+  const v = new DataView(buf);
+  const str = (off, t) => { for (let i = 0; i < t.length; i++) v.setUint8(off + i, t.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); str(8, 'WAVEfmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, hz, true); v.setUint32(28, hz * 2, true); v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, samples.length * 2, true);
+  let off = 44;
+  for (let i = 0; i < samples.length; i++){
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    off += 2;
+  }
+  return buf;
+}
+
+// One upload, usable either as a speculative snapshot or as the real thing. The promise is
+// returned rather than consumed, so a speculative upload can be kept and reused if he was only
+// pausing.
+function uploadAudio(earFlat, speculative){
+  const ctl = new AbortController();
+  const headers = { 'Content-Type': 'audio/wav', 'X-Jarvis-Page': BUILD + (speculative ? '+spec' : '') };
+  const earT0 = performance.now();
+  const promise = fetch('/stt', { method: 'POST', signal: ctl.signal,
+                                  body: new Blob([toWav(earFlat, rate)], { type: 'audio/wav' }),
+                                  headers })
+    .then(r => r.json())
+    .then(d => ({ d, earWaited: Math.round(performance.now() - earT0) }));
+  return { promise, ctl };
+}
+
+function dropSpeculation(){
+  if (!specPromise) return;
+  try { specAbort.abort(); } catch(e){}
+  specPromise.catch(() => {});          // its rejection is expected and has no reader
+  specPromise = null; specAbort = null; specSamples = 0;
+}
+
+// The native capture comes back as one WAV, pre-roll already inside it, and goes up the same road as a
+// webview capture: the same endpoint, the same headers, the same transcription handler.
+// The native window arrives with its own header; this keeps the tail and rewrites the header, so the
+// transcriber gets the utterance and nothing else. Depends on nothing in the shell, so it works on an
+// old APK too.
+function wavTail(u8, seconds){
+  const R = 16000, CH = 1, BITS = 16, HDR = 44;
+  const BPS = R * CH * (BITS / 8);
+  const body = u8.length > HDR ? u8.subarray(HDR) : new Uint8Array(0);
+  const want = Math.min(body.length, Math.max(BPS, Math.floor(seconds * BPS)));
+  const keep = body.subarray(body.length - want);
+  const out = new Uint8Array(HDR + keep.length);
+  const dv = new DataView(out.buffer);
+  const ascii = (off, str) => { for (let i = 0; i < str.length; i++) out[off + i] = str.charCodeAt(i); };
+  ascii(0, 'RIFF'); dv.setUint32(4, 36 + keep.length, true); ascii(8, 'WAVE');
+  ascii(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+  dv.setUint16(22, CH, true); dv.setUint32(24, R, true);
+  dv.setUint32(28, BPS, true); dv.setUint16(32, CH * (BITS / 8), true); dv.setUint16(34, BITS, true);
+  ascii(36, 'data'); dv.setUint32(40, keep.length, true);
+  out.set(keep, HDR);
+  return out;
+}
+
+function nativeEnd(){
+  const ear = nativeEar;
+  nativeEar = null;
+  setState('transcribing');
+  tl('native capture stopped');
+  ear.stop().then(function(res){
+    const secs = (res && res.seconds) || 0;
+    if (!res || !res.wav || secs < 0.25){
+      setState(earArmed ? 'listening' : 'idle');
+      return;
+    }
+    const bin = atob(res.wav);
+    let u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    // spoken time plus the pre-roll, with a small margin; anything longer is silence or an old turn
+    const keepS = Math.min(14, Math.max(1.5, (Date.now() - recordStart) / 1000 + 1.5));
+    u8 = wavTail(u8, keepS);
+    tl('native window trimmed to ' + keepS.toFixed(1) + 's');
+    const ctl = new AbortController();
+    const got = performance.now();
+    const promise = fetch('/stt', { method: 'POST', signal: ctl.signal,
+                                    body: new Blob([u8], { type: 'audio/wav' }),
+                                    headers: { 'Content-Type': 'audio/wav',
+                                               'X-Jarvis-Page': BUILD + '+native' } })
+      .then(r => r.json())
+      .then(d => ({ d, earWaited: Math.round(performance.now() - got) }));
+    tl('/stt sent (native)');
+    handleTranscription(promise, secs, false);
+  }).catch(function(e){
+    console.log('native capture failed', e);
+    nativeFailures++;
+    setState(earArmed ? 'listening' : 'idle');
+  });
+}
+
+function submit(earFlat){
+  const earSeconds = earFlat.length / rate;
+  tl('/stt sent');
+  setState('transcribing');
+  const up = uploadAudio(earFlat, false);
+  handleTranscription(up.promise, earSeconds, false);
+}
+
+function handleTranscription(promise, earSeconds, reused){
+  promise
+    .then(({ d, earWaited }) => {
+      earLastText = (d.text || '').trim();
+      tl(reused ? '/stt returned (was already in flight)' : '/stt returned');
+      lastMeta = 'clip ' + earSeconds.toFixed(1) + 's | heard in ' + earWaited + 'ms' +
+                 (reused ? ' | speculative' : '') + ' | ' +
+                 (d.transcribe_s !== undefined ? d.transcribe_s + 's of it transcribing' : (d.reason || ''));
+      console.log('you said:', earLastText, '|', lastMeta);
+      if (!earLastText){
+        // He spoke and nothing came back. Going quiet here is indistinguishable from being
+        // ignored, which is exactly how it read from his side.
+        const why = d.reason || '';
+        if (!why || (why.indexOf('no speech') !== 0 && why.indexOf('clip too short') !== 0
+                     && why !== 'transcriber busy')){
+          say('Did not catch that');
+          cue('notcaught');
+        } else if (why === 'transcriber busy'){
+          say('One moment, say it again');
+        }
+        setState(earArmed ? 'listening' : 'idle');
+        return;
+      }
+      say(earLastText);
+      barged = false;
+      ask(earLastText);
+    })
+    .catch(e => {
+      if (e && e.name === 'AbortError') return;      // dropped on purpose: he was only pausing
+      fail('Could not reach the transcriber.'); cue('lost');
+      console.log(e); setState(earArmed ? 'listening' : 'idle');
+    });
+}
+
+mic.addEventListener('click', () => {
+  if (VOICE_PARKED){ voiceParkedNotice(); return; }
+  audio();
+  modeArm('voice');                       // the live button is what arms the voice
+  if (earArmed && (playing || turnActive || Date.now() < EarAudioUntil)){
+    ignoreUntil = Date.now() + 300;
+    interrupt();
+    if (earRecording){ endCapture(); return; }
+    earRing = [];                   // drop the pre-roll: it holds his voice, not yours
+    barged = true;               // this capture is deliberate, so the gate lets it through
+    console.log('tapped to interrupt - listening now');
+    beginCapture();
+    return;
+  }
+  earArmed = !earArmed;
+  syncMic();
+  if (earArmed){
+    openMic().then(ok => { if (ok) beginCapture(); });   // tap to talk: earRecording starts at once
+  } else {
+    if (earRecording) endCapture();
+    setState(playing ? 'speaking' : 'idle');
+  }
+  syncMic();
+});
+
+// a seam for testing without a real microphone: feed samples down the same path the
+// microphone uses, so the earCapture, the cutting and the upload can be checked for real
+setInterval(() => {
+  // Nothing can leave the microphone shut forever: if no sound has come out of him for a
+  // minute, the turn is over whatever the flags believe.
+  if (earTurnOpen && !audioBusy() && Date.now() - EarAudioUntil > 60000){
+    earTurnOpen = false;
+    console.log('released the microphone gate: no audio for a minute');
+  }
+}, 5000);
+
+window.__jarvisFeed = arr => pushSamples(Float32Array.from(arr));
+window.__jarvisArm = () => { earArmed = true; return earArmed; };
+window.__jarvisBusy = ms => { EarAudioUntil = Date.now() + (ms || 0); return EarAudioUntil; };
+window.__jarvisPlaying = v => { playing = !!v; if (v) EarAudioUntil = Date.now() + 500; return playing; };
+window.__jarvisVisual = s => { state = s; syncMic(); return state; };
+window.__jarvisSync = syncMic;
+// Feed a complete MP3 through the streaming player exactly as the server would, so the
+// chunked path can be tested against real audio without a microphone.
+let feedCounter = 0;
+window.__jarvisFeedAudio = (b64, size) => {
+  const raw = atob(b64);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  const n = ++feedCounter + 1000;
+  const step = size || 8192;
+  for (let o = 0; o < bytes.length; o += step) pushUnit(n, bytes.subarray(o, Math.min(o + step, bytes.length)));
+  endUnit(n);
+  return n;
+};
+window.__jarvisMp3PrefixLength = mp3PrefixLength;
+window.__jarvisSched = () => schedLog.slice();
+window.__jarvisAudioState = () => ({
+  sources: sources.length, open: unitsOpen.size, playing,
+  scheduled: +scheduled.toFixed(3), ctx: +audio().currentTime.toFixed(3),
+  played: Object.keys(unitStreams).map(k => +unitStreams[k].played.toFixed(3))
+});
+window.__jarvisCue = cue;
+window.__jarvisSpec = () => ({ inFlight: !!specPromise, samples: specSamples });
+window.__jarvisState = () => ({ earRecording, earArmed, rate, floor, loudBlocks,
+                                ringSamples: earRing.reduce((n, a) => n + a.length, 0),
+                                settling: Date.now() < EarAudioUntil, quietBlocks: EarQuietBlocks, turnOpen: earTurnOpen,
+                                earLastText, lastMeta, clientTurn, stateLog: stateLog.slice(-14) });
+
+resetBtn.addEventListener('click', () => {
+  say('New conversation');
+  // The page owns the conversation, so the page starts the new one: it writes the thread to its own store,
+  // blanks the canvas, clears the dock and mints the machine's next window. Doing it here instead is how
+  // the dock kept the previous chat's running state and the next question was refused as the last one's.
+  if (window.__jarvisNewChat) {
+    try { window.__jarvisNewChat(); return; } catch (e) { console.log(e); }
+  }
+  // No page-level new chat: the old way, minus the interrupt. A turn still being written belongs to the
+  // conversation being left and keeps going in it; cancelling it here ended his work just because he
+  // moved to another chat.
+  try { if (typeof detachTurn === 'function') detachTurn(); } catch (e) {}
+  try { window.__jarvisFlushSession && window.__jarvisFlushSession(); } catch (e) {}
+  try { window.__jarvisResetSurface && window.__jarvisResetSurface(); } catch (e) {}
+  try { window.__jarvisUnlockDock && window.__jarvisUnlockDock(); } catch (e) {}
+  fetch('/reset', { method: 'POST' })
+    .then(r => { if (!r.ok) throw new Error('reset failed: ' + r.status); })
+    .then(() => console.log('conversation reset'))
+    .catch(e => { fail('Could not start a new conversation.'); console.log(e); });
+});
+
+sendBtn.addEventListener('click', () => {
+  const v = input.value.trim();
+  if (!v) return;
+  // One turn at a time in a conversation. A second send while the first is still being answered would
+  // either cut the answer he is reading short or open a second stream onto the same conversation, and
+  // both look like the page losing his question. His words stay in the box, where he can send them the
+  // moment the answer lands — and the live button is there for the turn he wants to stop now.
+  if (liveTurn && liveTurn.running !== false && !liveTurn.closed && !liveTurn.detached
+      && String(liveTurn.conv) === String(convId())){
+    tl('send refused: this conversation is still being answered');
+    say('Still answering the last one');
+    return;
+  }
+  modeArm('text');                   // typing arms the text mode, always
+  input.value = '';                  // the box empties as he sends, not when the answer lands
+  tl('endpoint decided'); tlEndpoint = Math.round(performance.now() - TL0);
+  ask(v);
+});
+input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); sendBtn.click(); } });
+document.addEventListener('click', () => audio(), {once:true});
+window.__jarvisRegenerateAsk = function(q){ ask(q, 'text'); };
+
+// The armed mode, shown and switchable. The inputs set it (the live button arms voice, the typing
+// box arms text); this is the one place he can also set it by hand, because a mode he cannot see is
+// a mode he cannot trust.
+const modeBtn = document.getElementById('modeBtn');
+if (modeBtn) modeBtn.addEventListener('click', () => modeArm(mode === 'voice' ? 'text' : 'voice'));
+modeArm(mode);
+// What the collision tests read: which mode is armed for the next turn, whether the microphone is
+// actually open, and whether any sound is scheduled.
+window.__jarvisModes = () => ({ mode: mode, turnMode: turnMode, earArmed: earArmed,
+                                micOpen: !!earMicStream, audioBusy: audioBusy(),
+                                typing: fallback.classList.contains('show') });
+setState('idle');
+
+/* A deploy must reach the phone. An installed app keeps its document, so the worker tells an open
+   page to reload once it has taken over. Never mid-turn: a turn in flight is someone waiting. */
+if (window.navigator && navigator.serviceWorker) {
+  navigator.serviceWorker.addEventListener('message', function (e) {
+    var d = e && e.data;
+    if (!d || d.type !== 'jarvis-reload') return;
+    var busy = false;
+    try { busy = !!(window.__jarvisModes && window.__jarvisModes().audioBusy); } catch (err) {}
+    var working = document.body && document.body.getAttribute('data-phase') === 'working';
+    if (busy || working) { setTimeout(function () { location.reload(); }, 20000); }
+    else { location.reload(); }
+  });
+}
+
+</script>
+<script src="/static/workview.js?v=5711718756"></script>
+<script src="/static/hardlight.js?v=222aab723e"></script>
+<script src="/static/hud.js?v=a998db665f"></script>
+</body>
+</html>

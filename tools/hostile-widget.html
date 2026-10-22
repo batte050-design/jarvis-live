@@ -1,0 +1,121 @@
+<!-- The hostile test widget (brief 5.7).
+     It tries every way out of its frame and reports what happened. Nothing it attempts is
+     expected to work: reading cookies, fetching an app route, navigating the top window, opening
+     a popup, submitting a form, loading a remote script or image, flooding the page with resize
+     and ask messages, and allocating a huge DOM. Any success is a blocking defect. -->
+<h1>Hostile widget</h1>
+<p class="jw-muted">Every attempt below is expected to fail.</p>
+<pre id="r" class="jw-muted">running…</pre>
+
+<script>
+(function () {
+  "use strict";
+  var R = {}, violations = [], t0 = Date.now();
+
+  function send() {
+    try { parent.postMessage({ type: "hostile:report", data: R, violations: violations }, "*"); } catch (e) {}
+    var pre = document.getElementById("r");
+    if (pre) pre.textContent = JSON.stringify(R, null, 1);
+  }
+  function rec(k, v) { R[k] = v; send(); }
+
+  document.addEventListener("securitypolicyviolation", function (e) {
+    violations.push((e.violatedDirective || "") + " blocked " + String(e.blockedURI || "").slice(0, 60));
+  });
+  window.addEventListener("error", function (e) { violations.push("error: " + (e.message || "")); });
+
+  // 1. cookies ---------------------------------------------------------------
+  try { rec("cookie", "read: " + JSON.stringify(String(document.cookie || ""))); }
+  catch (e) { rec("cookie", "threw " + e.name); }
+  try {
+    document.cookie = "hostile=1; path=/";
+    rec("cookieWrite", "wrote, now " + JSON.stringify(String(document.cookie || "")));
+  } catch (e) { rec("cookieWrite", "threw " + e.name); }
+
+  // 2. reaching the app ------------------------------------------------------
+  function probe(url, opts) {
+    return fetch(url, opts).then(function (r) { return url + " -> STATUS " + r.status; })
+      .catch(function (e) { return url + " -> blocked (" + (e && e.name) + ")"; });
+  }
+  Promise.all([
+    probe("/stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: '{"q":"hostile"}' }),
+    probe("https://live.battemohammad.com/screen/last"),
+    probe("https://live.battemohammad.com/art", { method: "POST", body: "{}" }),
+    probe("https://example.com/remote")
+  ]).then(function (a) { rec("fetch", a); });
+
+  // 3. the top window --------------------------------------------------------
+  try { R.topRead = String(top.location.href); }
+  catch (e) { rec("topRead", "threw " + e.name); }
+  try { top.location.href = "https://example.com/taken-over"; rec("topWrite", "assigned without throwing"); }
+  catch (e) { rec("topWrite", "threw " + e.name); }
+  try { parent.document.body.innerHTML = "taken over"; rec("parentDom", "reached the parent document"); }
+  catch (e) { rec("parentDom", "threw " + e.name); }
+
+  // 4. a popup ---------------------------------------------------------------
+  try { var w = window.open("https://example.com/popup"); rec("popup", w ? "OPENED" : "null"); }
+  catch (e) { rec("popup", "threw " + e.name); }
+
+  // 5. a form ----------------------------------------------------------------
+  // Submitting to itself: if the frame were allowed to submit, the document would navigate away
+  // and pagehide would fire. Staying put is the only acceptable outcome.
+  var navigated = false;
+  window.addEventListener("pagehide", function () {
+    navigated = true;
+    try { parent.postMessage({ type: "hostile:report", data: { navigated: true } }, "*"); } catch (e) {}
+  });
+  try {
+    var f = document.createElement("form");
+    f.action = "https://example.com/post"; f.method = "get"; f.target = "_self";
+    document.body.appendChild(f);
+    f.submit();
+    setTimeout(function () {
+      rec("form", navigated ? "NAVIGATED - defect" : "blocked: still on the widget document");
+    }, 1500);
+  } catch (e) { rec("form", "threw " + e.name); }
+
+  // 6. a remote script and image --------------------------------------------
+  var s = document.createElement("script");
+  s.src = "https://example.com/remote.js";
+  s.onload = function () { rec("remoteScript", "LOADED"); };
+  s.onerror = function () { rec("remoteScript", "blocked"); };
+  document.head.appendChild(s);
+  var im = new Image();
+  im.onload = function () { rec("remoteImage", "LOADED"); };
+  im.onerror = function () { rec("remoteImage", "blocked"); };
+  im.src = "https://example.com/remote.png";
+  var ix = new Image();
+  ix.onload = function () { rec("inlineImage", "loaded (data: is allowed on purpose)"); };
+  ix.onerror = function () { rec("inlineImage", "blocked"); };
+  ix.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+  // 7. the message protocol, abused -----------------------------------------
+  try {
+    for (var i = 0; i < 200; i++) parent.postMessage({ type: "jarvis:resize", height: 200 + i * 50 }, "*");
+    rec("resizeFlood", "200 resize messages sent");
+  } catch (e) { rec("resizeFlood", "threw " + e.name); }
+  try {
+    for (var j = 0; j < 8; j++) parent.postMessage({ type: "jarvis:ask", text: "hostile ask " + j }, "*");
+    rec("askFlood", "8 ask messages sent");
+  } catch (e) { rec("askFlood", "threw " + e.name); }
+  try {
+    parent.postMessage({ type: "jarvis:resize", height: 999999 }, "*");
+    rec("resizeHuge", "asked for 999999px");
+  } catch (e) { rec("resizeHuge", "threw " + e.name); }
+
+  // 8. a huge DOM ------------------------------------------------------------
+  try {
+    var d0 = performance.now(), host = document.createElement("div");
+    for (var k = 0; k < 120000; k++) {
+      var n = document.createElement("span");
+      n.textContent = "x";
+      host.appendChild(n);
+    }
+    document.body.appendChild(host);
+    rec("hugeDom", Math.round(performance.now() - d0) + "ms for 120000 nodes");
+  } catch (e) { rec("hugeDom", "threw " + e.name); }
+
+  rec("elapsedMs", Date.now() - t0);
+  setInterval(send, 500);
+})();
+</script>

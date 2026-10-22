@@ -1,0 +1,28 @@
+<!-- The deliberately failing widget: the control for the 5.6 verifier.
+     Every rule must bite on it. If this one passes, the verifier is not working. -->
+<h1>Bad widget</h1>
+
+<!-- a console error -->
+<script>console.error("this widget logs an error on purpose");</script>
+
+<!-- a CSP violation -->
+<img src="https://example.com/forbidden.png" alt="remote">
+
+<!-- a tap target under 44px -->
+<p><button style="font-size:10px;padding:1px 3px">tiny</button></p>
+
+<!-- horizontal overflow, past the right edge -->
+<div style="width:900px;white-space:nowrap">This line is nine hundred pixels wide and will not wrap.</div>
+
+<!-- text clipped by its container -->
+<div style="height:18px;overflow:hidden">This paragraph is cut off by its own container and the rest of it cannot be read at all.</div>
+
+<!-- a blank canvas -->
+<canvas id="empty" width="200" height="100"></canvas>
+
+<canvas id="drawn" width="120" height="40"></canvas>
+<script>
+  var c = document.getElementById("drawn").getContext("2d");
+  c.fillStyle = "#D8B15C";
+  c.fillRect(0, 0, 120, 40);
+</script>
