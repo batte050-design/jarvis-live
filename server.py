@@ -2453,6 +2453,9 @@ def warm_answer(ask, stop=None, on_event=None, reasoning="none", screen=False, c
             if not agent.ready():
                 return None
         options = {"retry": False} if screen else {}
+        _response = globals().get('RESPONSE_AUTHORING')
+        if _response and getattr(agent, 'ctx_path', None):
+            _response.SOURCES.bind_publisher(agent.ctx_path)
         status, raw = agent.ask(ask, on_event=_warm_events(on_event, screen=screen),
                                 stop=stop, reasoning=reasoning, **options)
     except Exception as exc:
@@ -2942,6 +2945,9 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
               "PYTHONUNBUFFERED", "PYTHONPATH", "TERM", "XDG_RUNTIME_DIR", "XDG_DATA_DIRS",
               "SSL_CERT_FILE", "VIRTUAL_ENV", "DBUS_SESSION_BUS_ADDRESS")
     _env = {k: os.environ[k] for k in _ALLOW if k in os.environ}
+    _response = globals().get('RESPONSE_AUTHORING')
+    if _response:
+        _env['JARVIS_SCREEN_PUBLICATION'] = json.dumps(_response.SOURCES.publisher_context())
     _agent_home = os.environ.get("JARVIS_LIVE_AGENT_HOME")
     if _agent_home:
         _env["HERMES_HOME"] = _agent_home
@@ -5621,7 +5627,8 @@ async def art(request: Request):
     if not isinstance(payload, dict):
         return JSONResponse({"error": "malformed body"}, status_code=400)
     if not RESPONSE_AUTHORING.SOURCES.artifact_allowed(payload):
-        return JSONResponse({"error": "This text turn publishes its answer inline; a separate screen artifact is refused."}, status_code=409)
+        return JSONResponse({"error": "A screen artifact requires an active voice-turn publication grant; text answers publish inline."}, status_code=409)
+    payload.pop('publication', None)
     if payload.get("clear"):
         payload = {"kind": "clear"}
     kind = str(payload.get("kind") or "")
@@ -6677,7 +6684,7 @@ async def stream(request: Request):
                                 ask_q = q
                                 try:
                                     _note = RESPONSE_LAYER.prompt_note()
-                                    if _note:
+                                    if _note and mode != "text":
                                         ask_q = q + "\n" + _note
                                 except Exception as _ne:
                                     print("response note unavailable: %r" % (_ne,), flush=True)

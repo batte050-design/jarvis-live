@@ -5,12 +5,16 @@ import copy
 import datetime as dt
 from decimal import Decimal
 import hashlib
+import hmac
 import json
 import logging
 import math
+import os
 import re
 import secrets
 import threading
+import tempfile
+import time
 import urllib.parse
 import urllib.request
 
@@ -20,6 +24,57 @@ LIMITS = {'payloadBytes': 262144, 'points': 64, 'dailyPoints': 800, 'receipts': 
           'timeoutSeconds': 10, 'queryChars': 1024, 'historyDays': 732, 'charts': 1}
 _TEXT_LOCK = threading.Lock()
 _TEXT_JOBS = 0
+PUBLISHER = contextvars.ContextVar('response_publisher', default=None)
+_PUBLISHERS = {}
+_PUBLISHER_LOCK = threading.RLock()
+
+
+@contextlib.contextmanager
+def publisher(mode, conv=''):
+    """A server-minted capability lives only for the helper that owns this publication."""
+    current = PUBLISHER.get()
+    if current is not None:
+        with _PUBLISHER_LOCK: record = _PUBLISHERS.get(current['turn'])
+        if record and record['mode'] == mode and record['conv'] == str(conv or ''):
+            yield copy.deepcopy(current)
+            return
+    if mode not in ('text', 'voice'): raise ValueError('publisher mode')
+    public = {'turn': secrets.token_hex(16), 'conv': str(conv or ''), 'token': secrets.token_hex(32)}
+    now = time.monotonic()
+    with _PUBLISHER_LOCK:
+        for key, record in list(_PUBLISHERS.items()):
+            if now >= record['expires']: del _PUBLISHERS[key]
+        if len(_PUBLISHERS) >= 64: raise ValueError('publisher capacity')
+        _PUBLISHERS[public['turn']] = {**public, 'mode': mode, 'expires': now + 600}
+    token = PUBLISHER.set(public)
+    try:
+        yield copy.deepcopy(public)
+    finally:
+        with _PUBLISHER_LOCK: _PUBLISHERS.pop(public['turn'], None)
+        PUBLISHER.reset(token)
+
+
+def publisher_context():
+    return copy.deepcopy(PUBLISHER.get())
+
+
+def bind_publisher(path):
+    """Refresh the existing warm-child context atomically, retaining its permission fields."""
+    if not path: raise ValueError('publisher context path missing')
+    with open(path, encoding='utf-8') as source:
+        text = source.read(32769)
+    if len(text.encode()) > 32768: raise ValueError('publisher context budget')
+    value = json.loads(text)
+    if not isinstance(value, dict): raise ValueError('publisher context shape')
+    value['JARVIS_SCREEN_PUBLICATION'] = publisher_context()
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=os.path.dirname(os.path.abspath(path)), delete=False) as out:
+            temporary = out.name
+            json.dump(value, out)
+        os.replace(temporary, path)
+    finally:
+        if temporary and os.path.exists(temporary): os.unlink(temporary)
 
 
 def canonical(value):
@@ -40,7 +95,7 @@ def number(value):
     return Decimal(str(value))
 
 
-def points_ok(points):
+def points_ok(points, supplied=False):
     if not isinstance(points, list) or not 1 <= len(points) <= LIMITS['points']:
         raise ValueError('series point budget')
     labels, values = set(), set()
@@ -52,7 +107,7 @@ def points_ok(points):
             raise ValueError('series label')
         value = number(point['value'])
         if label in labels: raise ValueError('duplicate period')
-        if value in values: raise ValueError('repeated series value; no fill permitted')
+        if not supplied and value in values: raise ValueError('repeated series value; no fill permitted')
         labels.add(label); values.add(value)
 
 
@@ -168,6 +223,7 @@ class Evidence:
             raise ValueError('retrieval argument shape')
         if query['provider'] == 'user_input':
             points = supplied_points(self.question)
+            points_ok(points, supplied=True)
             payload = {'question': self.question, 'points': points}
             tool, kind, through, missing, aggregation, title = 'read_user_input', 'provided', '', [], 'supplied figures', 'Supplied figures'
             exact_query = self.question
@@ -216,7 +272,7 @@ class Evidence:
 
     def check_points(self, source, points):
         receipt = self.checked(source)
-        points_ok(points)
+        points_ok(points, supplied=receipt['source']['kind'] == 'provided')
         if len(points) != len(receipt['points']) or any(p['label'] != r['label'] or number(p['value']) != number(r['value']) for p,r in zip(points,receipt['points'])): raise ValueError('plotted values differ from retrieval')
         return receipt
 
@@ -245,11 +301,15 @@ def turn(question, network=False, fetch=None, clock=None, presentation=False):
 
 
 def artifact_allowed(payload):
-    # Agent runs already serialize under AGENT_RUN_LOCK. An unscoped side push cannot be
-    # attributed safely to the text answer; during that job the answer is the sole publisher.
-    # No voice-only route or payload is changed. No payload claiming to be voice is trusted.
-    with _TEXT_LOCK:
-        return not _TEXT_JOBS or payload.get('kind') == 'clear' or bool(payload.get('clear'))
+    # A master transport token identifies the tool, not the turn. Text never owns this channel.
+    # The model cannot choose a mode, mint a grant or reuse a grant after its helper finishes.
+    grant = payload.get('publication')
+    if not isinstance(grant, dict) or set(grant) != {'turn', 'conv', 'token'}: return False
+    if not all(isinstance(value, str) for value in grant.values()): return False
+    with _PUBLISHER_LOCK:
+        record = _PUBLISHERS.get(grant['turn'])
+        return bool(record and record['mode'] == 'voice' and time.monotonic() < record['expires']
+                    and grant['conv'] == record['conv'] and hmac.compare_digest(grant['token'], record['token']))
 
 
 def unavailable(question, reason='a dated, verifiable series was not returned'):
@@ -323,7 +383,7 @@ def source_line(source):
         prefix = 'Source: Yahoo Finance; ' + query['symbol'] + '; requested: ' + query['start'] + ' to ' + query['end']
     else:
         prefix = 'Calculated from editable supplied inputs' if source['kind'] == 'calculation' else 'Source: your supplied figures'
-    line = prefix + '; retrieved: ' + source['timestamp']
+    line = prefix + ('; recorded this turn: ' if source['kind'] in ('provided','calculation') else '; retrieved: ') + source['timestamp']
     if source['observed_through']: line += '; observations through: ' + source['observed_through']
     line += '; ' + source['aggregation']
     if source['missing']: line += '; missing: ' + ', '.join(source['missing'])
@@ -332,7 +392,7 @@ def source_line(source):
 
 def describe(receipt):
     points = receipt['points']
-    points_ok(points)
+    points_ok(points, supplied=receipt['source']['kind'] == 'provided')
     return receipt['title'] + '\n\n' + '\n'.join(p['label'] + ': ' + str(p['value']) for p in points) + '\n\n' + source_line(receipt['source'])
 
 

@@ -23,6 +23,12 @@ def assets():
     core = (ROOT / "static/response-core.js").read_text()
     runtime = (ROOT / "static/response-runtime.js").read_text()
     style = (ROOT / "static/response-runtime.css").read_text()
+    # Fixed local type, embedded in the opaque frame: no remote font request or provider CSS.
+    fonts = [('Instrument Sans','instrument-sans-latin.woff2','400 700'),
+             ('Instrument Serif','instrument-serif-normal.woff2','400')]
+    for family, filename, weight in fonts:
+        encoded = base64.b64encode((ROOT/'static/fonts'/filename).read_bytes()).decode('ascii')
+        style += '\n@font-face{font-family:"'+family+'";font-style:normal;font-weight:'+weight+';font-display:swap;src:url(data:font/woff2;base64,'+encoded+') format("woff2")}\n'
     digest = hashlib.sha256(source.encode()).hexdigest()
     stamp = hashlib.sha256(canonical([source, core, runtime, style]).encode()).hexdigest()
     return manifest, digest, stamp, core, runtime, style
@@ -48,7 +54,7 @@ def document(parent_origin):
         return base64.b64encode(hashlib.sha256(content.encode()).digest()).decode()
     policy = "; ".join(["default-src 'none'", "script-src 'sha256-" + sha(script) + "'",
                         "style-src 'sha256-" + sha(style) + "'", "connect-src 'none'",
-                        "form-action 'none'", "base-uri 'none'", "object-src 'none'",
+                        "font-src data:", "form-action 'none'", "base-uri 'none'", "object-src 'none'",
                         "frame-ancestors " + parent_origin, "sandbox allow-scripts"])
     return html, {"Content-Security-Policy": policy, "X-Content-Type-Options": "nosniff",
                   "Referrer-Policy": "no-referrer", "Cache-Control": "no-store",

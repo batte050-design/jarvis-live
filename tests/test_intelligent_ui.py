@@ -22,9 +22,9 @@ spec.loader.exec_module(LAYER)
 
 def prompt_environment(source=SOURCE):
     tree = ast.parse(source)
-    names = {'TEXT_MODE_NOTE','TEXT_MECHANICS','VOICE_ONLY','FAMILIES','RESTRAINT','MECHANICS',
+    names = {'WORK_MARK','SYSTEM','TEXT_MODE_NOTE','TEXT_MECHANICS','VOICE_ONLY','FAMILIES','RESTRAINT','MECHANICS',
              'COMPOSE','SPOKEN_NOTE','UI_LIBRARY','UI_NOTE','NO_FILLER','NO_VOICE_LOSS','FORMAT_RULES'}
-    env = {'re':re, 'RESPONSE_LAYER':LAYER, 'SYSTEM':(ROOT / 'persona/system.txt').read_text(),
+    env = {'re':re, 'RESPONSE_LAYER':LAYER,
            'WEB_NOTE':'SEARCH FIRST. ', 'NO_MEMORY_NOTE':'NO MEMORY. ',
            'thread_note':lambda conv:'THREAD '+str(conv)+'\n'}
     nodes = [n for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in names for t in n.targets)]
@@ -38,6 +38,8 @@ def prompt_environment(source=SOURCE):
     module = ast.Module(body=nodes,type_ignores=[])
     ast.fix_missing_locations(module)
     exec(compile(module,'<actual prompt builders>','exec'),env)
+    persona=ROOT/'persona/system.txt'
+    if persona.is_file():env['SYSTEM']=persona.read_text()
     return env
 
 
@@ -90,11 +92,12 @@ class IntelligentUITests(unittest.TestCase):
         fixture = json.loads((ROOT/'tests/fixtures/ui_voice_baseline.json').read_text())
         e = prompt_environment()
         values = {
-            'system':e['system_for']('voice'),
             'format':e['format_directive']('compare','voice'),
             'deep':e['hermes_answer']('Compare these options.',mode='voice',web=True,memory=False,conv='fixture'),
             'schema':LAYER.prompt_note(),
         }
+        if (ROOT/'persona/system.txt').is_file():values['system']=e['system_for']('voice')
+        else:print('SKIP private-persona voice-system hash: persona is intentionally excluded from the public snapshot')
         self.assertEqual(e['shape_hint']('voice','question'),'')
         for name,value in values.items():
             self.assertEqual(hashlib.sha256(value.encode()).hexdigest(),fixture['sha256'][name],name)

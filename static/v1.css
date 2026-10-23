@@ -3349,6 +3349,11 @@ body.material-frost #prodNotice .pn-card{ background: color-mix(in srgb, var(--h
    ========================================================================== */
 
 @font-face{
+  font-family:"Instrument Sans";
+  font-style:normal; font-weight:400 700; font-display:swap;
+  src:url("/static/fonts/instrument-sans-latin.woff2") format("woff2");
+}
+@font-face{
   font-family:"Instrument Serif";
   font-style:normal; font-weight:400; font-display:swap;
   src:url("/static/fonts/instrument-serif-normal.woff2") format("woff2");
@@ -3360,11 +3365,14 @@ body.material-frost #prodNotice .pn-card{ background: color-mix(in srgb, var(--h
 }
 
 :root{
+  --sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --serif: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
   --hair:  rgba(233,232,227,.11);      /* the visible row separator */
   --edge:  rgba(233,232,227,.055);     /* a control that must read as a container */
   --r-row: 12px;
 }
+body{font-family:var(--sans)}
+.t-a .rc-h{font-family:var(--serif);font-weight:400;font-size:1.35em;line-height:1.25;letter-spacing:-.015em;margin-top:1.3em;margin-bottom:.6em}
 :root[data-theme="light"]{ --hair: rgba(28,26,23,.10); --edge: rgba(28,26,23,.07) }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){ --hair: rgba(28,26,23,.10); --edge: rgba(28,26,23,.07) }

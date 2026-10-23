@@ -233,7 +233,7 @@
       var query = JSON.parse(source.query);
       prefix = 'Source: Yahoo Finance; ' + query.symbol + '; requested: ' + query.start + ' to ' + query.end;
     } else prefix = source.kind === 'calculation' ? 'Calculated from editable supplied inputs' : 'Source: your supplied figures';
-    var line = prefix + '; retrieved: ' + source.timestamp;
+    var line = prefix + (source.kind === 'provided' || source.kind === 'calculation' ? '; recorded this turn: ' : '; retrieved: ') + source.timestamp;
     if (source.observed_through) line += '; observations through: ' + source.observed_through;
     line += '; ' + source.aggregation;
     if (source.missing.length) line += '; missing: ' + source.missing.join(', ');
@@ -248,7 +248,7 @@
     charts.forEach(function (o) {
       o.points.forEach(function (p) {
         if (source.kind !== 'calculation' && source.kind !== 'illustration') {
-          if (!finite(p.value) || seen.has(p.value)) fail('repeated or nonliteral series value');
+          if (!finite(p.value) || (source.kind !== 'provided' && seen.has(p.value))) fail('repeated or nonliteral series value');
           seen.add(p.value);
         }
       });

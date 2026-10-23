@@ -21,15 +21,21 @@ SUITES = [
     ('warm-prestart', [sys.executable,'tests/test_warm_prestart.py']),
     ('failure-client', ['node','tests/test_cold_failure_client.js']),
     ('prestart-client', ['node','tests/test_prestart_client.js']),
+    ('supplied-data-publication', [sys.executable,'tests/test_current_repairs.py']),
+    ('defect6', [sys.executable,'tests/test_defect6.py']),
 ]
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--report',type=Path)
+    parser.add_argument('--browser',type=Path,help='Optional existing Chromium executable for offline native-frame/layout acceptance')
     args = parser.parse_args()
+    suites = list(SUITES)
+    if args.browser:
+        suites.append(('native-browser',['node','tools/native_ui_acceptance.js','--browser',str(args.browser.resolve())]))
     rows = []
-    for name,command in SUITES:
+    for name,command in suites:
         started = time.monotonic()
         try:
             result = subprocess.run(command,cwd=ROOT,text=True,capture_output=True,timeout=180)
@@ -42,10 +48,12 @@ def main():
         if row['exit']:
             print(row['output'],flush=True)
     report = {
-        'base':'eace50e404baeffadf87f77a096e7244728217dd',
-        'kind':'Offline tests using actual repository helpers/painter and scripted provider/child boundaries.',
-        'not_covered':['Live model format choices','Native phone/browser layout','Real research-provider responses',
-                       'Earlier Defect 6 candidate: sourced charts and delayed side-channel publication'],
+        'base':'f60309bf429074bcb6055048b3a753c5607b0616',
+        'kind':'Offline tests using actual helpers/painter and scripted provider/child boundaries; optional real Chromium.',
+        'not_covered':['Human input during a deployed streaming turn','Real STT/TTS and /read audio command',
+                       'Private persona voice-system hash (persona excluded from public snapshot)',
+                       'Intermittent agent_empty root cause and external service-restart caller',
+                       'Two unnamed layout known failures from acceptance tools not present in this snapshot'],
         'passed':sum(row['exit']==0 for row in rows),
         'total':len(rows),
         'suites':rows,

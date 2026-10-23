@@ -5,3 +5,17 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 
 .jr-canvas{position:relative} .jr-hotspot{opacity:.75}.jr-hotspot:focus-visible,.jr-hotspot:hover{opacity:1}
+
+/* The answer frame belongs to the same ink/copper surface as its parent. */
+:root{--ground:#111316;--ink:#E9E8E3;--muted:#B7B5AF;--accent:#BD765C;--line:#2E3236;font-family:"Instrument Sans",system-ui,sans-serif}
+:root[data-theme=light]{--ground:#FBFAF7;--ink:#1C1A17;--muted:#6A655C;--accent:#9E5B41;--line:#D5D0C5}
+body{padding:12px 0;line-height:1.55}
+h2{font-family:"Instrument Serif",Georgia,serif;font-size:1.5rem;font-weight:400;line-height:1.2;margin:0 0 20px;letter-spacing:-.015em}
+.jr-inputs{gap:18px}.jr-control{gap:8px}
+.jr-metrics{gap:20px 32px;margin:24px 0}.jr-metrics dd{font-size:1.4rem;letter-spacing:-.025em}
+.jr-table-scroll{max-width:100%;scrollbar-width:thin}
+.jr-table-scroll table{width:max-content;min-width:100%;overflow-wrap:normal;word-break:normal}
+.jr-table-scroll th,.jr-table-scroll td{min-width:5rem;max-width:18rem;white-space:normal;overflow-wrap:normal;word-break:normal}
+.jr-table-scroll th{white-space:nowrap}
+button,input:not([type=checkbox]),select{border-radius:6px}
+.jr-control input[type=range]{margin:0;min-width:0}

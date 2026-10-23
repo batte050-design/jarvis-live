@@ -99,10 +99,14 @@ class AuthoringTests(unittest.TestCase):
                     if row['shape']=='prose':
                         self.assertEqual(text,row['answer']);self.assertEqual(len(seen),1 if lane=='fast' else 0)
                     else:
-                        self.assertEqual(len(seen),2 if row.get('tool') in ('emit_chart','emit_budget') else 1);self.assertNotIn('calculator.html',text);self.assertNotIn('Drag the slider',text)
+                        self.assertEqual(len(seen),0 if row.get('tool')=='emit_chart' else 2 if row.get('tool')=='emit_budget' else 1);self.assertNotIn('calculator.html',text);self.assertNotIn('Drag the slider',text)
                         self.assertTrue(all('calculator.html' not in value for kind,value in live if kind=='live'))
-                        body=seen[0]['body'];self.assertEqual(body['tool_choice'],'required');self.assertTrue(all(t['function']['strict'] for t in body['tools']))
-                        self.assertTrue(any(LAYER.prompt_note() in m['content'] for m in body['messages']),'existing instruction block missing')
+                        if seen:
+                            body=seen[0]['body'];self.assertEqual(body['tool_choice'],'required');self.assertTrue(all(t['function']['strict'] for t in body['tools']))
+                            self.assertTrue(any(LAYER.prompt_note() in m['content'] for m in body['messages']),'existing instruction block missing')
+                        else:
+                            self.assertEqual(row['tool'],'emit_chart')
+                            self.assertEqual(json.loads(text.split('```ui\n')[1].split('\n```')[0])['source']['kind'],'provided')
         if A.report:A.report.write_text(json.dumps({'kind':'SCRIPTED provider/child boundaries; actual server helpers, not native acceptance','rows':report},indent=2)+'\n')
 
     def test_all_server_specs_pass_the_existing_js_validator_and_recompute(self):

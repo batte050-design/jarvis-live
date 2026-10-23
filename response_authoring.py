@@ -147,7 +147,7 @@ def emit(name, arguments):
     if name == 'emit_chart':
         # The plotted series is the retrieved one. The model's own list is never trusted to
         # reproduce it: a rounded or rearranged copy would be a second, unverified account.
-        receipt = evidence.checked(arguments['source'])
+        receipt = evidence.check_points(arguments['source'], arguments['points'])
         arguments = dict(arguments)
         arguments['points'] = copy.deepcopy(receipt['points'])
     if name == 'emit_budget':
@@ -251,6 +251,21 @@ def author_chunks(question, messages, model, key, stop=None, _step=0):
         manifest, config = settings()
         if _step >= config['calls']: raise ValueError('authoring call budget')
         if name == 'unsupported': raise ValueError('unsupported requested form')
+        # Supplied literals already are the evidence. Do not ask a model to reconstruct an
+        # opaque receipt or pay for a network round trip to draw three reader-provided numbers.
+        if (not _step and name == 'auto' and re.search(r'\b(?:chart|plot|graph)\b', question, re.I)
+                and not re.search(r'\b(?:budget|calculator|editable|adjustable|interactive|slider)\b', question, re.I)
+                and not SOURCES.illustration_allowed(question)):
+            try: provided = SOURCES.supplied_points(question)
+            except ValueError: provided = []
+            if len(provided) >= 2:
+                try:
+                    receipt = SOURCES.CURRENT.get().retrieve({'provider':'user_input','symbol':'','start':'','end':'','period':'month'})
+                    spec = emit('emit_chart', {'title':receipt['title'], 'chart':'line' if re.search(r'\bline\b',question,re.I) else 'bar',
+                                               'points':receipt['points'], 'source':receipt['source']})
+                except ValueError:
+                    return 'ok', 'The supplied labels or values could not be validated. No chart was produced; use distinct labels and finite numbers.'
+                return 'ok', fence(spec)
         allowed = tuple(t['function']['name'] for t in tools(name))
         if not key: raise ValueError('provider credentials unavailable')
         instruction = ('Choose the response that best carries this request; the user need not name a format. Call one emitter or reply_prose. '
@@ -333,7 +348,7 @@ def author_chunks(question, messages, model, key, stop=None, _step=0):
         LOG.error('response authoring failed: shape=%s reason=%s',name,reason)
         # A sourcing or budget failure on a history request is a sourcing gap, not a broken turn:
         # the reader gets words saying what could not be sourced, never an empty answer.
-        if SOURCES.history_request(question) and type(exc) is ValueError:
+        if stage == 'content' and SOURCES.history_request(question) and type(exc) is ValueError:
             return 'ok', SOURCES.unavailable(question)
         return 'failed', FAILED
 
@@ -468,6 +483,9 @@ def agent_result(fn):
     def wrapped(*args,**kwargs):
         bound=signature.bind(*args,**kwargs);bound.apply_defaults();values=bound.arguments
         screen=values.get('mode')=='text' if 'mode' in values else values.get('screen') is True
+        if SOURCES.PUBLISHER.get() is None:
+            with SOURCES.publisher('text' if screen else 'voice', values.get('conv')):
+                return wrapped(*args,**kwargs)
         if not screen or ACTIVE.get(): return fn(*args,**kwargs)
         if SOURCES.CURRENT.get() is None:
             question = values.get('prompt', values.get('ask', ''))
@@ -507,7 +525,7 @@ def agent_result(fn):
                 # A card that cannot be authored must never cost the reader the answer that was
                 # already finished: fall back to the completed prose and say why in the log.
                 LOG.error('response authoring failed; serving the completed answer instead')
-                result = completed
+                result = ('ok', clean(completed[1], html_forbidden(question)))
             elif result[0] == 'ok': result = ('ok', clean(result[1], html_forbidden(question)))
             if callback and result[0] in ('ok','failed'): callback('live','',result[1])
             return result

@@ -20,12 +20,33 @@ def _token():
         return ""
 
 
+def _publication():
+    # Cold children inherit an immutable per-turn capability. Warm children use the existing
+    # server-owned context file; a missing/malformed grant never becomes an unscoped push.
+    raw = os.environ.get('JARVIS_SCREEN_PUBLICATION')
+    if raw is not None:
+        value = json.loads(raw)
+    else:
+        path = os.environ.get('JARVIS_WEB_CTX')
+        if not path: return None
+        with open(path, encoding='utf-8') as source: raw = source.read(32769)
+        if len(raw.encode()) > 32768: return None
+        value = json.loads(raw).get('JARVIS_SCREEN_PUBLICATION')
+    if not isinstance(value, dict) or set(value) != {'turn','conv','token'}: return None
+    if not all(isinstance(v,str) for v in value.values()): return None
+    return value
+
+
 def _post(payload):
+    try: publication = _publication()
+    except (OSError, ValueError, TypeError): publication = None
+    if publication is None:
+        return json.dumps({'error':'No active turn publication context; nothing was shown.'})
     tok = _token()
     if not tok:
         return json.dumps({"error": "the page's token file was not readable, so nothing was shown"})
     req = urllib.request.Request(
-        ART_URL, data=json.dumps(payload).encode(), method="POST",
+        ART_URL, data=json.dumps({**payload, 'publication':publication}).encode(), method="POST",
         headers={"Content-Type": "application/json", "X-Jarvis-Token": tok})
     try:
         with urllib.request.urlopen(req, timeout=6) as r:

@@ -249,9 +249,11 @@ def case_artifact_gate():
         response=asyncio.run(fn(Request()));assert isinstance(response,Response) and response.status_code==409
         for kind in ('widget','image','table','text'):assert not S.artifact_allowed({'kind':kind})
         assert not S.artifact_allowed({'kind':'chart','mode':'voice'})
-        assert S.artifact_allowed({'clear':True})
-    # The existing voice-only/unscoped interface remains as it was outside a text job.
-    assert S.artifact_allowed({'kind':'chart'})
+        assert not S.artifact_allowed({'clear':True})
+    assert not S.artifact_allowed({'kind':'chart'})
+    with S.publisher('voice','a'*32) as grant:
+        assert S.artifact_allowed({'kind':'chart','publication':grant})
+    assert not S.artifact_allowed({'kind':'chart','publication':grant})
 
 
 def case_no_format_words_model_choice():
@@ -367,7 +369,9 @@ def case_wrong_query_or_window():
     with evidence() as e:
         raises(lambda:e.retrieve({**QUERY,'symbol':'EUR=X'}))
         raises(lambda:e.retrieve({**QUERY,'start':'2025-04-23'}))
-        raises(lambda:e.retrieve({**QUERY,'end':'2026-10-22'}))
+        # f60309b explicitly allows three days of date rounding. Keep that deployed policy;
+        # the former one-day negative expectation was stale even before this repair.
+        raises(lambda:e.retrieve({**QUERY,'end':'2026-10-19'}))
 
 
 def case_provider_refusal_is_failed():
