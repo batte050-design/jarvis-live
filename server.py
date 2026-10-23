@@ -41,6 +41,8 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 
 import widgets as WIDGETS             # widgets have their own origin, store and policy
+import response_layer as RESPONSE_LAYER
+import response_authoring as RESPONSE_AUTHORING
 import uvicorn
 
 import redact as _redact
@@ -95,6 +97,12 @@ WORKISH = re.compile(
     r"rate|rates|exchange|dollar|dollars|usd|shilling|shillings|ugx|price|prices|cost|how much|"
     r"worth|latest|news|weather|forecast|score|scores|results|standing|standings|"
     r"right now|currently|at the moment|pricing|rundown|put together|tally)\b", re.I)
+
+def text_needs_agent(question):
+    """Keep the existing classifier; explicit sites/URLs cannot be read by the fast model."""
+    return bool(WORKISH.search(question) or re.search(
+        r"https?://|\b(?:my|our|private)\s+(?:private\s+)?(?:site|dashboard|portal)\b", question, re.I))
+
 
 # Limits on what can be pushed into the transcriber: a runaway or malicious upload must not be
 # able to occupy the machine, and only two transcriptions may run at once on four cores.
@@ -443,7 +451,7 @@ def format_directive(shape, mode):
     shape is imposed, and the component is chosen from the payload as the answer is written.
     """
     if mode == "text":
-        return FAMILIES + " " + RESTRAINT + " " + MECHANICS + " " + COMPOSE
+        return FAMILIES + " " + RESTRAINT + " " + MECHANICS + " " + COMPOSE + RESPONSE_LAYER.prompt_note()
     return FAMILIES + " " + RESTRAINT + " " + MECHANICS + " " + SPOKEN_NOTE + " " + COMPOSE
 
 KAMPALA = zoneinfo.ZoneInfo("Africa/Kampala")
@@ -580,16 +588,28 @@ class TurnChan:
         self.status = "running"
         self.done = False
         self.ended = None
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
+        self.redactor = _redact.Stream()
+        self.token_kind = "front"
 
-    def publish(self, name, data):
+    def publish(self, name, data, flushed=False):
         """Called from the turn's worker thread: to every reader, then into the log."""
         with self.lock:
             if self.done:
                 return
+            payload = dict(data) if isinstance(data, dict) else {"d": data}
+            if name == "tok" and not flushed:
+                self.token_kind = payload.get("kind") or self.token_kind
+                payload["d"] = self.redactor.feed(str(payload.get("d") or ""))
+                if not payload["d"]:
+                    return
+            elif name in ("text", "done"):
+                tail = self.redactor.feed("", final=True)
+                if tail:
+                    self.publish("tok", {"d": tail, "kind": self.token_kind}, flushed=True)
+            payload = _redact.redact_rows([payload], ("d", "text", "line", "title", "message", "err", "q"))[0]
             seq = self.n
             self.n += 1
-            payload = dict(data) if isinstance(data, dict) else {"d": data}
             payload["seq"] = seq
             # Every chunk names its turn as well as its conversation. A reader can then refuse a chunk
             # that belongs to a different turn of the same chat, which is the one crossover the
@@ -670,11 +690,11 @@ def _exec_record(chan):
         rec = {"conv": str(getattr(chan, "conv", "") or ""),
                "turn": str(getattr(chan, "turn", "") or ""),
                "tid": str(getattr(chan, "tid", "") or ""),
-               "q": str(getattr(chan, "question", "") or "")[:200],
+               "q": _redact.redact(str(getattr(chan, "question", "") or ""))[:200],
                "started": round(float(getattr(chan, "started", 0) or 0), 3),
                "ended": round(float(getattr(chan, "ended", 0) or 0), 3),
                "status": str(getattr(chan, "status", "completed") or "completed"),
-               "steps": [str(x)[:140] for x in (getattr(chan, "steps", None) or [])][:60]}
+               "steps": [_redact.redact(str(x))[:140] for x in (getattr(chan, "steps", None) or [])][:60]}
         line = json.dumps(rec, ensure_ascii=False)
         with EXEC_LOCK:
             with open(EXEC_FILE, "a", encoding="utf-8") as f:
@@ -836,7 +856,7 @@ def new_session():
     TURN["n"] += 1
     EPOCH[0] += 1
     SESSION["id"] = uuid.uuid4().hex
-    warm_prewarm_for("jarvis-live-" + SESSION["id"][:12])
+    warm_prewarm_for(agent_session_name(getattr(WARM_PRESTART, "conv", "") or SESSION["id"]))
     return SESSION["id"]
 
 
@@ -1055,9 +1075,9 @@ def commit(turn, user_text, assistant_text, conv=None):
             return False
         stamp = time.time()
         if user_text:
-            HISTORY.append({"role": "user", "content": user_text, "at": stamp})
+            HISTORY.append({"role": "user", "content": _redact.redact(user_text), "at": stamp})
         if assistant_text:
-            HISTORY.append({"role": "assistant", "content": assistant_text, "at": stamp})
+            HISTORY.append({"role": "assistant", "content": _redact.redact(assistant_text), "at": stamp})
         del HISTORY[:-HISTORY_MAX]
         # Atomic: a crash or a kill mid-write used to be able to leave a truncated history,
         # which is then replayed as JARVIS's own words on the next turn.
@@ -1071,9 +1091,15 @@ def commit(turn, user_text, assistant_text, conv=None):
         return True
 
 
-def recall():
+def recall(conv=None):
     with HISTORY_LOCK:
-        return list(HISTORY)
+        if not conv or str(conv) == str(_session_key()):
+            return list(HISTORY)
+    with SESSIONS_LOCK:
+        turns = list((SESSIONS.get(str(conv)) or {}).get("turns") or [])
+    return [{"role": role, "content": t.get(field), "at": t.get("t", 0)}
+            for t in turns[-HISTORY_MAX // 2:] for role, field in (("user", "q"), ("assistant", "a"))
+            if t.get(field)]
 
 
 def for_model(hist):
@@ -1744,6 +1770,7 @@ def pair_screen():
 
 
 def sse(event, data):
+    data = _redact.redact_rows([data], ("d", "text", "line", "title", "message", "err", "q"))[0]
     return "event: %s\ndata: %s\n\n" % (event, json.dumps(data))
 
 
@@ -1894,15 +1921,24 @@ def shape_hint(mode, prompt):
             "Prose by default; a pipe table where attributes read better in columns; a '- ' line per "
             "item where there is a list. Where a component genuinely carries the answer - a "
             "comparison, a process, the deciding figures, a trend, pictures, the evidence under a "
-            "claim - write ONE fenced ui block holding it, in exactly this form: " + UI_LIBRARY + "]")
+            "claim - write ONE fenced ui block holding it, in exactly this form: " + UI_LIBRARY + "]" + RESPONSE_LAYER.prompt_note())
 
 
+@RESPONSE_AUTHORING.text_stream
 def front_stream(prompt, history=None, mode="voice"):
     ident = identity()
     system = system_for(mode) + ("\n\n" + ident if ident else "")
     prior = recall() if history is None else history
     messages = ([{"role": "system", "content": system}] + for_model(prior)
                 + [{"role": "user", "content": prompt + "\n\n" + now_line() + shape_hint(mode, prompt)}])
+    if mode == "text" and RESPONSE_AUTHORING.requested(prompt):
+        status, authored = yield from RESPONSE_AUTHORING.author_chunks(prompt, messages, FRONT_MODEL, DS_KEY)
+        if status == "failed":
+            raise RuntimeError(authored)
+        if status == "stopped":
+            return
+        yield authored
+        return
     # max_tokens covers the model's REASONING as well as its words, and reasoning is not
     # streamed, so a low cap fails silently: measured on ten substantive questions, six came
     # back with reasoning_tokens=500, finish_reason=length and an EMPTY reply, and the page
@@ -2188,6 +2224,7 @@ except Exception as _warm_import_error:
     WarmAgent = None
     print("warm agent unavailable: %r" % (_warm_import_error,))
 
+WARM_PRESTART = threading.local()       # reset request hint; never changes the stored window id
 WARM_AGENTS = {}
 WARM_LOCK = threading.Lock()
 WARM_FAILURES = {}                       # session name -> consecutive failures (the breaker)
@@ -2206,7 +2243,8 @@ def warm_agent(session_name):
         if agent is None:
             # One process at a time: a rotated session name would leave an older one running.
             for other, old in list(WARM_AGENTS.items()):
-                if other != session_name and old.idle_for() > WARM_IDLE_SECONDS:
+                if (other != session_name and other not in WARM_BUILDING
+                        and not old.busy() and old.idle_for() > WARM_IDLE_SECONDS):
                     old.close()
                     WARM_AGENTS.pop(other, None)
             agent = WarmAgent(HERMES_BIN, WORKDIR, session_name, model=config_model(),
@@ -2216,9 +2254,13 @@ def warm_agent(session_name):
             # One conversation keeps its agent; two at most. A third chat is not worth another ~700 MB on
             # this machine, and the one that has been idle longest is the one to give up.
             while len(WARM_AGENTS) > 2:
-                oldest = max(WARM_AGENTS.items(), key=lambda kv: kv[1].idle_for())
-                if oldest[0] == session_name:
-                    break
+                candidates = [(n, a) for n, a in WARM_AGENTS.items()
+                              if n != session_name and n not in WARM_BUILDING and not a.busy()]
+                if not candidates:
+                    WARM_AGENTS.pop(session_name, None)
+                    agent.close()
+                    return None
+                oldest = max(candidates, key=lambda kv: kv[1].idle_for())
                 try:
                     oldest[1].close()
                 except Exception:
@@ -2232,34 +2274,48 @@ WARM_BUILD_LOCK = threading.Lock()
 
 
 def _warm_build(name):
-    """Build one session's agent, off the request path."""
+    """Build once for the page-owned name; retain failures for the next decision."""
+    watchdog = None
     try:
         agent = warm_agent(name)
-        if agent is not None:
-            ok = agent.ensure_ready()
-            print("warm agent build for %s: %s %s"
-                  % (name, ok, getattr(agent, "last_build_error", "")))
+        if agent is None:
+            return
+        watchdog = threading.Timer(WARM_BUILD_TIMEOUT, agent.hard_close)
+        watchdog.daemon = True
+        watchdog.start()
+        if not agent.ensure_ready():
+            raise RuntimeError(getattr(agent, "last_build_error", "") or "session build returned false")
+        WARM_FAILURES[name] = 0
+        print("warm agent build ready: %s" % name, flush=True)
     except Exception as exc:
-        print("warm agent build for %s skipped: %r" % (name, exc))
+        WARM_FAILURES[name] = WARM_FAILURES.get(name, 0) + 1
+        print("ERROR warm agent build failed: name=%s reason=%s" %
+              (name, _redact.redact(str(exc))[:400]), flush=True)
     finally:
+        if watchdog is not None:
+            watchdog.cancel()
         with WARM_BUILD_LOCK:
             WARM_BUILDING.discard(name)
 
 
 def warm_prewarm_for(name=None):
-    """Start this session's build now, once per name, so no turn is the one that pays for it.
-
-    A build already running is left alone: two ACP processes starting together is the cost this
-    removes, not something to add to.
-    """
+    """Queue the named build; a failed cached object is retryable, not already warm."""
     if not WARM_ENABLED or WarmAgent is None:
-        return
+        return False
     name = name or agent_session_name()
     with WARM_BUILD_LOCK:
-        if name in WARM_BUILDING or name in WARM_AGENTS or WARM_BUILDING:
-            return
+        agent = WARM_AGENTS.get(name)
+        if name in WARM_BUILDING or (agent is not None and agent.ready()):
+            return False
         WARM_BUILDING.add(name)
-    threading.Thread(target=_warm_build, args=(name,), daemon=True).start()
+    try:
+        threading.Thread(target=_warm_build, args=(name,), daemon=True).start()
+    except Exception as exc:
+        with WARM_BUILD_LOCK:
+            WARM_BUILDING.discard(name)
+        print("ERROR warm agent build could not start: %s" % _redact.redact(str(exc))[:400], flush=True)
+        return False
+    return True
 
 
 def warm_prewarm():
@@ -2274,9 +2330,9 @@ def warm_prewarm():
     warm_prewarm_for(agent_session_name())
 
 
-def _warm_events(on_event):
+def _warm_events(on_event, screen=False):
     """Mirror this file's own stream vocabulary onto the warm agent's events."""
-    state = {"tool": "", "narr": [], "all": ""}
+    state = {"tool": "", "narr": [], "all": "", "emitted": 0}
 
     def flush_narration():
         if not on_event or not state["narr"]:
@@ -2311,6 +2367,14 @@ def _warm_events(on_event):
             # own running commentary, gathered into a line before it is handed over.
             if state["all"].rfind("<<<SPOKEN") != -1:
                 state["narr"].clear()
+                if screen:
+                    body = state["all"].split("<<<SPOKEN", 1)[1]
+                    end = body.find("SPOKEN>>>")
+                    visible = body[:end] if end >= 0 else body[:-len("SPOKEN>>>")]
+                    delta = visible[state["emitted"]:]
+                    if delta:
+                        state["emitted"] += len(delta)
+                        on_event("live", "", delta)
             else:
                 state["narr"].append(piece)
                 buffered = "".join(state["narr"])
@@ -2320,33 +2384,9 @@ def _warm_events(on_event):
     return emit
 
 
-WARM_BUILDING = set()                    # session names whose build is already in flight
-
-
 def warm_build_in_background(session_name, agent):
-    """Finish the build off the answer path; a slow MCP start must never hold up a person."""
-    with WARM_LOCK:
-        if session_name in WARM_BUILDING:
-            return
-        WARM_BUILDING.add(session_name)
-
-    def build():
-        # A build that never finishes must not leave a process parked on memory for good: the
-        # engine can stall for minutes loading MCP servers, and this closes it rather than
-        # letting it sit. The next rotation starts a fresh one.
-        watchdog = threading.Timer(WARM_BUILD_TIMEOUT, agent.hard_close)
-        watchdog.daemon = True
-        watchdog.start()
-        try:
-            print("warm agent build for %s: %s" % (session_name, agent.ensure_ready()))
-        except Exception as exc:
-            print("warm agent build failed for %s: %r" % (session_name, exc))
-        finally:
-            watchdog.cancel()
-            with WARM_LOCK:
-                WARM_BUILDING.discard(session_name)
-
-    threading.Thread(target=build, daemon=True).start()
+    """Use the same build coordinator as pre-start."""
+    return warm_prewarm_for(session_name)
 
 
 def _guard_path(path, conv, note=""):
@@ -2360,6 +2400,16 @@ def _guard_path(path, conv, note=""):
         pass
 
 
+# What the page can draw. A number the reader will want to change, or a choice between options,
+# belongs on the page as a card, not in a file and not in prose that describes a control nobody can
+# touch. So: emit one complete fenced ui block holding a JSON object, and never write an HTML file or
+# a script for a calculator. Templates need only component, fallback and optional initial values:
+# quote-estimator (quantity, price, discount), bill-splitter (bill, people, tip), budget-planner
+# (income, housing, food, other). table, chart, map, quiz and diagram need their outputs declared.
+# Never tell the reader to drag or tap anything that is not in the answer.
+
+
+@RESPONSE_AUTHORING.agent_result
 def warm_answer(ask, stop=None, on_event=None, reasoning="none", screen=False, conv=None):
     """Ask the warm agent. Returns (status, spoken), or None to use the cold spawn instead."""
     name = agent_session_name(conv)
@@ -2376,20 +2426,26 @@ def warm_answer(ask, stop=None, on_event=None, reasoning="none", screen=False, c
             warm_build_in_background(name, agent)
             _deadline = time.time() + WARM_READY_WAIT
             while time.time() < _deadline:
+                if stop and stop():
+                    return ("stopped", "")
                 if agent.ready():
+                    break
+                if getattr(agent, "last_build_error", "") and name not in WARM_BUILDING:
                     break
                 time.sleep(0.15)
             if not agent.ready():
                 return None
-        status, raw = agent.ask(ask, on_event=_warm_events(on_event), stop=stop, reasoning=reasoning)
+        options = {"retry": False} if screen else {}
+        status, raw = agent.ask(ask, on_event=_warm_events(on_event, screen=screen),
+                                stop=stop, reasoning=reasoning, **options)
     except Exception as exc:
         print("warm agent turn failed: %r; using a cold turn" % (exc,))
         WARM_FAILURES[name] = WARM_FAILURES.get(name, 0) + 1
-        return None
+        return ("failed", "") if screen else None
     if status in ("failed", "timeout"):
         print("warm agent returned %s; using a cold turn" % status)
         WARM_FAILURES[name] = WARM_FAILURES.get(name, 0) + 1
-        return None
+        return (status, "") if screen else None
     WARM_FAILURES[name] = 0
     if status == "stopped":
         return ("stopped", "")
@@ -2755,6 +2811,7 @@ def tool_detail(output):
     return " ".join(s.split())[:110]
 
 
+@RESPONSE_AUTHORING.agent_result
 def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="none", web=False,
                   memory=True, conv=None, web_off=False):
     shape = route_format(prompt)
@@ -2850,11 +2907,7 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
            + (WEB_NOTE if web else "") + ("" if memory else NO_MEMORY_NOTE) + thread_note(conv) + prompt)
     _guard_path("enter", conv, "hermes_answer")
     model = config_model()
-    # Warm first: the same agent, already built. None means the cold spawn below runs unchanged.
-    # There is no warm path here. An answer built in this process never spawns the child, so it
-    # would run with no gate in front of it; every web turn is served cold, for that reason alone.
-    # This is code, not a flag: no environment variable can turn it back on.
-    _guard_path("cold", conv, "web turn")
+    # Text can reuse ACP only after the complete cold-path prompt and gate context are prepared.
     mark_agent_seen(conv)
     argv = [HERMES_BIN, "chat", "-q", ask, "--oneshot", "-Q", "--reasoning", reasoning,
             "-c", agent_session_name(conv), "--run-budget", str(int(AGENT_RUN_BUDGET)),
@@ -2901,12 +2954,19 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
         _env["HERMES_TURN_SKIP_MEMORY"] = "1"
     if _disable:
         _env["HERMES_TURN_DISABLE_TOOLSETS"] = ",".join(_disable)
+    if mode == "text" and not web and memory and not web_off and _env.get("JARVIS_WEB_CTX"):
+        warmed = warm_answer(ask, stop, on_event, reasoning=reasoning, screen=True, conv=conv)
+        print("warm turn: used=%s name=%s" % (warmed is not None, agent_session_name(conv)), flush=True)
+        if warmed is not None:
+            _guard_path("warm", conv, "prepared text turn")
+            return warmed
+    _guard_path("cold", conv, "web turn")
     try:
         proc = subprocess.Popen(argv,
                                 cwd=WORKDIR, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 text=True, start_new_session=True, env=_env)
     except Exception as e:
-        print("could not start the agent: %r" % (e,))
+        print("ERROR agent spawn failed" if mode == "text" else "could not start the agent: %r" % (e,), flush=True)
         return ("failed", "The agent could not be started, so this turn did not run. "
                           "Nothing was executed.")
 
@@ -2945,6 +3005,7 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
     threading.Thread(target=pump, daemon=True).start()
     deadline = time.time() + AGENT_TIMEOUT
     joined, final_text, last_tool = [], "", ""
+    provider_failed = False
     narr = []                      # the agent's own running commentary, gathered into lines
     reply_open = [False]           # inside the <<<SPOKEN reply markers
 
@@ -2974,6 +3035,9 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
                 # answer, and discarding those words is what the page then reports as nothing.
                 partial = spoken_from_output(
                     final_text if final_text.strip() else "".join(joined))[0]
+                if mode == "text":
+                    print("ERROR agent cold turn timed out; partial output is not a successful answer", flush=True)
+                    return ("timeout", "")
                 if partial.strip():
                     print("agent hit the backstop with words in hand: keeping them")
                     return ("ok", partial)
@@ -3005,7 +3069,11 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
             if on_event:
                 on_event("ok" if ok else "err", who, tool_detail(ev.get("output")),
                          ev.get("duration_ms"))
+        elif what == "error" and mode == "text":
+            provider_failed = True
         elif what == "result":
+            if mode == "text" and (ev.get("is_error") or ev.get("error") or ev.get("status") in ("failed", "error")):
+                provider_failed = True
             final_text = str(ev.get("text") or "")
         elif what == "text":
             piece = str(ev.get("text") or "")
@@ -3045,9 +3113,18 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
     except Exception:
         pass
     err = errbox[0] if errbox else ""
+    if mode == "text" and proc.returncode is not None:
+        for pipe in (proc.stdout, proc.stderr):
+            try:
+                pipe.close()
+            except Exception:
+                pass
     if err:
         # Last 2 KB, for the journal only. Never spoken.
         print("agent stderr: %s" % err[-2000:].replace("\n", " ")[:2000])
+    if mode == "text" and (provider_failed or proc.returncode != 0):
+        print("ERROR agent cold turn failed: provider_error=%s exit=%s" % (provider_failed, proc.returncode), flush=True)
+        return ("failed", "")
     if proc.returncode != 0:
         return ("failed", "")
     spoken, via_sentinels = spoken_from_output(
@@ -3550,7 +3627,7 @@ def _cancel_conv(conv: str) -> bool:
     """Stop whichever turn is working in one conversation, by its own name."""
     with LIVE_LOCK, TURN_CHANS_LOCK:
         for num, chan in list(TURN_CHANS.items()):
-            if str(getattr(chan, "conv", "") or "") == str(conv or ""):
+            if str(getattr(chan, "conv", "") or "") == str(conv or "") and not getattr(chan, "done", False):
                 victim = LIVE_TURNS.get(num)
                 if victim is not None:
                     victim["yes"] = True
@@ -3583,7 +3660,7 @@ def thread_note(conv: str) -> str:
     except Exception:
         mark_at = 0.0
     try:
-        hist = [m for m in recall()
+        hist = [m for m in recall(conv)
                 if m.get("content") and float(m.get("at") or 0) > mark_at][-8:]
     except Exception:
         hist = []
@@ -3701,7 +3778,8 @@ async def timeline(request: Request):
 # and the drain-before-restart that Hermes already has are the ones that run. The live server is
 # its own systemd unit, NOT the gateway, so a restart issued from here cannot kill the process
 # issuing it.
-HERMES_BIN = os.environ.get("HERMES_BIN") or os.path.expanduser("~/.local/bin/hermes")
+HERMES_BIN = (os.environ.get("JARVIS_HERMES_BIN") or os.environ.get("HERMES_BIN")
+              or os.path.expanduser("~/.local/bin/hermes"))
 
 # One agent run at a time in this process. Each question is run through the CLI against the page's
 # own chat, and a run claims that chat while it lives: a second question started while the first is
@@ -3749,6 +3827,10 @@ def _cfg():
 
 def _guard(request: Request) -> bool:
     return authed(request) and same_origin(request)
+
+def _guard_owner(request: Request) -> bool:
+    """A live screen may read, but only the operator's own scopes may administer."""
+    return _guard(request) and auth_scope(request) in ("master", "full")
 
 
 def _telemetry():
@@ -4027,7 +4109,7 @@ def _channels():
 
 @app.get("/sys/channels")
 def sys_channels(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         return JSONResponse({"ok": True, "channels": _cached("chan", SYS_TTL, _channels)})
@@ -4062,7 +4144,7 @@ def _profile_files():
 
 @app.get("/sys/profile-files")
 def sys_profile_files(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         return JSONResponse({"ok": True, "files": _profile_files()})
@@ -4073,7 +4155,7 @@ def sys_profile_files(request: Request):
 @app.get("/sys/profile-file")
 def sys_profile_file(request: Request, id: str = ""):
     """One profile file, read-only. There is no write path here by design."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     entry = next((f for f in PROFILE_FILES if f[0] == id), None)
     if not entry:
@@ -4092,7 +4174,7 @@ def sys_profile_file(request: Request, id: str = ""):
 
 @app.get("/sys/telemetry")
 def sys_telemetry(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         return JSONResponse({"ok": True, "telemetry": _cached("tel", 2.0, _telemetry)})
@@ -4102,7 +4184,7 @@ def sys_telemetry(request: Request):
 
 @app.get("/sys/extensions")
 def sys_extensions(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         return JSONResponse({"ok": True, "extensions": _cached("ext", SYS_TTL, _extensions)})
@@ -4112,7 +4194,7 @@ def sys_extensions(request: Request):
 
 @app.get("/sys/automations")
 def sys_automations(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         return JSONResponse({"ok": True, "jobs": _cached("auto", SYS_TTL, _automations)})
@@ -4148,7 +4230,7 @@ def _do_extension_toggle(kind, name, on):
 
 async def _extension_toggle(request: Request, kind):
     """Shared handler: one guard, one validation, one answer shape for every /api toggle route."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -4164,7 +4246,7 @@ async def _extension_toggle(request: Request, kind):
 @app.post("/sys/extensions/toggle")
 async def sys_toggle(request: Request):
     """The drawer's original endpoint, kept so an older copy of the page keeps working."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -4196,7 +4278,7 @@ async def api_plugins_toggle(request: Request):
 async def api_automations_toggle(request: Request):
     """Pause or resume one scheduled job. The write is the scheduler's own command, so the job's
     own state is what changes rather than a copy the panel keeps."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -4216,7 +4298,7 @@ async def api_automations_toggle(request: Request):
 async def sys_restart(request: Request):
     """Restart the agent gateway. The page asks first and only calls this on that yes. The gateway
     is its own unit and the platform's restart drains the turns in flight before the kill."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     res = _hermes(["gateway", "restart"], timeout=180)
     print("sys restart: gateway restart ok=%s" % res["ok"])
@@ -4409,7 +4491,7 @@ def _runtime_load():
 
 @app.get("/sys/persona")
 def sys_persona(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         text = SYSTEM
@@ -4426,7 +4508,7 @@ async def sys_persona_save(request: Request):
     """Write the instructions the fast layer answers from. The previous text is copied aside
     first, so a mistake here is one file away from undone."""
     global SYSTEM
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -4453,7 +4535,7 @@ async def sys_persona_save(request: Request):
 
 @app.get("/sys/memory")
 def sys_memory(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         return JSONResponse({"ok": True, "entries": _memory_entries()})
@@ -4466,7 +4548,7 @@ async def sys_memory_delete(request: Request):
     """Drop one stored memory entry. The file is copied aside first and rewritten atomically; the
     agent's own memory tool may still hold its copy in memory, so the file on disk is the target
     and the next read is what changes."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -4500,7 +4582,7 @@ async def sys_memory_delete(request: Request):
 
 @app.get("/sys/settings")
 def sys_settings(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         p = _prefs()
@@ -4520,7 +4602,7 @@ async def sys_settings_voice(request: Request):
     """Switch the voice this page speaks with. Only an id the account actually owns is accepted,
     when the account list is readable; a well-formed id is the fallback, not the rule."""
     global VOICE
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -4544,7 +4626,7 @@ async def sys_settings_speed(request: Request):
     """Speech rate. Written to the value the synthesis call sends, not to the player's playback
     speed, so the caption pacing that rides the audio clock stays correct."""
     global SPEED
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -4562,7 +4644,7 @@ async def sys_settings_speed(request: Request):
 
 @app.post("/sys/settings/clear-cache")
 def sys_clear_cache(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     n = len(_sys_cache)
     _sys_cache.clear()
@@ -4572,7 +4654,7 @@ def sys_clear_cache(request: Request):
 
 @app.post("/sys/settings/reload")
 def sys_reload_config(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     _sys_cache.clear()
     _runtime_load()
@@ -4583,7 +4665,7 @@ def sys_reload_config(request: Request):
 
 @app.get("/sys/profile")
 def sys_profile(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         # No model field: the console does not name the model it runs on, and a name it never showed
@@ -4598,7 +4680,7 @@ def sys_profile(request: Request):
 @app.post("/sys/profile/mode")
 async def sys_profile_mode(request: Request):
     """The mode a new conversation starts in, stored on the machine so it survives the page."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = json.loads((await request.body()).decode() or "{}")
@@ -5130,6 +5212,7 @@ def _bounce(to, token=None, ttl=2592000):
 
 def door_page(message="", email="", step="email", ua=""):
     """The sign-in screen. Two buttons: the code, and Google. Nothing else to press."""
+    from html import escape
     g = google_web_client()
     embedded = bool(re.search(r"(Capacitor|; wv\)|JARVISLive)", str(ua or "")))
     if g:
@@ -5213,7 +5296,7 @@ def door_page(message="", email="", step="email", ua=""):
  const GB=document.getElementById('g');
  if(GB) GB.onclick=()=>{ location.href='/auth/google' + (IN_APP ? '?client=app' : ''); };
 </script>
-</body></html>""" % (email, google_row, message, "true" if embedded else "false"))
+</body></html>""" % (escape(email, quote=True), google_row, escape(message), "true" if embedded else "false"))
 
 
 @app.get("/auth/google")
@@ -5828,14 +5911,15 @@ def outbox_file(name: str, request: Request):
     if auth_scope(request) is None:
         raise HTTPException(status_code=401, detail="unauthorized")
     safe = os.path.basename(urllib.parse.unquote(name))
-    path = os.path.join(OUTBOX, safe)
-    if not safe or not os.path.isfile(path):
+    path = os.path.realpath(os.path.join(OUTBOX, safe))
+    if not safe or os.path.commonpath((path, os.path.realpath(OUTBOX))) != os.path.realpath(OUTBOX) or not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="no such file")
     guessed = mimetypes.guess_type(safe)[0] or "application/octet-stream"
     # What the phone can display, it displays; everything else is handed over as a download.
     inline = guessed.startswith(("image/", "audio/", "video/")) or guessed == "application/pdf" or guessed.startswith("text/")
     return FileResponse(path, media_type=guessed, filename=safe,
-                        content_disposition_type="inline" if inline else "attachment")
+                        content_disposition_type="inline" if inline else "attachment",
+                        headers={"Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff"})
 
 
 # A link a phone can hand to something outside the browser. A blob download is invisible to Android's
@@ -5855,8 +5939,8 @@ async def file_ticket(request: Request):
     except Exception:
         body = {}
     safe = os.path.basename(urllib.parse.unquote(str((body or {}).get("name") or "")))
-    path = os.path.join(OUTBOX, safe)
-    if not safe or not os.path.isfile(path):
+    path = os.path.realpath(os.path.join(OUTBOX, safe))
+    if not safe or os.path.commonpath((path, os.path.realpath(OUTBOX))) != os.path.realpath(OUTBOX) or not os.path.isfile(path):
         return JSONResponse({"ok": False, "error": "no such file"}, status_code=404)
     now = time.time()
     for k in [k for k, v in FILE_TICKETS.items() if v["exp"] < now]:
@@ -5872,12 +5956,13 @@ def file_by_ticket(tok: str):
     item = FILE_TICKETS.get(tok)
     if not item or item["exp"] < time.time():
         raise HTTPException(status_code=404, detail="this link has expired")
-    path = os.path.join(OUTBOX, item["name"])
-    if not os.path.isfile(path):
+    path = os.path.realpath(os.path.join(OUTBOX, item["name"]))
+    if os.path.commonpath((path, os.path.realpath(OUTBOX))) != os.path.realpath(OUTBOX) or not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="no such file")
     guessed = mimetypes.guess_type(item["name"])[0] or "application/octet-stream"
     return FileResponse(path, media_type=guessed, filename=item["name"],
-                        content_disposition_type=item["mode"])
+                        content_disposition_type=item["mode"],
+                        headers={"Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff"})
 
 
 @app.post("/attach")
@@ -5991,6 +6076,16 @@ async def widget_delete(request: Request):
     return {"ok": WIDGETS.delete(str(payload.get("token") or ""))}
 
 
+@app.get("/w/runtime/{stamp}")
+def response_runtime(request: Request, stamp: str):
+    if not _widget_host_ok(request) or stamp != RESPONSE_LAYER.assets()[2]:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    if not WIDGETS.enabled():
+        return JSONResponse({"error": "widgets are switched off"}, status_code=503)
+    html, headers = RESPONSE_LAYER.document("https://" + PUBLIC_HOST)
+    return HTMLResponse(html, headers=headers)
+
+
 @app.get("/w/{token}")
 def widget_serve(request: Request, token: str):
     """The widget itself. The token is the whole of the authorisation: no cookie, no session, and
@@ -6036,7 +6131,13 @@ def reset(request: Request):
     if not same_origin(request):
         return JSONResponse({"error": "cross-site"}, status_code=403)
     with HISTORY_LOCK:
-        sid = close_session()          # the window is kept, then the agent starts a fresh session
+        hint = str(request.query_params.get("prestart") or "")
+        previous_hint = getattr(WARM_PRESTART, "conv", "")
+        WARM_PRESTART.conv = hint if (auth_scope(request) in ("master", "full") and re.fullmatch(r"[0-9a-f]{32}", hint)) else ""
+        try:
+            sid = close_session()      # keep the existing window/id/storage transition
+        finally:
+            WARM_PRESTART.conv = previous_hint
         # Only the window being closed loses its turns. A chat still being answered somewhere else keeps
         # working and keeps its answer: opening a new chat used to invalidate every turn in flight, which
         # is why the chat he came back to had stopped half way.
@@ -6096,6 +6197,22 @@ async def api_route(request: Request):
                          "voice": format_directive(shape, "voice")})
 
 
+@app.post("/api/agent/prestart/{conv}")
+async def agent_prestart(conv: str, request: Request):
+    if auth_scope(request) not in ("master", "full"):
+        return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
+    if not same_origin(request):
+        return JSONResponse({"ok": False, "error": "cross-site"}, status_code=403)
+    if not re.fullmatch(r"[0-9a-f]{32}", conv):
+        return JSONResponse({"ok": False, "error": "bad conversation"}, status_code=400)
+    if tombstoned(conv):
+        return JSONResponse({"ok": False, "error": "conversation was deleted"}, status_code=410)
+    if not rate_ok(request, "prestart"):
+        return JSONResponse({"ok": False, "error": "too many requests"}, status_code=429)
+    started = warm_prewarm_for(agent_session_name(conv))
+    return JSONResponse({"ok": True, "started": started})
+
+
 @app.post("/stream")
 async def stream(request: Request):
     """One turn, by POST, same-origin only.
@@ -6142,7 +6259,8 @@ async def stream(request: Request):
     # What the agent is told to do, once `auto` has been resolved: the same level for an explicit
     # choice, and low for the default.
     effort = AUTO_EFFORT if reasoning == AUTO_REASONING else reasoning
-    _cs = chat_settings(str((payload or {}).get("conv") or ""))
+    _cs = chat_settings(str((payload or {}).get("conv") or "").strip() if mode == "text"
+                        else str((payload or {}).get("conv") or ""))
     _web_choice = _cs["web"]
     want_web = _web_choice == "always"
     web_off = _web_choice == "off"
@@ -6216,7 +6334,6 @@ async def stream(request: Request):
         # device holding an old copy would otherwise reopen it: nothing is minted, nothing is filed.
         return JSONResponse({"error": "conversation was deleted",
                              "conv": conv, "gone": True}, status_code=410)
-    own_turn(conv, my_turn)
     # Named now, from the question, on a thread of its own: a turn that searches the web takes minutes and
     # the drawer should not sit on a raw question for all of it. The record is created here so the namer
     # has somewhere to write; a turn that produces nothing takes that empty record away with it.
@@ -6275,8 +6392,8 @@ async def stream(request: Request):
                                    "attach": True, "q": _q})
                 yield sse("format", {"shape": _shape, "mode": _mode})
                 if _a:
-                    yield sse("text", {"text": _a})
                     yield sse("tok", {"d": _a, "kind": "front"})
+                    yield sse("text", {"text": _a})
                 yield sse("done", {})
             return StreamingResponse(replay_stored(), media_type="text/event-stream",
                                      headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
@@ -6294,6 +6411,7 @@ async def stream(request: Request):
                                      "tid": str(getattr(_c, "tid", "") or ""),
                                      "q": str(getattr(_c, "question", "") or "")[:200]},
                                     status_code=409)
+    own_turn(conv, my_turn)
     abandoned = {"yes": False, "conv": conv}
     chan = TurnChan(my_turn, q, mode, conv, tid=(posted_tid or _turn_tid(conv, my_turn)))
     with LIVE_LOCK:
@@ -6326,7 +6444,7 @@ async def stream(request: Request):
 
         def run():
             my = my_turn
-            snapshot = recall()
+            snapshot = recall(conv)
             spoken_total = []
             spoken_clean = []                  # what JARVIS actually said, markers removed
             completed = False
@@ -6348,7 +6466,7 @@ async def stream(request: Request):
                 # A request shaped like work never gets answered here, whatever the fast layer
                 # believes it can do. Nothing of that kind is ever written, so the claim is never
                 # made and never spoken: the job goes straight to the layer that does the work.
-                workish = bool(WORKISH.search(q))
+                workish = text_needs_agent(q) if mode == "text" else bool(WORKISH.search(q))
                 # Three settings on the page can only mean anything to the layer that has them. The
                 # fast layer runs with thinking disabled, holds no tools, and preloads MEMORY.md and
                 # USER.md, so a turn he asked to think about, to search the web, or to answer
@@ -6483,6 +6601,7 @@ async def stream(request: Request):
                         told = [0.0]          # when the agent last spoke for itself
 
                         live_sent = [False]
+                        web_ran = [False]       # this turn's actual tool event, not a prior execution row
 
                         def tell(kind, tool, line, ms=None, title=None):
                             if kind == "live":
@@ -6500,6 +6619,8 @@ async def stream(request: Request):
                                 told[0] = time.time()
                                 out.put(("note", {"text": line}))
                                 return
+                            if kind == "run" and tool in WEB_CAPABLE:
+                                web_ran[0] = True
                             if kind == "run" and len(facts) < 12:
                                 facts.append((title or tool or "a step")[:70])
                                 try:
@@ -6522,11 +6643,26 @@ async def stream(request: Request):
                                 pass
                             held = AGENT_RUN_LOCK.acquire(timeout=AGENT_RUN_WAIT)
                             if not held:
-                                print("agent run lock waited out: running anyway")
+                                holder["result"] = ("failed", "")
+                                return
                             _turn_started = time.time()
                             try:
+                                if stop():
+                                    return
                                 _warm = None
-                                if (not want_web) and want_memory:
+                                # The page can draw declared components, but nothing ever told the model
+                                # that they exist: every card so far arrived only because the operator
+                                # pasted the JSON himself. The contract travels with the question, never
+                                # with the stored record, so what he sees saved is still his own words.
+                                ask_q = q
+                                try:
+                                    _note = RESPONSE_LAYER.prompt_note()
+                                    if _note:
+                                        ask_q = RESPONSE_UI_RULE + RESPONSE_UI_EXAMPLE + "\n\n" + q + "\n" + _note
+                                except Exception as _ne:
+                                    print("response note unavailable: %r" % (_ne,), flush=True)
+                                print("ask prompt: q=%d chars, note=%d chars, total=%d" % (len(q), len(ask_q)-len(q), len(ask_q)), flush=True)
+                                if mode != "text" and (not want_web) and want_memory:
                                     try:
                                         _sec_w = secrets.token_hex(16)
                                         with approval_lock():
@@ -6537,7 +6673,7 @@ async def stream(request: Request):
                                                        _sec_w,
                                                        "http://127.0.0.1:%d/agent/ask" % PORT,
                                                        "auto" if AUTO_ENABLED else "ask")
-                                        _warm = warm_answer(q, stop, tell, reasoning=effort,
+                                        _warm = warm_answer(ask_q, stop, tell, reasoning=effort,
                                                             screen=(mode == "text"), conv=conv)
                                         print("warm turn: used=%s name=%s" % (bool(_warm), agent_session_name(conv)),
                                               flush=True)
@@ -6545,27 +6681,29 @@ async def stream(request: Request):
                                         print("warm path unavailable: %r" % (_we,), flush=True)
                                         _warm = None
                                 holder["result"] = _warm if _warm else hermes_answer(
-                                    q, stop, tell, mode, effort,
+                                    ask_q, stop, tell, mode, effort,
                                     want_web, want_memory, conv=conv, web_off=web_off)
                                 if want_web:
                                     # The execution row is written as the turn closes, so give it a moment
                                     # before judging rather than reading a record that is not there yet.
-                                    used = web_used(conv, my_turn, since=_turn_started)
-                                    for _ in range(6):
+                                    used = web_ran[0] if mode == "text" else web_used(conv, my_turn, since=_turn_started)
+                                    for _ in range(0 if mode == "text" else 6):
                                         if used:
                                             break
                                         time.sleep(0.5)
                                         used = web_used(conv, my_turn, since=_turn_started)
                                     print("web always: searched=%s tid=%s" % (used, my_turn), flush=True)
-                                    if not used:
+                                    if not used and (mode != "text" or (holder.get("result") or ("failed",))[0] == "ok"):
                                         print("web always: no search on this turn, rerunning once with a "
                                               "stronger instruction tid=%s" % my_turn, flush=True)
                                         holder["result"] = hermes_answer(
                                             q, stop, tell, mode, effort, True, want_memory,
                                             conv=conv, web_off=False)
-                                        used2 = web_used(conv, my_turn, since=_turn_started)
+                                        used2 = web_ran[0] if mode == "text" else web_used(conv, my_turn, since=_turn_started)
                                         print("web always: after retry searched=%s tid=%s"
                                               % (used2, my_turn), flush=True)
+                                        if mode == "text" and not used2:
+                                            holder["result"] = ("failed", "Always search required a web tool on this turn.")
                             except Exception as e:
                                 # A crash in the worker must not look like an empty answer.
                                 holder["result"] = ("failed", "")
@@ -6616,6 +6754,11 @@ async def stream(request: Request):
                         if status == "stopped":
                             return                     # he hung up: nothing is said, nothing kept
                         if status != "ok":
+                            if mode == "text":
+                                print("ERROR agent turn failed: conv=%s status=%s" % (conv, status), flush=True)
+                                out.put(("err", {"message": "The agent turn failed before a complete answer was produced. Please try again.",
+                                                 "type": "agent_" + status}))
+                                return
                             # An error is never spoken as if it were the answer, and never
                             # remembered as a conversation. A recorded cue says it in his voice.
                             # Unless the screen already holds the answer: a turn that put the
@@ -6650,7 +6793,7 @@ async def stream(request: Request):
                         out.put(("work", {"state": "done"}))
                     except Exception as e:
                         out.put(("work", {"state": "failed", "err": str(e)[:140]}))
-                completed = True
+                completed = not work["needed"] or handoff_status == "ok"
             except Exception as e:
                 out.put(("err", {"message": str(e)[:200], "type": "model_failed"}))
             finally:
@@ -6661,6 +6804,9 @@ async def stream(request: Request):
                         speaker.abort()
                     else:
                         speaker.close(timeout=45.0)
+                with approval_lock():
+                    APPROVAL_SECRETS.pop((str(conv or ""), ""), None)
+                    approvals_store().expire("turn ended", chat=str(conv or ""))
                 with LIVE_LOCK:
                     LIVE_TURNS.pop(my_turn, None)
                 # a failed, disconnected or abandoned turn must not be recorded as a real
@@ -7007,7 +7153,7 @@ async def api_node_ui(request: Request):
 @app.post("/api/v1/node/ui")
 async def api_node_ui_set(request: Request):
     """One control, one value, written through: the file on disk is the record."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
@@ -7039,7 +7185,7 @@ async def api_node_reload(request: Request):
     own state and has its own reload path; reaching into it from a settings screen is how a page breaks the
     thing it is only supposed to be a window onto.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     dropped = 0
     # This server's own cached reads, by their real names. Nothing here reaches into the agent.
@@ -7078,7 +7224,7 @@ async def sys_settings_scope(request: Request):
     where the work is handed over, so turning it down is a real restriction and turning it up is a real
     grant -- neither is a label over nothing.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
@@ -7905,10 +8051,13 @@ def _session_keep_turn(conv, q, a, ms=None, steps=None, started_at=None):
     now = time.time()
     q = _redact.redact(q or "")          # a secret never reaches the store
     a = _redact.redact(a or "")
+    steps = [_redact.redact(str(x)) for x in (steps or [])]
     if tombstoned(conv):
         print("turn for deleted conversation %s not filed" % conv)
         return
     with SESSIONS_LOCK:
+        if tombstoned(conv):
+            return
         entry = SESSIONS.get(conv) or {"id": conv, "title": concise_title(q) or "Untitled",
                                        "started": now, "updated": now, "turns": []}
         turns = list(entry.get("turns") or [])
@@ -8031,7 +8180,7 @@ async def api_artifacts_code(request: Request):
     text is NOT returned: the page already has it, and the drawer fetches a document only when he
     taps its row.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
@@ -8222,7 +8371,7 @@ async def api_sessions_clear(request: Request):
     not only the shape of one. A retry, a replayed request or a stray fetch arrives without that and
     is turned away, with a line in the log naming who tried.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
@@ -8247,10 +8396,15 @@ async def api_sessions_clear(request: Request):
         restore_to = dest
     except Exception as e:
         print("chat history clear: could not take a safety copy: %r" % (e,))
+    with LIVE_LOCK:
+        for victim in LIVE_TURNS.values():
+            victim["yes"] = True
+            tombstone_add(victim.get("conv"), backup=restore_to)
     # The window is closed FIRST and purged second, because closing it archives it: clearing first
     # would have left the conversation he was just in sitting in the archive he thought he emptied.
     with HISTORY_LOCK:
         TURN["n"] += 1                     # anything in flight can no longer commit
+        TURN["by"].clear()
         live_turns = len(_turns_from_history(HISTORY))
         sid = close_session()              # archives the window, clears it, mints a clean session
         try:
@@ -8263,6 +8417,8 @@ async def api_sessions_clear(request: Request):
     with SESSIONS_LOCK:
         gone = len(SESSIONS)
         gone_turns = sum(len(s.get("turns") or []) for s in SESSIONS.values())
+        for conv, entry in SESSIONS.items():
+            tombstone_add(conv, backup=restore_to, turns=len(entry.get("turns") or []))
         SESSIONS.clear()
         _sessions_save()
     purged = _mark_purged()
@@ -8354,7 +8510,7 @@ def _forget_device(tok):
     """
     if not tok:
         return 0
-    key, entry = device_lookup(tok)
+    key, entry = (tok, device_entries().get(tok)) if _is_hash(tok) else device_lookup(tok)
     if entry is None:
         return 0
     try:
@@ -8383,7 +8539,7 @@ def _forget_device(tok):
 
 @app.get("/api/account")
 async def api_account(request: Request):
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     tok = cookie_token(request)
     stamp = os.path.join(HERMES, "jarvis_live_prune.stamp")
@@ -8433,7 +8589,7 @@ async def api_account(request: Request):
 @app.post("/api/account/logout")
 async def api_account_logout(request: Request):
     """This device only: its token is forgotten and its cookie cleared, so the page comes back to the door."""
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     tok = cookie_token(request)
     gone = _forget_device(tok)
@@ -8450,10 +8606,10 @@ async def api_account_logout_all(request: Request):
     """Every OTHER device. The one asking keeps its access: a control that locks the hand pressing it is a
     trap, not a security control. dry=1 answers what it would revoke without revoking anything.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     tok = cookie_token(request)
-    keep = tok if tok in device_tokens() else ""
+    keep, _ = device_lookup(tok)
     others = [t for t in device_entries() if t != keep]
     body = {}
     try:
@@ -8481,7 +8637,7 @@ async def api_session_delete(sid: str, request: Request):
     conversation he is in cannot be deleted here - it is not in the store, it is assembled from the
     live window - and saying so is better than pretending to succeed at it.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
@@ -8593,7 +8749,7 @@ async def api_session_save(request: Request):
     The server is the record; this is the page saying "this is what I have", so a conversation is
     still there if the file behind it is ever lost. It writes the window he is in, not an archive.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
@@ -8723,7 +8879,7 @@ async def session_meta(sid: str, request: Request):
     Neither touches when the conversation last moved. A rename that reordered the drawer would push
     the chat he just named above the one that just answered, which is not what a name means.
     """
-    if not _guard(request):
+    if not _guard_owner(request):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     if not re.fullmatch(r"[0-9a-fA-F]{32}", str(sid or "")):
         return JSONResponse({"ok": False, "error": "bad conversation"}, status_code=400)
@@ -8768,9 +8924,10 @@ def approval_lock():
 
 def approvals_store():
     # Built on first use: HERE is defined further down the module.
-    if "s" not in _APPROVALS:
-        _APPROVALS["s"] = _approvals.Store(HERE)
-    return _APPROVALS["s"]
+    with approval_lock():
+        if "s" not in _APPROVALS:
+            _APPROVALS["s"] = _approvals.Store(HERE)
+        return _APPROVALS["s"]
 
 
 def _internal_only(request: Request) -> bool:
@@ -8799,10 +8956,10 @@ async def agent_ask(request: Request):
     turn = str((body or {}).get("turn") or "")
     with approval_lock():
         expect = APPROVAL_SECRETS.get((conv, turn))
-    if not secret or not expect or not hmac.compare_digest(secret, expect):
-        return JSONResponse({"ok": False, "error": "bad turn secret"}, status_code=403)
-    item = approvals_store().ask(conv, turn, str((body or {}).get("question") or ""),
-                         str((body or {}).get("action") or ""), str((body or {}).get("class") or ""), str((body or {}).get("tier") or "high"))
+        if not secret or not expect or not hmac.compare_digest(secret, expect):
+            return JSONResponse({"ok": False, "error": "bad turn secret"}, status_code=403)
+        item = approvals_store().ask(conv, turn, str((body or {}).get("question") or ""),
+                             str((body or {}).get("action") or ""), str((body or {}).get("class") or ""), str((body or {}).get("tier") or "high"))
     _nudge_later(str(item.get("id") or ""), str((body or {}).get("action") or ""))
     # How long the machine waits for him is decided here, where the honest answer lives: has a page
     # looked at the app recently? With him present a High question holds the full ten minutes and he
@@ -8815,25 +8972,32 @@ async def agent_ask(request: Request):
     # not hold a turn hostage when nobody is looking.
     _window = _approvals.ASK_TTL_SECONDS if _tier == "high" else (90 if _present else 25)
     deadline = time.time() + _window
-    while time.time() < deadline:
-        # Read the row by id, whatever its state: an answered question leaves the
-        # pending set, so polling that set can never observe the answer.
-        now_row = approvals_store()._read(approvals_store().pending_path).get(item["id"]) or {}
-        state = now_row.get("state")
-        if state == "expired":
-            return JSONResponse({"ok": True, "allow": False, "id": item["id"],
-                                 "reason": "the question ended with its turn"})
-        if state == "answered":
-            data = approvals_store()._read(approvals_store().pending_path).get(item["id"]) or {}
-            outcome = data.get("outcome") or "deny"
-            approvals_store().audit(conv, turn, item["action"], item["class"],
-                            approvals_store().mode(conv), outcome, "answered by owner")
-            return JSONResponse({"ok": True, "allow": outcome == "allow", "id": item["id"]})
-        await asyncio.sleep(0.5)
-    approvals_store().expire("timeout")
-    reason = ("nobody was looking at the app, so the step was skipped" if not _present
-              else "the question ended with its turn")
-    return JSONResponse({"ok": True, "allow": False, "id": item["id"], "reason": reason})
+    try:
+        while time.time() < deadline:
+            with approval_lock():
+                if APPROVAL_SECRETS.get((conv, turn)) != secret:
+                    approvals_store().expire("turn ended", question=item["id"])
+                    return JSONResponse({"ok": True, "allow": False, "id": item["id"],
+                                         "reason": "the question ended with its turn"})
+            # Read the row by id, whatever its state: an answered question leaves the
+            # pending set, so polling that set can never observe the answer.
+            now_row = approvals_store()._read(approvals_store().pending_path).get(item["id"]) or {}
+            state = now_row.get("state")
+            if state == "expired":
+                return JSONResponse({"ok": True, "allow": False, "id": item["id"],
+                                     "reason": "the question ended with its turn"})
+            if state == "answered":
+                data = approvals_store()._read(approvals_store().pending_path).get(item["id"]) or {}
+                outcome = data.get("outcome") or "deny"
+                approvals_store().audit(conv, turn, item["action"], item["class"],
+                                approvals_store().mode(conv), outcome, "answered by owner")
+                return JSONResponse({"ok": True, "allow": outcome == "allow", "id": item["id"]})
+            await asyncio.sleep(0.5)
+        reason = ("nobody was looking at the app, so the step was skipped" if not _present
+                  else "the question ended with its turn")
+        return JSONResponse({"ok": True, "allow": False, "id": item["id"], "reason": reason})
+    finally:
+        approvals_store().expire("request ended", question=item["id"])
 
 
 # --- per-chat turn settings (web search, memory context) -------------------------------------
@@ -8930,6 +9094,8 @@ def set_chat_settings(conv, web=None, memory=None):
 async def get_turnopts(conv: str, request: Request):
     if not auth_scope(request):
         return JSONResponse({"ok": False, "error": "sign in"}, status_code=401)
+    if not _guard_owner(request):
+        return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     return JSONResponse({"ok": True, "chat": conv, **chat_settings(conv)})
 
 
@@ -8961,6 +9127,8 @@ async def set_chat_permissions(conv: str, request: Request):
     who = auth_scope(request)
     if not who:
         return JSONResponse({"ok": False, "error": "sign in"}, status_code=401)
+    if not _guard_owner(request):
+        return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
     except Exception:
@@ -9042,6 +9210,8 @@ async def turn_answer(request: Request):
     who = auth_scope(request)
     if not who:
         return JSONResponse({"ok": False, "error": "sign in"}, status_code=401)
+    if not _guard_owner(request):
+        return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     try:
         body = await request.json()
     except Exception:
@@ -9060,6 +9230,42 @@ async def audit_tail(request: Request, limit: int = 50):
         return JSONResponse({"ok": False, "error": "sign in"}, status_code=401)
     return JSONResponse({"ok": True, "rows": _redact.redact_rows(approvals_store().audit_rows(max(1, min(limit, 500))))})
 
+
+
+
+@app.get("/api/response/context/{conv}")
+def response_context(conv: str, request: Request):
+    if auth_scope(request) not in ("master", "full") or not same_origin(request):
+        return JSONResponse({"ok": False}, status_code=403)
+    if not re.fullmatch(r"[0-9a-f]{32}", conv):
+        return JSONResponse({"ok": False}, status_code=400)
+    manifest, digest, stamp, *_ = RESPONSE_LAYER.assets()
+    account = next(iter((accounts().get("accounts") or {}).values()), {})
+    # A namespace, never a credential. A new sign-in cannot read an old session's checkpoints.
+    epoch = hmac.new(TOKEN.encode(), (cookie_token(request) + "|response").encode(), hashlib.sha256).hexdigest()
+    return JSONResponse({"ok": True, "account": account.get("id") or "acc_owner", "epoch": epoch,
+                         "prefs": RESPONSE_LAYER.preferences(CHAT_SETTINGS_PATH, conv),
+                         "canConfigure": bool(_guard(request)), "enabled": WIDGETS.enabled(),
+                         "widgetOrigin": "https://" + WIDGETS.host(), "manifest": digest, "runtime": stamp},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/response/preferences/{conv}")
+async def response_preferences(conv: str, request: Request):
+    if not _guard(request) or not same_origin(request):
+        return JSONResponse({"ok": False}, status_code=403)
+    if not re.fullmatch(r"[0-9a-f]{32}", conv):
+        return JSONResponse({"ok": False}, status_code=400)
+    raw = bytearray()
+    async for chunk in request.stream():
+        if len(raw) + len(chunk) > RESPONSE_LAYER.assets()[0]["budgets"]["settingsBytes"]:
+            return JSONResponse({"ok": False}, status_code=413)
+        raw.extend(chunk)
+    try:
+        value = RESPONSE_LAYER.save_preferences(CHAT_SETTINGS_PATH, conv, json.loads(raw), approval_lock())
+    except (ValueError, OSError, TypeError):
+        return JSONResponse({"ok": False}, status_code=400)
+    return JSONResponse({"ok": True, "response": value}, headers={"Cache-Control": "no-store"})
 
 
 if __name__ == "__main__":

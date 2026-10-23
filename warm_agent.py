@@ -30,10 +30,11 @@ class WarmAgent:
         self._reader = None
         self._rpc_id = 0
         self._session_id = None
-        self._last_used = 0.0
+        self._last_used = time.monotonic()
         self._lock = threading.RLock()
         self._write_lock = threading.Lock()
         self._closed = False
+        self._turn_running = threading.Event()
         self._reasoning_level = None      # what the session's thinking depth is currently set to
         self.ctx_path = ctx_path          # the file the web guard reads for the turn in flight
         self.last_usage: dict[str, Any] = {}
@@ -66,6 +67,7 @@ class WarmAgent:
         if proc is not None:
             try:
                 proc.kill()
+                proc.wait(timeout=2)
             except Exception:
                 pass
 
@@ -90,28 +92,43 @@ class WarmAgent:
                 except Exception:
                     pass
 
-    def ask(self, prompt, on_event=None, stop=None, reasoning="none") -> tuple[str, str]:
+            for pipe in (proc.stdout, proc.stderr):
+                try:
+                    pipe.close()
+                except Exception:
+                    pass
+
+    def ask(self, prompt, on_event=None, stop=None, reasoning="none", retry=True) -> tuple[str, str]:
         """Ask the current ACP session, retrying once if its process dies."""
         with self._lock:
             if self._closed:
                 return "failed", ""
-            for attempt in range(2):
-                if self._last_used and time.monotonic() - self._last_used >= self.idle_seconds:
-                    self._drop_process()
-                try:
-                    self._ensure_process()
-                    self._last_used = time.monotonic()
-                    return self._prompt(prompt, on_event, stop, reasoning)
-                except _ProcessDied:
-                    LOG.debug("warm Hermes process died (attempt %d)", attempt + 1, exc_info=True)
-                    self._drop_process()
-                    if attempt == 1:
+            self._turn_running.set()
+            try:
+                attempts = 2 if retry else 1
+                for attempt in range(attempts):
+                    if self._last_used and time.monotonic() - self._last_used >= self.idle_seconds:
+                        self._drop_process()
+                    try:
+                        self._ensure_process()
+                        self._last_used = time.monotonic()
+                        return self._prompt(prompt, on_event, stop, reasoning)
+                    except _ProcessDied:
+                        LOG.debug("warm Hermes process died (attempt %d)", attempt + 1, exc_info=True)
+                        self._drop_process()
+                        if attempt + 1 == attempts:
+                            return "failed", ""
+                    except Exception:
+                        LOG.debug("warm Hermes ACP turn failed", exc_info=True)
+                        self._drop_process()
                         return "failed", ""
-                except Exception:
-                    LOG.debug("warm Hermes ACP turn failed", exc_info=True)
-                    self._drop_process()
-                    return "failed", ""
-            return "failed", ""
+                return "failed", ""
+
+            finally:
+                self._turn_running.clear()
+
+    def busy(self) -> bool:
+        return self._turn_running.is_set()
 
     def _ensure_process(self) -> None:
         if self._proc is not None and self._proc.poll() is None and self._session_id:
@@ -133,9 +150,9 @@ class WarmAgent:
                   "JARVIS_APPROVAL_URL": os.environ.get("JARVIS_APPROVAL_URL") or "http://127.0.0.1:8150/agent/ask",
                   } if self.ctx_path else None),
         )
-        self._reader = threading.Thread(target=self._read_stdout, daemon=True)
+        self._reader = threading.Thread(target=self._read_stdout, args=(self._proc, self._events), daemon=True)
         self._reader.start()
-        self._errreader = threading.Thread(target=self._read_stderr, daemon=True)
+        self._errreader = threading.Thread(target=self._read_stderr, args=(self._proc,), daemon=True)
         self._errreader.start()
         self._request("initialize", {
             "protocolVersion": 1,
@@ -152,8 +169,7 @@ class WarmAgent:
                 "sessionId": self._session_id, "modelId": self.model,
             })
 
-    def _read_stdout(self) -> None:
-        proc = self._proc
+    def _read_stdout(self, proc, events) -> None:
         try:
             for line in proc.stdout:
                 LOG.debug("ACP stdout: %s", line.rstrip()[:200])
@@ -162,7 +178,7 @@ class WarmAgent:
                 except (TypeError, ValueError):
                     LOG.debug("discarding non-JSON ACP output: %r", line[:200])
                     continue
-                self._events.put(message)
+                events.put(message)
         except Exception:
             LOG.debug("ACP stdout reader stopped", exc_info=True)
         finally:
@@ -170,11 +186,10 @@ class WarmAgent:
             # pipe nobody reads also BLOCKS the child once it fills. Both are answered here.
             if self.stderr_tail:
                 LOG.warning("ACP child stopped; stderr tail: %s", " | ".join(self.stderr_tail[-6:]))
-            self._events.put(None)
+            events.put(None)
 
-    def _read_stderr(self) -> None:
+    def _read_stderr(self, proc) -> None:
         """Drain the child's stderr, keeping the tail for the post-mortem."""
-        proc = self._proc
         tail: collections.deque[str] = collections.deque(maxlen=40)
         try:
             for line in proc.stderr:
@@ -304,6 +319,7 @@ class WarmAgent:
                 self._drop_process()
                 return False
             self.last_build_error = ""
+            self._last_used = time.monotonic()
             return True
 
     def idle_for(self) -> float:
@@ -386,8 +402,14 @@ class WarmAgent:
             return
         try:
             proc.kill()
+            proc.wait(timeout=2)
         except Exception:
             pass
+        for pipe in (proc.stdin, proc.stdout, proc.stderr):
+            try:
+                pipe.close()
+            except Exception:
+                pass
 
 
 class _ProcessDied(RuntimeError):

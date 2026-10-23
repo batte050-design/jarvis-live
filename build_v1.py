@@ -9,6 +9,7 @@ This file owns the page SHELL only: the head, the body markup the stylesheet and
 expect, and the version stamps. Every asset is stamped with its own content hash, so an edit
 can never be served from a cache holding the previous copy.
 """
+import argparse
 import hashlib
 import re
 import subprocess
@@ -16,7 +17,24 @@ import tempfile
 import os
 import sys
 
-HERE = "/data/apps/jarvis-live"
+def builder_target():
+    parser = argparse.ArgumentParser(description="Build this app copy only; target must be explicit.")
+    parser.add_argument("--target", required=True, help="absolute path of the directory containing this builder")
+    args = parser.parse_args()
+    here = os.path.dirname(os.path.realpath(__file__))
+    if not os.path.isabs(args.target) or os.path.realpath(args.target) != here:
+        parser.error("target must be the absolute directory containing this builder")
+    for name in ("index.html", "static/v1.js", "static/v1.css", "static/approvals-ui.js"):
+        path = os.path.join(here, name)
+        if not os.path.isfile(path) or os.path.commonpath((here, os.path.realpath(path))) != here:
+            parser.error("target is not a self-contained app copy: " + name)
+    for name in ("index_v1.html", "static/response-config.js"):
+        if os.path.commonpath((here, os.path.realpath(os.path.join(here, name)))) != here:
+            parser.error("generated output escapes target: " + name)
+    return here
+
+
+HERE = builder_target()
 SRC = os.path.join(HERE, "index.html")
 OUT = os.path.join(HERE, "index_v1.html")
 CSS = os.path.join(HERE, "static", "v1.css")
@@ -139,6 +157,68 @@ if "FISH" in engine and "mp3" not in engine:
 _OPTS = "window.__jarvisTurnOpts ? window.__jarvisTurnOpts() : null"
 if engine.count(_OPTS) != 1:
     sys.exit("build refused: the turn-options seam appears %d times" % engine.count(_OPTS))
+
+# --- F11 (patch 16, hand-merged): a stream that ends without 'done' is not a finished turn -----------
+_old = "  let buf = '';\n  for (;;){"
+_new = "  let buf = '', ended = false;\n  for (;;){"
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = "      if (data && ev !== 'message') onEvent(ev, data);"
+_new = "      if (data && ev !== 'message'){\n        onEvent(ev, data);\n        if (ev === 'done') ended = true;\n      }"
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = '  }\n}\n\nasync function openStream'
+_new = "  }\n  if (!ended) throw new Error('stream ended before done');\n}\n\nasync function openStream"
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = '    if (!e || !e.status) {'
+_new = '    if (ctx.turn == null && (!e || !e.status)) {'
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+# --- F10 patch 15 (applied above) -------------------------------------------------------------------
+_old = '           handle: null, closed: false, running: true };'
+_new = '           handle: null, closed: false, running: true, lastSeq: -1 };'
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = "  if (typeof d.seq === 'number' && d.seq > lastSeq) lastSeq = d.seq;"
+_new = ''
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = '  // The transcript is kept whether or not the screen is on this conversation:'
+_new = "  if (typeof d.seq === 'number'){\n    if (d.seq <= ctx.lastSeq) return;\n    ctx.lastSeq = d.seq;\n  }\n  // The transcript is kept whether or not the screen is on this conversation:"
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = '  const ctx = newTurnCtx(conv);\n  ctx.turn = turn;'
+_new = '  const previous = liveTurn;\n  const ctx = newTurnCtx(conv);\n  if (previous && String(previous.turn) === String(turn) && String(previous.conv) === String(conv)){\n    ctx.spoken = previous.spoken;\n    ctx.sawTok = previous.sawTok;\n    ctx.sawAudio = previous.sawAudio;\n    ctx.lastSeq = previous.lastSeq;\n  }\n  ctx.turn = turn;'
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = 'since: (since == null ? lastSeq + 1 : since)'
+_new = 'since: ctx.lastSeq + 1'
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
+
+_old = 'window.__jarvisAttachTurn(ctx.turn, ctx.conv, lastSeq + 1)'
+_new = 'window.__jarvisAttachTurn(ctx.turn, ctx.conv, ctx.lastSeq + 1)'
+if engine.count(_old) != 1:
+    sys.exit("build refused: stream repair seam is not unique")
+engine = engine.replace(_old, _new)
 
 # --- the shell ---------------------------------------------------------------------------------------
 # Every id the engine looks up by name is present and keeps its name: c, heard, doing, err,
@@ -489,6 +569,31 @@ def stamp(path):
         return hashlib.sha256(f.read()).hexdigest()[:10]
 
 
+
+# Response assets are data/fixed code only; the engine above is left byte-for-byte unchanged.
+sys.path.insert(0, HERE)
+import response_layer as _response
+_response_config = os.path.join(HERE, "static", "response-config.js")
+with open(_response_config, "w", encoding="utf-8") as _f:
+    _f.write(_response.config_script())
+_response_names = ("response-config.js", "response-core.js", "response-store.js", "response-parent.js")
+_response_css = os.path.join(HERE, "static", "response-parent.css")
+_response_digest = hashlib.sha256()
+for _name in _response_names + ("response-parent.css",):
+    with open(os.path.join(HERE, "static", _name), "rb") as _f:
+        _response_digest.update(_f.read())
+    if _name.endswith(".js"):
+        _check = subprocess.run(["node", "--check", os.path.join(HERE, "static", _name)], capture_output=True, text=True)
+        if _check.returncode:
+            sys.exit("build refused: response script does not parse: " + _name)
+with open(JS, encoding="utf-8") as _f:
+    _surface = _f.read()
+_surface, _count = re.subn(r"/\* response-assets: [^*]+ \*/", "/* response-assets: " + _response_digest.hexdigest() + " */", _surface)
+if _count != 1:
+    sys.exit("build refused: response asset marker missing or duplicated")
+with open(JS, "w", encoding="utf-8") as _f:
+    _f.write(_surface)
+
 out = (
     head + "\n"
     # The build the page itself was made from. An installed app keeps its page alive across
@@ -571,6 +676,16 @@ _APPROVALS = os.path.join(HERE, "static", "approvals-ui.js")
 if os.path.exists(_APPROVALS) and "approvals-ui.js" not in out:
     _astamp = stamp(_APPROVALS)
     out = out.replace("</body>", '<script src="/static/approvals-ui.js?v=%s" defer></script>\n</body>' % _astamp)
+
+
+# Insert fixed response scripts before the surface, after the engine's guarded checks.
+_response_tags = "".join('<script src="/static/%s?v=%s"></script>\n' %
+                         (_name, stamp(os.path.join(HERE, "static", _name))) for _name in _response_names)
+_surface_tag = '<script src="/static/v1.js?v=%s"></script>' % stamp(JS)
+if out.count(_surface_tag) != 1:
+    sys.exit("build refused: response bootstrap has no unique surface insertion point")
+out = out.replace(_surface_tag, _response_tags + _surface_tag)
+out = out.replace("</head>", '<link rel="stylesheet" href="/static/response-parent.css?v=%s">\n' % stamp(_response_css) + "</head>")
 
 open(OUT, "w", encoding="utf-8").write(out)
 print("wrote", OUT, len(out), "bytes")

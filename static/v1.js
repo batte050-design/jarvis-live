@@ -85,7 +85,8 @@
     // the question and its controls stay, the answer never appears. Reclaim it here.
     if (liveBlock && liveBlockAns && ans !== liveBlockAns) ans = liveBlockAns;
     if (!ans) return;
-    if (!answerText) { streamReset(ans); ans.textContent = ""; return; }
+    if (textMode && liveBlock && liveBlock.dataset.agentFailed) return;
+    if (answerSettled && !answerText) { streamReset(ans); ans.textContent = ""; return; }
     if (!answerSettled) {
       // The answer draws as it arrives, in its final shape. Holding the body empty until the turn
       // ended meant the only thing on screen was the plain spoken line, which was then replaced by a
@@ -157,6 +158,11 @@
   // renderer — so the settle folds whatever became complete and rebuilds only if the structure really
   // differs. Nothing that is already right is drawn twice.
   function settleBody(el, text, shape) {
+    if (textMode && window.JarvisResponses && window.JarvisResponses.handles(text, el)) {
+      window.JarvisResponses.reconcile(el, function (target) { paintBodyInto(target, text, true, shape, true); });
+      outboxLinks(el);
+      return;
+    }
     var body = String(text == null ? "" : text);
     var blocks = splitBlocks(body), i, ok = true;
     // No folding pass here. While a turn runs the body is held empty, so folding first drew the answer
@@ -411,6 +417,8 @@
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     var hits = [], node;
     while ((node = walker.nextNode())) {
+      if (textMode && node.parentElement &&
+          (node.parentElement.closest(".jr-response-text") || node.parentElement.closest(".jr-component"))) continue;
       OUTBOX_RE.lastIndex = 0;
       if (OUTBOX_RE.test(node.nodeValue || "")) hits.push(node);
     }
@@ -435,7 +443,12 @@
     });
   }
 
-  function paintBodyInto(el, text, structured, shape) {
+  function paintBodyInto(el, text, structured, shape, responsePass) {
+    if (!responsePass && textMode && structured && window.JarvisResponses && window.JarvisResponses.handles(text, el)) {
+      window.JarvisResponses.reconcile(el, function (target) { paintBodyInto(target, text, structured, shape, true); });
+      outboxLinks(el);
+      return;
+    }
     // The router's own decision outranks the client's guess: when it says the answer is cards, one
     // '- ' line is a card list, because he asked for options. Guessing from punctuation alone sent a
     // real answer that opened with a single option back to raw text with its markers showing.
@@ -723,6 +736,7 @@
   // turn's own step list. Drawing it here rather than inside the finish path means a turn that ends
   // after its live surface was cleared still gets its own badge, on its own answer.
   function paintPill(block, list, ms) {
+    if (textMode && block && block.dataset.agentFailed) return;
     if (!block || block.querySelector(".t-meta")) return;
     var mine = Array.isArray(list) ? list : [];
     var n = mine.length, shown = Number(ms || 0) || 0;
@@ -2262,9 +2276,7 @@
   window.addEventListener("message", widgetMessage);
 
   function askFromWidget(text) {
-    // submitted as if typed: it becomes the question, and it goes down the same path a typed
-    // question takes.
-    try { window.ask(text); } catch (e) {}
+    try { useAsAsk(text); } catch (e) {}
   }
 
   function frameUrl(url) {
@@ -2579,7 +2591,25 @@
     } catch (e) {}
     return false;
   }
+  function paintAgentFailure(text) {
+    if (!textMode || !/^The agent turn failed\b/.test(String(text || "")) || !evBelongsHere() || !liveBlock) return false;
+    var target = liveBlock.querySelector(".t-a");
+    if (!target) return false;
+    liveBlock.dataset.agentFailed = "1";
+    var old = target.querySelector(".agent-failure");
+    if (!old) {
+      old = document.createElement("p"); old.className = "rc-p agent-failure";
+      old.setAttribute("role", "alert"); target.appendChild(old);
+    }
+    old.textContent = String(text);
+    var meta = liveBlock.querySelector(".t-meta");
+    if (meta) meta.remove();
+    answerText = ""; captionText = ""; turnText = "";
+    endFollow(); canvasReleased(); hideWorkingPill(); setPhase("");
+    return true;
+  }
   window.fail = function (text) {
+    if (paintAgentFailure(text)) return;
     if (turnAlreadyAnswered()) {
       // Quietly: the turn is done, so the page settles on it rather than raising a red line about a link.
       endFollow();
@@ -3393,6 +3423,13 @@
     }
     // Same chat, different turn: the ending belongs to its own block or to none.
     if (!evBelongsHere()) return;
+    if (textMode && liveBlock && liveBlock.dataset.agentFailed) {
+      turnEnded = true; answerSettled = true;
+      answerText = ""; captionText = ""; turnText = "";
+      if (cap) cap.textContent = "";
+      endFollow(); canvasReleased(); hideWorkingPill(); setPhase("");
+      return;
+    }
     var said = stripScreenAnnounce((full && String(full).trim()) || captionText || "");
     turnEnded = true;
     answerSettled = true;
@@ -7718,6 +7755,20 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
   function fenceBlock(lang, text) {
     var tag = uiTxt(lang, 24).toLowerCase();
     var spec = parseSpec(text);
+    if (textMode && spec && Object.prototype.hasOwnProperty.call(spec, "component") && Object.prototype.hasOwnProperty.call(spec, "version") &&
+        (/^ui\b/.test(tag) || tag === "uispec" || tag === "ui-spec")) {
+      var decision = window.JarvisResponses ? window.JarvisResponses.fence(text, true) : null;
+      return decision && decision.handled ? decision.node : responsePlain(spec.fallback);
+    }
+    if (textMode && (/^ui\b/.test(tag) || tag === "uispec" || tag === "ui-spec") &&
+        !(window.JarvisResponses ? window.JarvisResponses.legacy(spec) : spec && spec.type && !Object.prototype.hasOwnProperty.call(spec, "component"))) {
+      // A body that never parsed is not a rejected declaration: it is a broken fence, and the answer
+      // can still be read off it as a table or a list. Only a spec that parsed and was refused gets
+      // the sentence, because there the payload was understood and then turned down.
+      if (String(text == null ? "" : text).trim() === "") return null;
+      if (!spec) return uiBlock(text) || specFallback(spec) || specLines(text) || null;
+      return responsePlain(spec.fallback);
+    }
     if (/^ui\b/.test(tag) || tag === "ui" || tag === "uispec" || tag === "ui-spec") {
       // A component payload is never shown as code. This used to fall through to a code block when
       // the spec would not draw, which put the raw JSON on his screen: the one thing he asked never
@@ -7730,6 +7781,13 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
       if (drawn) return drawn;
     }
     return codeBlock(lang, text);
+  }
+
+  function responsePlain(text) {
+    var pre = document.createElement("pre");
+    pre.className = "jr-response-text";
+    pre.textContent = typeof text === "string" && text.trim() ? text : "This interactive response could not be displayed.";
+    return pre;
   }
 
   function uiBlock(text) {
@@ -9143,7 +9201,8 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
       // page's to give, and it keeps it — adopting the machine's window key here would leave the canvas
       // and the record with two different names for one chat, which is how a turn got filed into a
       // conversation that was not the one on screen.
-      return fetch("/reset", { method: "POST" })
+      var warmTarget = textMode && /^[0-9a-f]{32}$/.test(String(keepId || "")) ? "?prestart=" + keepId : "";
+      return fetch("/reset" + warmTarget, { method: "POST" })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function () { return keepId || sessionId; })
         .catch(function () { return keepId || sessionId; });
@@ -9208,6 +9267,25 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
       startNewConversation();
     });
 
+    var prestartedTextConv = "", preparedTextConv = "";
+    function prestartTextChat() {
+      if (!textMode || !q) return;
+      if (freshSession() && !pending) {
+        var typed = q.value;
+        startNewConversation(false);
+        q.value = typed;
+      }
+      var id = String(window.__jarvisConvId ? window.__jarvisConvId() : "");
+      if (!/^[0-9a-f]{32}$/.test(id)) return;
+      if (freshSession()) preparedTextConv = id;
+      if (prestartedTextConv === id) return;
+      prestartedTextConv = id;
+      fetch("/api/agent/prestart/" + id, { method: "POST", credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error("agent pre-start refused"); })
+        .catch(function (e) { if (prestartedTextConv === id) prestartedTextConv = ""; console.warn("agent pre-start failed", e); });
+    }
+    if (q) ["pointerdown", "focus", "input"].forEach(function (event) { q.addEventListener(event, prestartTextChat); });
+
     // --- a question asked on a blank canvas starts its own conversation ------------------------------
     // Without this, a send from the landing canvas was answered inside whatever window the machine was
     // still holding — the previous conversation — so asking the same thing twice put two identical
@@ -9225,6 +9303,10 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
         // Blank, or a conversation the page put there itself: either way this ask starts its own chat.
         // A conversation he opened is left alone — asking again there is a follow-up.
         if (turning || (!freshSession() && !autoBound)) return;
+        if (textMode && freshSession() && preparedTextConv === String(sessionId || "")) {
+          setAutoBound(false);
+          return;
+        }
         var typed = q.value;
         if (!typed || !typed.trim()) return;
         turning = true;
@@ -10350,6 +10432,7 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
         return;
       }
       toast("Signed out on this device");
+      try { if (window.JarvisResponses) window.JarvisResponses.signOut(); } catch (e) {}
       try { localStorage.removeItem("jarvis.v1.sessionstore"); } catch (e) {}
       setTimeout(function () { location.reload(); }, 800);
     });
@@ -10468,3 +10551,5 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
       });
     } catch (e) {}
   })();
+
+/* response-assets: c4e4a901f5d490efdca91e47bf05d8561b90b1013ca04502a92a818838cac0a7 */

@@ -13,8 +13,9 @@
 <link rel="icon" href="/static/icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="manifest" href="/static/manifest.webmanifest">
-<meta name="jl-build" content="c32dc4f359|bf01dacedc|">
+<meta name="jl-build" content="c32dc4f359|e4f3e52efc|">
 <link rel="stylesheet" href="/static/v1.css?v=c32dc4f359">
+<link rel="stylesheet" href="/static/response-parent.css?v=c8c3930707">
 </head>
 <body data-state="idle">
 <canvas id="c" aria-hidden="true"></canvas>
@@ -1248,7 +1249,7 @@ function convId(){
 
 function newTurnCtx(conv){
   return { turn: null, conv: conv, detached: false, spoken: "", sawTok: false, sawAudio: false,
-           handle: null, closed: false, running: true };
+           handle: null, closed: false, running: true, lastSeq: -1 };
 }
 
 // The view has moved off the conversation this turn belongs to. Drawing stops; reading does not.
@@ -1278,7 +1279,7 @@ async function readSSE(path, body, onEvent, signal){
     throw err;
   }
   const reader = r.body.getReader(), dec = new TextDecoder();
-  let buf = '';
+  let buf = '', ended = false;
   for (;;){
     const { value, done } = await reader.read();
     if (done) break;
@@ -1292,9 +1293,13 @@ async function readSSE(path, body, onEvent, signal){
         if (line.startsWith('event:')) ev = line.slice(6).trim();
         else if (line.startsWith('data:')) data += line.slice(5).trim();
       }
-      if (data && ev !== 'message') onEvent(ev, data);
+      if (data && ev !== 'message'){
+        onEvent(ev, data);
+        if (ev === 'done') ended = true;
+      }
     }
   }
+  if (!ended) throw new Error('stream ended before done');
 }
 
 async function openStream(q, onEvent, signal){
@@ -1311,7 +1316,7 @@ async function openStream(q, onEvent, signal){
 function applyEvent(ev, raw, ctx){
   let d = {};
   try { d = JSON.parse(raw); } catch(e){ return; }
-  if (typeof d.seq === 'number' && d.seq > lastSeq) lastSeq = d.seq;
+
   // What event this is and whose turn it belongs to, readable by the page's painters. A painter that
   // writes into a block must be able to check it is the right block before it writes.
   window.__jarvisEvCtx = { ev: ev, turn: ctx.turn, conv: ctx.conv, tid: d.tid || null, seq: d.seq };
@@ -1331,6 +1336,10 @@ function applyEvent(ev, raw, ctx){
   if (ev !== 'open' && d.conv && ctx.conv && String(d.conv) !== String(ctx.conv)){
     tl('chunk from another conversation refused');
     return;
+  }
+  if (typeof d.seq === 'number'){
+    if (d.seq <= ctx.lastSeq) return;
+    ctx.lastSeq = d.seq;
   }
   // The transcript is kept whether or not the screen is on this conversation: it is what the turn
   // said, and a turn that finishes while he is looking elsewhere is still a turn he asked for.
@@ -1441,7 +1450,14 @@ window.__jarvisViewChanged = function (conv) {
 // asked down: everything after `since`, then live, drawn by the same painter as a fresh turn.
 window.__jarvisAttachTurn = function (turn, conv, since){
   if (liveTurn && !liveTurn.closed && !liveTurn.detached) return false;   // still being read
+  const previous = liveTurn;
   const ctx = newTurnCtx(conv);
+  if (previous && String(previous.turn) === String(turn) && String(previous.conv) === String(conv)){
+    ctx.spoken = previous.spoken;
+    ctx.sawTok = previous.sawTok;
+    ctx.sawAudio = previous.sawAudio;
+    ctx.lastSeq = previous.lastSeq;
+  }
   ctx.turn = turn;
   liveTurn = ctx;
   const ac = new AbortController();
@@ -1450,7 +1466,7 @@ window.__jarvisAttachTurn = function (turn, conv, since){
   turnActive = true;
   earTurnOpen = true;
   setState('thinking');
-  readSSE('/stream/attach', { turn: turn, since: (since == null ? lastSeq + 1 : since) },
+  readSSE('/stream/attach', { turn: turn, since: ctx.lastSeq + 1 },
     (ev, data) => { if (liveTurn === ctx) applyEvent(ev, data, ctx); }, ac.signal)
     .then(() => { ctx.closed = true; })
     .catch(e => {
@@ -1530,7 +1546,7 @@ function ask(q, requestedMode){
     }
     // No answer from the machine at all: the question never arrived. It is held, with its id, and sent
     // again when the connection returns — once, because the machine knows that id.
-    if (!e || !e.status) {
+    if (ctx.turn == null && (!e || !e.status)) {
       try {
         if (window.__jarvisHoldQuestion &&
             window.__jarvisHoldQuestion(q, ctx.conv, (window.__jarvisTurnOpts() || {}).turn_id || "")) {
@@ -1547,7 +1563,7 @@ function ask(q, requestedMode){
     // dropped: nothing was lost except the reading of it, and that is recoverable.
     if (ctx.turn != null && typeof window.__jarvisAttachTurn === 'function') {
       console.log('stream cut, re-binding to turn', ctx.turn);
-      if (window.__jarvisAttachTurn(ctx.turn, ctx.conv, lastSeq + 1)) return;
+      if (window.__jarvisAttachTurn(ctx.turn, ctx.conv, ctx.lastSeq + 1)) return;
     }
     console.log('stream failed', e);
     fail('Lost the connection to JARVIS.');
@@ -2248,7 +2264,11 @@ if (window.navigator && navigator.serviceWorker) {
 }
 
 </script>
-<script src="/static/v1.js?v=bf01dacedc"></script>
+<script src="/static/response-config.js?v=af7ad6ed4d"></script>
+<script src="/static/response-core.js?v=7e81768890"></script>
+<script src="/static/response-store.js?v=9e5c2fce21"></script>
+<script src="/static/response-parent.js?v=3f400fa7d9"></script>
+<script src="/static/v1.js?v=e4f3e52efc"></script>
 <script src="/static/approvals-ui.js?v=d4a3607b21" defer></script>
 </body>
 </html>

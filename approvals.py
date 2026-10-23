@@ -33,6 +33,7 @@ class Store:
         self.modes_path = os.path.join(root, "modes.json")
         self.pending_path = os.path.join(root, "pending.json")
         self.audit_path = os.path.join(root, "audit.jsonl")
+        self.expire("restart")
 
     # --- small atomic json helpers -------------------------------------------------
     def _read(self, path: str) -> Dict[str, Any]:
@@ -100,13 +101,15 @@ class Store:
             self._write(self.pending_path, data)
         return {"ok": True, "outcome": item["outcome"], "item": item}
 
-    def expire(self, reason: str, chat: str | None = None) -> List[Dict[str, Any]]:
+    def expire(self, reason: str, chat: str | None = None, question: str | None = None) -> List[Dict[str, Any]]:
         """Restart or timeout: everything still pending becomes a logged deny."""
         expired = []
         with LOCK:
             data = self._read(self.pending_path)
             now = time.time()
             for qid, item in list(data.items()):
+                if question is not None and qid != str(question):
+                    continue
                 if chat is not None and item.get("chat") != str(chat):
                     continue
                 if item.get("state") != "pending":

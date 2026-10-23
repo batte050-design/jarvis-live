@@ -103,3 +103,24 @@ def load_known_secrets(token_file: str = "") -> None:
     for k, v in os.environ.items():
         if any(k.endswith(s) for s in ("_KEY", "_TOKEN", "_SECRET", "_PASSWORD")):
             register_secret(v)
+
+
+class Stream:
+    def __init__(self):
+        self.pending = ""
+
+    def feed(self, text, final=False):
+        self.pending += text
+        cut = len(self.pending) if final else max((m.end() for m in re.finditer(r"\s+", self.pending)), default=0)
+        if not final:
+            for pattern in (r"(?i)\bbearer(?:\s+\S*)?$",
+                            r"(?im)\b(?:api[_-]?key|token|secret|password)\b(?:\s*[:=][^\n]*|\s*)$"):
+                match = re.search(pattern, self.pending)
+                if match:
+                    cut = min(cut, match.start())
+            for value in list(_EXACT):
+                for size in range(1, min(len(value), len(self.pending)) + 1):
+                    if self.pending.endswith(value[:size]):
+                        cut = min(cut, len(self.pending) - size)
+        ready, self.pending = self.pending[:cut], self.pending[cut:]
+        return redact(ready)
