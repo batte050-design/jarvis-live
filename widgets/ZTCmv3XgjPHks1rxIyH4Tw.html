@@ -1,0 +1,68 @@
+<h1>What a month of fuel costs</h1>
+<p class="jw-muted">Move the distance. Petrol at 7,000 a litre, 26 days a month.</p>
+
+<div class="jw-card">
+  <label class="jw-muted" for="kmday">Distance a day</label>
+  <input id="kmday" type="range" min="20" max="150" step="5" value="60" style="width:100%">
+  <div class="jw-muted" id="kmlabel" style="margin-top:6px">&#8212;</div>
+</div>
+
+<h3>Shillings a month</h3>
+<div id="bars"></div>
+
+<div class="jw-card" style="margin-top:10px">
+  <div class="jw-muted" id="verdict">&#8212;</div>
+  <p class="jw-muted" style="margin:8px 0 0" id="basis">&#8212;</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var PRICE = 7000, DAYS = 26, TRAFFIC = 1.3;
+  var CARS = [
+    { name: "Toyota Corolla 1.8", l100: 7.1, published: true },
+    { name: "Toyota Premio 1.8", l100: 7.6, published: true },
+    { name: "Toyota Camry 2.4", l100: 9.7, published: true },
+    { name: "Your Noah", l100: 13.5, published: false }
+  ];
+  var slider = document.getElementById("kmday");
+
+  function money(v) {
+    var s = String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return s;
+  }
+
+  function draw() {
+    var kmDay = Number(slider && slider.value) || 60;
+    var km = kmDay * DAYS;
+    var rows = [];
+    var litres = {};
+
+    CARS.forEach(function (c) {
+      var l100 = c.published ? c.l100 * TRAFFIC : c.l100;   // published figures are optimistic here
+      var l = km * l100 / 100;
+      litres[c.name] = l;
+      rows.push({ label: c.name + " \u2014 " + Math.round(l) + " litres", value: l * PRICE });
+    });
+
+    if (window.JARVIS && JARVIS.bars) {
+      JARVIS.bars(document.getElementById("bars"), rows, { unit: "", digits: 0 });
+    }
+
+    var cheapest = rows[0], dearest = rows[rows.length - 1];
+    var gap = dearest.value - cheapest.value;
+    document.getElementById("kmlabel").textContent =
+      kmDay + " km a day over " + DAYS + " days = " + money(km) + " km a month";
+    document.getElementById("verdict").textContent =
+      "The Noah burns " + money(gap) + " a month more than the Corolla, " +
+      money(dearest.value - rows[rows.length - 2].value) + " more than the Camry.";
+    document.getElementById("basis").textContent =
+      "Corolla, Premio and Camry use makers' published combined figures plus 30 percent for " +
+      "Kampala traffic, which is an estimate. The Noah is your own measured 7.4 km a litre, not " +
+      "an estimate. Values are shillings a month.";
+  }
+
+  if (slider) slider.addEventListener("input", draw);
+  draw();
+})();
+</script>

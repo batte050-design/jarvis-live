@@ -1,0 +1,52 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">The Kamwokya place</h2><p class="wr-p">Everything on record about the tenancy at Mulimira, Kamwokya. What happened, what the law gave you, and what is still open. Last updated 21 September 2026, so the exit date has since passed and needs confirming.</p><h3 class="wr-h">Where and who</h3><p class="wr-p">You rent a room at Mulimira, Kamwokya, in Kampala, and had been there about a year and two months. The landlord is Mr Bwiire, spelled as you gave it, and he lives in the same compound. He is a decent man by your own account; his wife runs the compound day to day, and she is where the trouble came from.</p><hr class="wr-div"><h3 class="wr-h">What happened, in order</h3><section class="wr-card"><span class="wr-badge">Service withdrawn</span><h4>18 September 2026 - electricity cut</h4><p class="wr-p">She cut your power over a kettle being boiled. It stayed off more than three days while the neighbours had power. No notice, no process.</p></section><section class="wr-card"><span class="wr-badge">Service withdrawn</span><h4>21 September 2026 - toilet key withheld</h4><p class="wr-p">She took the key to the shared toilet and bathroom, leaving you no sanitary facility at all, and put you on the compound mopping rota.</p></section><section class="wr-card"><h4>21 September 2026 - the demand letter</h4><p class="wr-p">A formal letter went to Mr Bwiire, single issue, the sanitary facilities only, citing sections 6, 19, 28, 43 and 45 of the Landlord and Tenant Act 2022. Deliberately not about the kettle, so it could not be deflected.</p></section><section class="wr-card"><span class="wr-badge">It worked</span><h4>Within a day - both restored</h4><p class="wr-p">Power came back and the key was returned, with the claim that they never had it. Your read afterwards was that people feel legal things.</p></section><h3 class="wr-h">Why you refused to mop</h3><p class="wr-p">You paid in full and in advance, so when she broke her side of the bargain first you would not keep yours. You chose to leave when your paid period expired rather than confront her, and you were not going to apologise for something you had not done. That position held.</p><hr class="wr-div"><h3 class="wr-h">The law that carried it</h3><p class="wr-p">Under the Landlord and Tenant Act 2022, rent buys the use of facilities and services, not just walls, and electricity plus the toilet and bathroom both count as services. Section 6 requires premises fit for human habitation and names sanitary conveniences. Section 19 requires quiet enjoyment. Section 28 says where a service is withdrawn the rent must come down proportionately. Sections 43 and 45 say nobody may re-enter or push you out without local council officials and police present, and an attempt to compel you to vacate carries relief of three months' rent plus damages. The LC1 is a proper court for this, and a claim there costs between 500 and 4,000 shillings.</p><hr class="wr-div"><h3 class="wr-h">What is still open</h3><section class="wr-card"><span class="wr-badge">Loose end</span><h4>The exit was never confirmed in writing</h4><p class="wr-p">Your stated plan was to leave by 5 October 2026 when the paid period expired. The clean route is the landlord's written consent to vacate. That consent was still outstanding on the last record I have, and the date has now passed without it being closed.</p></section><section class="wr-card"><h4>The proportionate rent reduction</h4><p class="wr-p">Section 28 entitled you to a rent decrease for the days the services were withheld. The letter asked for it in writing. Nothing on record shows it was ever given.</p></section><section class="wr-card"><h4>Nobody ever told me you actually left</h4><p class="wr-p">I hold no record of keys handed back, room photographed, or a final reconciliation. If you have moved, that side of the file needs closing before it becomes a dispute in reverse.</p></section><section class="wr-choices"><h4>What do you want done with this file?</h4><label class="wr-opt"><input type="radio" name="next" value="close-it-out"><span>Close it out: confirm you have left and reconcile the deposit and rent</span></label><label class="wr-opt"><input type="radio" name="next" value="chase-rent-reduction"><span>Chase the section 28 rent reduction claim</span></label><label class="wr-opt"><input type="radio" name="next" value="get-written-consent"><span>Push for Mr Bwiire's written consent to vacate</span></label><label class="wr-opt"><input type="radio" name="next" value="leave-it"><span>Leave it; nothing more is needed</span></label></section><p class="wr-p">The short version: the letter did its job within a day, and the one thing still unreconciled is the exit itself, which was never put in writing on their side.</p><button class="jw-cta" id="wr-send" type="button" disabled>Continue</button><p class="wr-sent" id="wr-sent"></p><script>
+(function () {
+  var ids = ["next"], limit = 200;
+  var btn = document.getElementById("wr-send"), sent = document.getElementById("wr-sent");
+  if (!btn) return;
+  function chosen() {
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var picked = document.querySelector('input[name="' + ids[i] + '"]:checked');
+      if (picked) out.push(ids[i] + ": " + picked.value);
+    }
+    return out;
+  }
+  function refresh() {
+    var n = chosen().length;
+    btn.disabled = n < ids.length;
+    btn.style.opacity = btn.disabled ? "0.4" : "1";
+  }
+  document.addEventListener("change", refresh);
+  refresh();
+  btn.addEventListener("click", function () {
+    var answers = chosen();
+    if (!answers.length) return;
+    var text = ("Kamwokya file - do this next:" + " " + answers.join(" ")).slice(0, limit);
+    // Shown whatever the transport: opened as a plain link, nothing can reach the page, and a
+    // control that silently did nothing would be the lie.
+    sent.textContent = "Sent to JARVIS: " + text;
+    try { if (window.JARVIS && window.JARVIS.ask) window.JARVIS.ask(text); } catch (e) {}
+  });
+})();
+</script>

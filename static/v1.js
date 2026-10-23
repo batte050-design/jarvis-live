@@ -6741,10 +6741,26 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
     return { text: JSON.stringify(spec), used: Math.max(used, srcUsed) };
   }
 
+  function tableCells(line) {
+    // Only unescaped pipes delimit cells. Remove the pipe escape here: the inline renderer
+    // handles emphasis and links, not table syntax.
+    var text = String(line).trim(), parts = [], cell = "", escaped = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (ch === "|" && escaped) cell = cell.slice(0, -1) + ch;
+      else if (ch === "|") { parts.push(cell.trim()); cell = ""; }
+      else cell += ch;
+      if (ch === "\\") escaped = !escaped; else escaped = false;
+    }
+    parts.push(cell.trim());
+    if (text.charAt(0) === "|") parts.shift();
+    var slashes = 0, end = text.length - 2;
+    while (end >= 0 && text.charAt(end--) === "\\") slashes++;
+    if (text.charAt(text.length - 1) === "|" && slashes % 2 === 0) parts.pop();
+    return parts;
+  }
+
   function tableBlock(raw) {
-    var cells = function (line) {
-      return line.replace(/^[ \t]*\|/, "").replace(/\|[ \t]*$/, "").split("|").map(function (c) { return c.trim(); });
-    };
     // The row under the header is the --- rule when the model wrote one. Assuming it is there and
     // skipping a row because of it dropped the table's own first line of data whenever it was not,
     // which is how a table came back missing its first row.
@@ -6762,7 +6778,7 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
     }
     var rows = raw.filter(function (l) { return !isRuleRow(l); });
     if (!rows.length) return null;
-    var parsedRows = rows.map(cells), legends = [];
+    var parsedRows = rows.map(tableCells), legends = [];
     parsedRows = parsedRows.filter(function (row) {
       if (!isTableLegend(row)) return true;
       legends.push(row); return false;
@@ -6770,14 +6786,49 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
     if (!parsedRows.length) return legends.length ? legendBlock(legends) : null;
     var head = parsedRows[0];
     var bodyRows = parsedRows.slice(1);
+    // A frequent model error is an unlabeled leading rank. Repair only an unambiguous 1..N
+    // sequence with exactly one extra cell on every row. Other ragged tables stay readable as
+    // rows in source order, without falsely attaching a value to the next column's heading.
+    if (bodyRows.length && bodyRows.every(function (row, i) {
+      return row.length === head.length + 1 && row[0] === String(i + 1);
+    })) head = ["#"].concat(head);
+    if (bodyRows.some(function (row) { return row.length !== head.length; })) {
+      var fallback = document.createElement("div");
+      fallback.className = "rc-table-fallback";
+      var notice = document.createElement("p");
+      notice.textContent = "Column labels are incomplete; values are shown in their original order.";
+      fallback.appendChild(notice);
+      // Keep the original header too: labels and every supplied value remain available.
+      parsedRows.forEach(function (row) {
+        var line = document.createElement("div");
+        row.forEach(function (cell, i) {
+          if (i) line.appendChild(document.createTextNode(" · "));
+          inline(line, cell);
+        });
+        fallback.appendChild(line);
+      });
+      var readable = document.createDocumentFragment();
+      if (heading) {
+        var title = document.createElement("div"); title.className = "rc-h";
+        inline(title, heading.replace(/^[ \t]*#{1,3}[ \t]+/, "").replace(/[ \t]*#+[ \t]*$/, ""));
+        readable.appendChild(title);
+      }
+      readable.appendChild(fallback);
+      if (legends.length) readable.appendChild(legendBlock(legends));
+      return readable;
+    }
     var align = numColumns(bodyRows);
     var wrap = document.createElement("div");
     wrap.className = "rc-tw";
+    wrap.setAttribute("role", "region");
+    wrap.setAttribute("aria-label", "Data table; scroll horizontally for more columns");
+    wrap.setAttribute("tabindex", "0");
     var t = document.createElement("table");
     t.className = "rc-table";
     var thead = document.createElement("thead"), tr = document.createElement("tr");
     head.forEach(function (c, i) {
       var th = document.createElement("th");
+      th.setAttribute("scope", "col");
       if (align[i]) th.className = "num";
       inline(th, c); tr.appendChild(th);
     });
@@ -10552,4 +10603,4 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
     } catch (e) {}
   })();
 
-/* response-assets: c4e4a901f5d490efdca91e47bf05d8561b90b1013ca04502a92a818838cac0a7 */
+/* response-assets: 80fcd57552ef5d5f662d700f76eaebab6e10f96bf8d1946ad0e32659eab1eaac */

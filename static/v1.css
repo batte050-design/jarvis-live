@@ -3105,16 +3105,28 @@ body[data-stop] #bar3 #live{ display: none }
 .nrow .ndot, .nrow .nspin, .nrow .nspin::before{ pointer-events: none }
 
 
-/* ================================================================== a table takes the width (16 October)
-   A card-width table clipped its own columns: "26 open tabs" came out as "26 open tab...", because the
-   cells were held on one line inside a narrow wrapper. The table uses the width it is given, its cells
-   wrap, and the sideways scroller stays for the rare table that is genuinely too wide to fit at all. */
-.art table, .rc-table, #answer table{ width: 100%; min-width: 0; table-layout: auto }
-.art th, .art td, .rc-table th, .rc-table td{
+/* Artifact tables retain their separate layout. Answer tables preserve readable columns inside
+   their own scroller: forcing every table into the card broke names into individual letters. */
+.art table{ width: 100%; min-width: 0; table-layout: auto }
+.art th, .art td{
   white-space: normal; overflow: visible; text-overflow: clip;
   overflow-wrap: anywhere; word-break: normal; line-height: 1.4;
 }
 .art .tw, .rc-tw{ width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch }
+.rc-tw{ min-width: 0; box-sizing: border-box; scrollbar-width: thin }
+.rc-tw::-webkit-scrollbar{ display: block; height: 6px }
+.rc-table, #answer .rc-table{ width: max-content; min-width: 100%; table-layout: auto }
+.rc-table th, .rc-table td{
+  min-width: 5rem; max-width: 22rem; white-space: normal;
+  overflow: visible; text-overflow: clip; overflow-wrap: normal; word-break: normal; line-height: 1.4;
+}
+.rc-table th, .rc-table .num{ white-space: nowrap }
+.rc-table th:first-child, .rc-table td:first-child{ max-width: 12rem }
+.rc-table code, .rc-table a{ overflow-wrap: anywhere }
+.rc-tw:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px }
+.rc-table-fallback{ margin-bottom: .95rem; overflow-wrap: anywhere }
+.rc-table-fallback p{ color: var(--dim) }
+.rc-table-fallback > div{ padding: .5rem 0; border-bottom: 1px solid var(--line) }
 
 /* --- the account portal ------------------------------------------------------------------------- */
 .acc-id{ display: flex; align-items: center; gap: .9rem; padding: .7rem .2rem 1.1rem }

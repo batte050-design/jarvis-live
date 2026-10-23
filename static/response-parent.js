@@ -44,7 +44,12 @@
   function post(r,data) { if (r.frame && !r.dead) { data.nonce = r.nonce; r.frame.contentWindow.postMessage(data,'*'); } }
   function summary(r) {
     var lines = [r.result.spec.fallback];
-    Object.keys(r.values || {}).forEach(function (k) { var i = r.result.spec.inputs.find(function (x) { return x.id === k; }); lines.push(i.label + ': ' + String(r.values[k])); });
+    Object.keys(r.values || {}).forEach(function (k) {
+      var i = r.result.spec.inputs.find(function (x) { return x.id === k; });
+      // A range field counted in basis points reads as a percentage, never as its raw count.
+      var shown = (i.display === 'basisPoints' && typeof r.values[k] === 'number') ? (r.values[k] / 100) : r.values[k];
+      lines.push(i.label + ': ' + String(shown));
+    });
     try {
       var env = core.evaluate(r.result.spec,r.values);
       r.result.spec.outputs.filter(function (o) { return o.kind === 'metrics'; }).forEach(function (o) { o.items.forEach(function (m) { lines.push(m.label + ': ' + String(core.resolve(m.value,env))); }); });

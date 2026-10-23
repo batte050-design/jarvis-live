@@ -1,0 +1,6 @@
+name: screen
+version: 1.0.0
+description: Put a typed artifact on the user's JARVIS Live screen
+provides_tools:
+  - screen_show
+  - screen_clear

@@ -36,7 +36,13 @@ def provider(row,seen,*,events=None):
         body=json.loads(request.data);seen.append({'url':request.full_url,'body':body})
         if events is None:
             if body.get('tools'):
-                raw=json.dumps(row['arguments']);name=row['tool'];frames=[]
+                args=copy.deepcopy(row['arguments']);name=row['tool'];frames=[]
+                prior=[json.loads(m['content']) for m in body['messages'] if m['role']=='tool']
+                if name in ('emit_chart','emit_budget'):
+                    if not prior:
+                        name='retrieve_series';args={'provider':'user_input','symbol':'','start':'','end':'','period':'month'}
+                    else:args['source']=prior[-1]['source']
+                raw=json.dumps(args)
                 frames.append({'choices':[{'index':0,'delta':{'content':'Drag the slider below. [[file:calculator.html]]','tool_calls':[{'index':0,'id':'fixture','type':'function','function':{'name':name,'arguments':''}}]}}]})
                 for i in range(0,len(raw),7):frames.append({'choices':[{'index':0,'delta':{'tool_calls':[{'index':0,'function':{'arguments':raw[i:i+7]}}]}}]})
                 frames.append({'choices':[{'index':0,'delta':{},'finish_reason':'tool_calls'}]})
@@ -93,14 +99,21 @@ class AuthoringTests(unittest.TestCase):
                     if row['shape']=='prose':
                         self.assertEqual(text,row['answer']);self.assertEqual(len(seen),1 if lane=='fast' else 0)
                     else:
-                        self.assertEqual(len(seen),1);self.assertNotIn('calculator.html',text);self.assertNotIn('Drag the slider',text)
+                        self.assertEqual(len(seen),2 if row.get('tool') in ('emit_chart','emit_budget') else 1);self.assertNotIn('calculator.html',text);self.assertNotIn('Drag the slider',text)
                         self.assertTrue(all('calculator.html' not in value for kind,value in live if kind=='live'))
                         body=seen[0]['body'];self.assertEqual(body['tool_choice'],'required');self.assertTrue(all(t['function']['strict'] for t in body['tools']))
                         self.assertTrue(any(LAYER.prompt_note() in m['content'] for m in body['messages']),'existing instruction block missing')
         if A.report:A.report.write_text(json.dumps({'kind':'SCRIPTED provider/child boundaries; actual server helpers, not native acceptance','rows':report},indent=2)+'\n')
 
     def test_all_server_specs_pass_the_existing_js_validator_and_recompute(self):
-        values=[AUTHOR.emit(row['tool'],row['arguments']) for row in ROWS if row['shape']!='prose']
+        values=[]
+        for row in ROWS:
+            if row['shape']=='prose':continue
+            with AUTHOR.SOURCES.turn(row['prompt']) as evidence:
+                args=copy.deepcopy(row['arguments'])
+                if row['tool'] in ('emit_chart','emit_budget'):
+                    receipt=evidence.retrieve({'provider':'user_input','symbol':'','start':'','end':'','period':'month'});args['source']=receipt['source']
+                values.append(AUTHOR.emit(row['tool'],args))
         code="const fs=require('fs'),root=process.argv[1],core=require(root+'/static/response-core.js')(JSON.parse(fs.readFileSync(root+'/response-capabilities.json')));const rows=JSON.parse(fs.readFileSync(0));for(const spec of rows){const r=core.validate(spec);if(!r.ok)throw Error(spec.component+': '+r.reason);let e=core.evaluate(r.spec,r.initial);if(spec.component==='quote-estimator'){if(e.total!==17004)throw Error('quote total');const next={...r.initial,quantity:7};if(core.evaluate(r.spec,next).total!==19838)throw Error('quote recompute');}if(spec.component==='bill-splitter'&&e.perPerson*e.regularPeople+e.extraShare*e.extraPeople!==100001)throw Error('bill allocation');if(spec.component==='budget-planner'&&e.remaining!==400000)throw Error('budget');console.log('PASS existing validator '+spec.component);}"
         run=subprocess.run(['node','-e',code,str(ROOT)],input=json.dumps(values),text=True,capture_output=True)
         self.assertEqual(run.returncode,0,run.stdout+run.stderr);print(run.stdout,end='')
@@ -120,7 +133,7 @@ class AuthoringTests(unittest.TestCase):
             self.assertEqual(AUTHOR.author(row['prompt'],[],'m','k',stop=lambda:True),('stopped',''));http.assert_not_called()
 
     def test_prose_ui_fences_fall_back_before_the_painter_and_claims_never_leak(self):
-        samples=[('```ui\nPricing is linear, not tapered.\n```','Pricing is linear, not tapered.\n'),('Drag the slider below.\n',AUTHOR.INSTRUCTIONS+'\n'),('Tap the button below.\n',AUTHOR.INSTRUCTIONS+'\n'),('```ui\n{"bad":\n```',AUTHOR.FAILED+'\n')]
+        samples=[('```ui\nPricing is linear, not tapered.\n```','Pricing is linear, not tapered.\n'),('Drag the slider below.\n',AUTHOR.INSTRUCTIONS+'\n'),('Tap the button below.\n',AUTHOR.INSTRUCTIONS+'\n'),('```ui\n{"bad":\n```','')]
         for raw,expected in samples:
             for cut in range(len(raw)+1):
                 guard=AUTHOR.TextSafety();self.assertEqual(guard.feed(raw[:cut])+guard.feed(raw[cut:])+guard.finish(),expected)
@@ -174,11 +187,23 @@ class AuthoringTests(unittest.TestCase):
         self.assertEqual(stamp,hashlib.sha256(LAYER.canonical([source,core,runtime,style]).encode()).hexdigest())
         self.assertNotIn('authoring',LAYER.config_script())
 
-    def test_adjust_myself_never_delivers_an_html_file_or_unmounted_control_claim(self):
-        row={'prompt':'Build me something I can adjust myself.','shape':'prose'};seen=[]
-        status,text,live=deep(ROOT,row,seen)
-        self.assertEqual(status,'failed');self.assertEqual(text,AUTHOR.FAILED);self.assertFalse(seen)
-        self.assertEqual([v for k,v in live if k=='live'],[AUTHOR.FAILED])
+    def test_adjust_myself_is_classified_unsupported_and_answers_as_prose(self):
+        # The request for a self-adjustable control is still recognised and still never authored,
+        # but a dead turn is not an answer: the front path now skips authoring for it and the
+        # model answers in words. Assert both halves of that contract.
+        self.assertEqual(AUTHOR.requested('Build me something I can adjust myself.'),'unsupported')
+        code=(ROOT/'server.py').read_text()
+        self.assertIn('RESPONSE_AUTHORING.requested(prompt) not in (None, "unsupported")',code,
+                      'the front path can once again die on an unsupported authoring request')
+
+    def test_table_requests_stay_with_the_painter(self):
+        for prompt in ['Compare three Kampala buildings in a table: name, units, monthly rent.',
+                       'Show this as a table',
+                       'Give me a table of the fees',
+                       'Tabular breakdown please']:
+            self.assertIsNone(AUTHOR.requested(prompt),prompt)
+        self.assertEqual(AUTHOR.requested('Compare USD vs UGX over the last 6 months'),'auto')
+        self.assertEqual(AUTHOR.requested('Plot a bar chart: January 10, February 20, March 15'),'auto')
 
     def test_coding_artifacts_and_explanations_do_not_enter_authoring(self):
         for prompt in ['Explain how to build a React widget.','What is a quiz?','Write a Python function to plot a bar chart.','Build a React quote card component.','Create a website with a pricing chart.','Create a CSV export for my budget.','Explain how an HTML calculator works.']:
@@ -204,6 +229,6 @@ class AuthoringTests(unittest.TestCase):
             self.assertEqual(actual,LAYER.prompt_note(),'authoring metadata changed the instruction block')
         if A.prompt_note_sha256:
             self.assertEqual(hashlib.sha256(actual.encode()).hexdigest(),A.prompt_note_sha256,'original deployed instruction bytes changed')
-        code=(ROOT/'server.py').read_text();self.assertEqual(code.count('RESPONSE_LAYER.prompt_note()'),2)
+        code=(ROOT/'server.py').read_text();self.assertEqual(code.count('RESPONSE_LAYER.prompt_note()'),3)
 
 if __name__=='__main__':unittest.main(argv=['test_response_authoring.py']+REST)

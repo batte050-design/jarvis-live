@@ -1,0 +1,52 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">Three secondhand phones under $300 for work and driving</h2><p class="wr-p">Prices are the used and refurbished market as of October 2026, so treat them as ranges, not fixed. The right pick turns on whether a full day on maps or a better camera matters more.</p><section class="wr-card"><span class="wr-badge">~$130-200 used</span><h4>Samsung Galaxy A54 5G</h4><p class="wr-p">6.4in Super AMOLED 120Hz, Exynos 1380, 6-8GB RAM, 128-256GB plus microSD, 5000 mAh, IP67.</p><p class="wr-meta">Pros: biggest battery here, expandable storage, 120Hz screen, cheapest of the three. Cons: weakest chip and a camera behind the Pixel.</p></section><section class="wr-card"><span class="wr-badge">~$190-250 used</span><h4>Google Pixel 7a</h4><p class="wr-p">6.1in OLED 90Hz, Tensor G2, 8GB RAM, 128GB, 4385 mAh, IP67, wireless charging.</p><p class="wr-meta">Pros: sharpest screen, best camera, longest software life (updates to May 2028). Cons: no microSD, battery only average for heavy map use.</p></section><section class="wr-card"><span class="wr-badge">~$165-250 used</span><h4>Apple iPhone 12</h4><p class="wr-p">6.1in OLED 60Hz, A14 Bionic, 4GB RAM, 64-256GB, 2815 mAh, MagSafe, IP68.</p><p class="wr-meta">Pros: smooth iOS, strong resale, long support. Cons: smallest battery of the three for long drives, buy only on verified battery health, no microSD.</p></section><h3 class="wr-h">Best pick</h3><p class="wr-p">Samsung Galaxy A54 5G. For work plus all-day driving navigation its 5000 mAh battery and microSD beat the Pixel's better camera, and it costs the least. If photos matter more to you than a whole day on maps, take the Pixel 7a instead.</p><h3 class="wr-h">Three habits that keep the battery healthy</h3><section class="wr-card"><h4>Live in the 20-80% band</h4><p class="wr-p">Top up in short bursts rather than running to 0 or sitting at 100%. Deep cycles and long holds at full charge wear a lithium cell fastest.</p></section><section class="wr-card"><h4>Don't baby it on the car charger</h4><p class="wr-p">A phone that lives plugged in at 100% on a hot dashboard ages quickest. Let it drop, and keep it out of direct sun while navigating.</p></section><section class="wr-card"><h4>Slow charge overnight</h4><p class="wr-p">Use a plain 10-15W charger overnight, keep fast charging for the day, and enable the battery-protection or optimised-charging setting so it stops at 85%.</p></section><section class="wr-choices"><h4>Which one should I hunt live listings for?</h4><label class="wr-opt"><input type="radio" name="pick" value="A54"><span>Samsung Galaxy A54 5G</span></label><label class="wr-opt"><input type="radio" name="pick" value="Pixel 7a"><span>Google Pixel 7a</span></label><label class="wr-opt"><input type="radio" name="pick" value="iPhone 12"><span>iPhone 12</span></label></section><p class="wr-p">Any of the three handles navigation and chat; the A54 is the value call, the Pixel is the camera call.</p><button class="jw-cta" id="wr-send" type="button" disabled>Continue</button><p class="wr-sent" id="wr-sent"></p><script>
+(function () {
+  var ids = ["pick"], limit = 200;
+  var btn = document.getElementById("wr-send"), sent = document.getElementById("wr-sent");
+  if (!btn) return;
+  function chosen() {
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var picked = document.querySelector('input[name="' + ids[i] + '"]:checked');
+      if (picked) out.push(ids[i] + ": " + picked.value);
+    }
+    return out;
+  }
+  function refresh() {
+    var n = chosen().length;
+    btn.disabled = n < ids.length;
+    btn.style.opacity = btn.disabled ? "0.4" : "1";
+  }
+  document.addEventListener("change", refresh);
+  refresh();
+  btn.addEventListener("click", function () {
+    var answers = chosen();
+    if (!answers.length) return;
+    var text = ("Find current used listings, with prices, for the" + " " + answers.join(" ")).slice(0, limit);
+    // Shown whatever the transport: opened as a plain link, nothing can reach the page, and a
+    // control that silently did nothing would be the lie.
+    sent.textContent = "Sent to JARVIS: " + text;
+    try { if (window.JARVIS && window.JARVIS.ask) window.JARVIS.ask(text); } catch (e) {}
+  });
+})();
+</script>

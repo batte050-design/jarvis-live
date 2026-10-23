@@ -156,7 +156,7 @@
         if (!spec.inputs.some(function (i) { return i.id === a.input; })) fail('DATA target');
       }
     });
-    var cost = { components: 1, nodes: 0, inputsPerResponse: spec.inputs.length, responseBytes: bytes(JSON.stringify(spec)), tableCells: 0, chartPoints: 0, svgPrimitives: 0, hotspots: 0, domNodes: 20 + spec.inputs.length * 8 + spec.actions.length * 6 };
+    var cost = { charts: spec.outputs.filter(function (o) { return o.kind === 'chart'; }).length, components: 1, nodes: 0, inputsPerResponse: spec.inputs.length, responseBytes: bytes(JSON.stringify(spec)), tableCells: 0, chartPoints: 0, svgPrimitives: 0, hotspots: 0, domNodes: 20 + spec.inputs.length * 8 + spec.actions.length * 6 };
     var count = { n: 0 }; walk(spec, 0, count); cost.nodes = count.n;
     function action(id) { if (id) { if (!own(actions, id)) fail('hotspot action'); cost.hotspots++; cost.domNodes += 3; } }
     spec.outputs.forEach(function (o) {
@@ -226,6 +226,38 @@
     if (spec.type === 'gallery') spec.images.forEach(function (i) { image(i,true); });
     if (spec.type === 'sources') spec.items.forEach(function (i) { if (!label(i.url || i.href)) fail('legacy source'); if (i.url !== undefined) url(i.url); if (i.href !== undefined) url(i.href); });
   }
+  function sourceLine(source) {
+    if (source.kind === 'illustration') return 'Illustration: synthetic, unmeasured values.';
+    var prefix;
+    if (source.tool === 'yahoo_chart') {
+      var query = JSON.parse(source.query);
+      prefix = 'Source: Yahoo Finance; ' + query.symbol + '; requested: ' + query.start + ' to ' + query.end;
+    } else prefix = source.kind === 'calculation' ? 'Calculated from editable supplied inputs' : 'Source: your supplied figures';
+    var line = prefix + '; retrieved: ' + source.timestamp;
+    if (source.observed_through) line += '; observations through: ' + source.observed_through;
+    line += '; ' + source.aggregation;
+    if (source.missing.length) line += '; missing: ' + source.missing.join(', ');
+    return line;
+  }
+  function provenance(spec) {
+    var charts = spec.outputs.filter(function (o) { return o.kind === 'chart'; });
+    if (!charts.length) return;
+    if (charts.length > B.charts || !spec.source) fail('chart source/count required');
+    var source = spec.source, seen = new Set();
+    if (source.kind !== 'illustration' && !Number.isFinite(Date.parse(source.timestamp))) fail('source timestamp');
+    charts.forEach(function (o) {
+      o.points.forEach(function (p) {
+        if (source.kind !== 'calculation' && source.kind !== 'illustration') {
+          if (!finite(p.value) || seen.has(p.value)) fail('repeated or nonliteral series value');
+          seen.add(p.value);
+        }
+      });
+    });
+    // Fixed text output is interpreted by the existing renderer. Model text never supplies
+    // this credit or the illustration warning; parent and opaque frame derive the same line.
+    var credit = {kind:'text',value:sourceLine(source)};
+    if (source.kind === 'illustration') spec.outputs.unshift(credit); else spec.outputs.push(credit);
+  }
   function validate(raw) {
     var text = typeof raw === 'string' ? raw : '', type = 'unparseable';
     try {
@@ -255,6 +287,8 @@
         if (spec.outputs.some(function (o) { return component.outputKinds.indexOf(o.kind) < 0; })) fail('component output kind');
       }
       spec.actions = spec.actions || []; spec.props = spec.props || {};
+      schema(spec, manifest.schema, manifest.schema.$defs);
+      provenance(spec);
       schema(spec, manifest.schema, manifest.schema.$defs);
       var result = semantic(spec);
       return { ok: true, spec: spec, initial: result.initial, cost: result.cost };
@@ -289,5 +323,5 @@
   }
   return { manifest: manifest, budgets: B, validate: validate, inputs: inputs, initial: initial, inputValue: inputValue,
     evaluate: evaluate, outputValues: outputValues, resolve: resolve, ledger: ledger, message: message, schema: schema,
-    bytes: bytes, clone: clone, bucket: bucket };
+    bytes: bytes, clone: clone, bucket: bucket, sourceLine: sourceLine };
 });

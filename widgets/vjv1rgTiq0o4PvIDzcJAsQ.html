@@ -1,0 +1,52 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">Three scanners for a mobile inspection business</h2><p class="wr-p">Prices read 9 October 2026 from the sellers' own pages; Autel and Launch both ship worldwide.</p><section class="wr-card"><span class="wr-badge">US$419 / EUR346</span><h4>Autel MaxiCOM MK808S</h4><p class="wr-p">Tablet with built-in cable, 7-inch Android 11. Full-system diagnostics, 3,000+ active tests, 28+ reset services. Diesel DPF regeneration, injector coding, ABS bleed, TPMS, battery registration and keys are all on board.</p><p class="wr-meta">Type: pro-level tablet with cable. MK808S vs MK808BT: the BT adds Bluetooth and costs more. Price from Autel's EU dealer, in stock, 9 Oct 2026. No US store listing could be reached today.</p></section><section class="wr-card"><span class="wr-badge">US$401 incl. shipping</span><h4>Launch X431 CRP919E</h4><p class="wr-p">7-inch Android 10 tablet, 4,000+ active tests, 35+ reset services (over 100 in the system menu), ECU coding, CAN FD and DoIP, FCA AutoAuth, TPMS and battery-test modules supported, 8MP camera.</p><p class="wr-meta">Type: pro-level tablet, needs its own USB cable or the BT version. Reads EUR401 in Germany with EUR110 shipping and import on top. Two years of updates included.</p></section><section class="wr-card"><span class="wr-badge">US$1,569</span><h4>Autel MaxiSYS MS906 Pro</h4><p class="wr-p">8-inch Qualcomm tablet, ECU coding and online coding, 36+ services, 3,000+ active tests, CAN FD and DoIP, Customisable pre and post scans, cloud reports, remote expert support.</p><p class="wr-meta">Type: flagship tablet with wireless VCI. Sale price US$1,569, was US$1,599. The step you buy when you are also doing coding and programming work, not inspection alone.</p></section><hr class="wr-div"><h3 class="wr-h">For inspection work specifically</h3><p class="wr-p">The business scans cars pre-purchase and diagnoses faults. That needs all-system reading, live data, freeze frame and a few resets, not ECU coding. The MK808S covers it for roughly a quarter of the MS906 Pro; the Launch costs about the same and carries slightly more reset services but a weaker build and a smaller update window. Land the MS906 Pro only when customers start paying for coding and key work.</p><section class="wr-choices"><h4>Which do you want priced for Kampala delivery?</h4><label class="wr-opt"><input type="radio" name="pick" value="Autel MK808S"><span>Autel MK808S</span></label><label class="wr-opt"><input type="radio" name="pick" value="Launch CRP919E"><span>Launch X431 CRP919E</span></label><label class="wr-opt"><input type="radio" name="pick" value="Autel MS906 Pro"><span>Autel MS906 Pro</span></label><label class="wr-opt"><input type="radio" name="pick" value="a cheaper option"><span>Cheaper option</span></label></section><button class="jw-cta" id="wr-send" type="button" disabled>Continue</button><p class="wr-sent" id="wr-sent"></p><script>
+(function () {
+  var ids = ["pick"], limit = 200;
+  var btn = document.getElementById("wr-send"), sent = document.getElementById("wr-sent");
+  if (!btn) return;
+  function chosen() {
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var picked = document.querySelector('input[name="' + ids[i] + '"]:checked');
+      if (picked) out.push(ids[i] + ": " + picked.value);
+    }
+    return out;
+  }
+  function refresh() {
+    var n = chosen().length;
+    btn.disabled = n < ids.length;
+    btn.style.opacity = btn.disabled ? "0.4" : "1";
+  }
+  document.addEventListener("change", refresh);
+  refresh();
+  btn.addEventListener("click", function () {
+    var answers = chosen();
+    if (!answers.length) return;
+    var text = ("Price this for delivery to Kampala, Uganda, including shipping and import duty:" + " " + answers.join(" ")).slice(0, limit);
+    // Shown whatever the transport: opened as a plain link, nothing can reach the page, and a
+    // control that silently did nothing would be the lie.
+    sent.textContent = "Sent to JARVIS: " + text;
+    try { if (window.JARVIS && window.JARVIS.ask) window.JARVIS.ask(text); } catch (e) {}
+  });
+})();
+</script>

@@ -27,6 +27,8 @@ const examples={
  quiz:app('quiz',{kind:'quiz',question:'Pick the second option',input:'choice',answer:'b',explanation:'Second is correct.'},[select]),
  diagram:app('diagram',{kind:'diagram',shapes:[{id:'box',kind:'rect',x:20,y:20,width:80,height:60,color:'accent',action:'pick',label:'Pick'}]},[number])
 };
+// These local renderer examples are explicitly synthetic, never measured series.
+examples['budget-planner'].source={kind:'illustration'};examples.chart.source={kind:'illustration'};
 examples.diagram.actions=[{id:'pick',class:'LOCAL',label:'Pick',set:{input:'n',value:7}}];
 async function validation(){
  await check('all templates and outputs validate',()=>{for(const [name,s] of Object.entries(examples)){const r=core.validate(s);assert.equal(r.ok,true,name+': '+r.reason);}});

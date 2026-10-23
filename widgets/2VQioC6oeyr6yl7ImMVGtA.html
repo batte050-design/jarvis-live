@@ -1,0 +1,52 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">System check - 10 Oct, 10:26 AM</h2><p class="wr-p">Machine is healthy overall. No failed services, no reboot due, no pending updates. Three things want attention.</p><h3 class="wr-h">What needs attention</h3><section class="wr-card"><span class="wr-badge">Now</span><h4>The automation browser is leaking</h4><p class="wr-p">156 processes and 147 background tabs, one tab pinned at 79% CPU for about 18 hours; the browser as a whole is running near 179%. It is what the load average is made of. Recycling it reclaims the CPU and memory immediately.</p></section><section class="wr-card"><span class="wr-badge">Recurring</span><h4>Semantic memory refresh was OOM-killed</h4><p class="wr-p">On 9 Oct at 4:08 PM that job was killed at 4.1 GB of memory after 25 minutes of CPU. Later runs succeeded, so it is intermittent, but it can blow up again. A memory cap on the job turns a kill into a clean retry.</p></section><section class="wr-card"><span class="wr-badge">Gap</span><h4>No swap on the machine</h4><p class="wr-p">23 GB of RAM and zero swap, so a memory spike has no cushion and goes straight to an OOM kill. A small swapfile absorbs the spike as a slowdown instead.</p></section><hr class="wr-div"><h3 class="wr-h">Also checked, nothing wrong</h3><p class="wr-p">Disk at 50% on the system volume and 14% on data. All services up: gateway, dashboard, web interface, live page, voice shim, InspectFirst site, Uptime Kuma and the tunnel. SSH is key-only with root login off, and the line is under constant scanner noise that the ban list is already absorbing.</p><section class="wr-choices"><h4>Act on these now?</h4><label class="wr-opt"><input type="radio" name="act" value="recycle browser"><span>Recycle the browser</span></label><label class="wr-opt"><input type="radio" name="act" value="add swap"><span>Add a swapfile</span></label><label class="wr-opt"><input type="radio" name="act" value="both"><span>Both</span></label><label class="wr-opt"><input type="radio" name="act" value="nothing"><span>Just the report for now</span></label></section><button class="jw-cta" id="wr-send" type="button" disabled>Continue</button><p class="wr-sent" id="wr-sent"></p><script>
+(function () {
+  var ids = ["act"], limit = 200;
+  var btn = document.getElementById("wr-send"), sent = document.getElementById("wr-sent");
+  if (!btn) return;
+  function chosen() {
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var picked = document.querySelector('input[name="' + ids[i] + '"]:checked');
+      if (picked) out.push(ids[i] + ": " + picked.value);
+    }
+    return out;
+  }
+  function refresh() {
+    var n = chosen().length;
+    btn.disabled = n < ids.length;
+    btn.style.opacity = btn.disabled ? "0.4" : "1";
+  }
+  document.addEventListener("change", refresh);
+  refresh();
+  btn.addEventListener("click", function () {
+    var answers = chosen();
+    if (!answers.length) return;
+    var text = ("Do this to the machine:" + " " + answers.join(" ")).slice(0, limit);
+    // Shown whatever the transport: opened as a plain link, nothing can reach the page, and a
+    // control that silently did nothing would be the lie.
+    sent.textContent = "Sent to JARVIS: " + text;
+    try { if (window.JARVIS && window.JARVIS.ask) window.JARVIS.ask(text); } catch (e) {}
+  });
+})();
+</script>

@@ -1,0 +1,51 @@
+{
+  "notice": "SYNTHETIC TEST FIXTURE in Yahoo chart response shape. Not real FX observations; never used by production fetch.",
+  "clock": "2026-10-23T12:00:00Z",
+  "request": {
+    "provider": "yahoo_chart",
+    "symbol": "UGX=X",
+    "start": "2026-04-23",
+    "end": "2026-10-23",
+    "period": "month"
+  },
+  "payload": {
+    "chart": {
+      "error": null,
+      "result": [
+        {
+          "meta": {
+            "symbol": "UGX=X",
+            "currency": "UGX",
+            "exchangeTimezoneName": "UTC"
+          },
+          "timestamp": [
+            1776902400,
+            1776988800,
+            1778803200,
+            1781481600,
+            1784073600,
+            1786752000,
+            1789430400,
+            1792627200
+          ],
+          "indicators": {
+            "quote": [
+              {
+                "close": [
+                  3680.25,
+                  3684.25,
+                  3725.5,
+                  null,
+                  3666.75,
+                  3694.25,
+                  3769.5,
+                  3984.25
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

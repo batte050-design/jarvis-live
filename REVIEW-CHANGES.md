@@ -798,7 +798,7 @@ so `mlops/evaluation/llama-cpp` is filed under MLOps rather than under nothing. 
 tree's, not a constant: it moves when a skill is added.
 
 **Automations: the schedule was being printed, not read.** The endpoint was handing the page
-`when: "0 7 * * *"` and the panel was showing exactly that, next to `→ whatsapp:000000000000@lid`.
+`when: "0 7 * * *"` and the panel was showing exactly that, next to `→ whatsapp:<operator-lid>@lid`.
 The endpoint now sends the schedule's own parts — `kind`, `expr`, `minutes` — plus `last_run_at`,
 `next_run_at`, `failure_streak` and `last_error`, and the page says the sentence: "Daily at 7:00 AM",
 "Mondays at 6:00 AM", "Every 6 hours", "Hourly at :25", "4 Oct at 5:48 PM". Every one of the twenty
@@ -1654,7 +1654,7 @@ reading the rendered page back -- none of those strings appear.
 **Authentication methods.** Three rows, each with what it is, the value behind it, and a status badge.
 Every badge is derived at request time from a file that actually holds the thing:
   * Email Address -> the node's own channel directory, taking only the entry attributable to him
-    (operator@example.com, Bound, Primary). It does not take the first address it finds: that directory also
+    (owner@example.com, Bound, Primary). It does not take the first address it finds: that directory also
     lists people who have written to him, and a customer's address on his account page would be both wrong
     and careless.
   * Google Account -> ~/.hermes/google_token.json, checked by name and by holding a refresh_token.
@@ -1724,7 +1724,7 @@ IS (model and system), never by the surface or the raw agent. "Sessions & securi
 security", and it lists devices with their session counts, not a flat list of loads.
 
 **The account.** `~/.hermes/jarvis_live_accounts.json` holds exactly one account -- the owner's,
-operator@example.com, role admin -- with `"signup": "closed"`. It is data, not a hardcoded name. Sign-up is
+owner@example.com, role admin -- with `"signup": "closed"`. It is data, not a hardcoded name. Sign-up is
 refused in the sign-in screen itself.
 
 **The sign-in screen.** GET / (unauthenticated) or GET /door: the address, then the code, with Google
@@ -1808,7 +1808,7 @@ could not find `hermes` at all -- the mail path itself was never reached. Every 
 because they ran from a shell where PATH had it. Now the executable is resolved by hand once
 (shutil.which, then ~/.local/bin/hermes, then the checkout's venv) and the child is handed a PATH holding
 the same directory plus HOME, so anything it spawns resolves too. Verified from the service: "mail will use
-/home/ubuntu/.local/bin/hermes", then "sign-in code mailed to operator@example.com" in 4.6 s.
+/home/ubuntu/.local/bin/hermes", then "sign-in code mailed to owner@example.com" in 4.6 s.
 
 **Two buttons, as he asked.** The screen had three controls and a separate "Continue" that did nothing
 until you pressed the other one. It is now: **Email me a code** and **Continue with Google**. The first

@@ -1,0 +1,22 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">Payment gateway dashboard - illustrative figures</h2><p class="wr-p">Every number below is illustrative: made up to show the instrument panel, not measured from any live account. Three providers side by side on throughput, latency, webhook reliability and settlement. Gateway pages to the reader: M-Pesa is the mobile-money rail, Flutterwave and Paystack are the card-and-collection aggregators.</p><h3 class="wr-h">Throughput and success rate</h3><section class="wr-card"><span class="wr-badge">Illustrative</span><h4>M-Pesa</h4><p class="wr-p">Slower peak rate and a wider failure tail, mostly STK push timeouts when the handset does not answer. Rail operates in fixed local hours, so volume concentrates hard into the working day.</p><p class="wr-meta">Peak 41 txn/s - 96.8% success</p></section><section class="wr-card"><span class="wr-badge">Illustrative</span><h4>Flutterwave</h4><p class="wr-p">Highest peak of the three, failures clustered on issuer declines rather than transport. Card and mobile money arrive through the same endpoint, which flattens the integration work.</p><p class="wr-meta">Peak 68 txn/s - 98.1% success</p></section><section class="wr-card"><span class="wr-badge">Illustrative</span><h4>Paystack</h4><p class="wr-p">Best success rate and the steadiest curve. Lower peak because the demo routes card traffic first and falls back to the rail, adding one hop under load.</p><p class="wr-meta">Peak 54 txn/s - 98.6% success</p></section><h3 class="wr-h">Latency on the authorisation path</h3><p class="wr-p">Median and 95th percentile, in milliseconds, accepted requests only. The gap between the two columns is the number that matters to a customer standing at a till: the median is what the average payer feels, the p95 is what the unlucky one does.</p><p class="wr-p">Settlement, hours after the transaction: M-Pesa same day, Flutterwave T+1 to T+2, Paystack T+1. All illustrative.</p><p class="wr-p">Figures are illustrative, drawn to show the shape of the dashboard and not read from any provider account. Point it at a real account and the same panels fill with measured numbers.</p>

@@ -149,18 +149,18 @@ class BuilderTests(unittest.TestCase):
     def test_rebuild_is_deterministic_and_engine_is_identical(self):
         with tempfile.TemporaryDirectory() as d:
             target=pathlib.Path(d)/'app'
-            shutil.copytree(ROOT,target,ignore=shutil.ignore_patterns('.git','__pycache__'))
+            target.mkdir()
+            names=['server.py','response_layer.py','response-capabilities.json','build_v1.py','index.html','index_v1.html',
+                   'static/v1.js','static/v1.css','static/approvals-ui.js']
+            names += [str(p.relative_to(ROOT)) for p in (ROOT/'static').glob('response-*') if p.is_file()]
+            for name in names:
+                dest=target/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,dest)
             before=(target/'index_v1.html').read_text()
-            source=(target/'build_v1.py').read_text()
-            # Bind only the pinned builder's hardcoded location, in memory, inside a disposable copy.
-            # This never writes the live path and does not change the repository builder.
-            location='HERE = "/data/apps/jarvis-live"'
-            self.assertEqual(source.count(location),1)
-            source=source.replace(location,'HERE = '+repr(str(target)),1)
-            runner=pathlib.Path(d)/'run.py';runner.write_text('exec(compile('+repr(source)+',"build_v1.py","exec"),{"__file__":'+repr(str(target/'build_v1.py'))+',"__name__":"__main__"})')
-            subprocess.run([sys.executable,str(runner)],check=True,capture_output=True,text=True)
+            # Exercise this commit's guarded builder against its own disposable app copy.
+            argv=[sys.executable,str(target/'build_v1.py'),'--target',str(target)]
+            subprocess.run(argv,check=True,capture_output=True,text=True)
             one=(target/'index_v1.html').read_bytes()
-            subprocess.run([sys.executable,str(runner)],check=True,capture_output=True,text=True)
+            subprocess.run(argv,check=True,capture_output=True,text=True)
             self.assertEqual(one,(target/'index_v1.html').read_bytes())
             def inline(s):return re.findall(r'<script(?![^>]*src)[^>]*>(.*?)</script>',s,re.S)
             self.assertEqual(inline(before),inline(one.decode()))

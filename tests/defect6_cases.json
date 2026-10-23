@@ -1,0 +1,86 @@
+[
+  {
+    "case": "missing_source"
+  },
+  {
+    "case": "fixture_build"
+  },
+  {
+    "case": "source_changes_with_clock"
+  },
+  {
+    "case": "observation_timestamp"
+  },
+  {
+    "case": "no_fill"
+  },
+  {
+    "case": "empty_or_failed_retrieval"
+  },
+  {
+    "case": "repeat_rejected"
+  },
+  {
+    "case": "wrong_points"
+  },
+  {
+    "case": "foreign_receipt"
+  },
+  {
+    "case": "source_tamper"
+  },
+  {
+    "case": "one_chart"
+  },
+  {
+    "case": "mixed_narrative"
+  },
+  {
+    "case": "numeric_prose"
+  },
+  {
+    "case": "illustration"
+  },
+  {
+    "case": "artifact_gate"
+  },
+  {
+    "case": "no_format_words_model_choice"
+  },
+  {
+    "case": "fast_real_helper"
+  },
+  {
+    "case": "deep_real_helper"
+  },
+  {
+    "case": "web_off"
+  },
+  {
+    "case": "ordinary_and_voice"
+  },
+  {
+    "case": "bare_and_legacy"
+  },
+  {
+    "case": "no_network_or_redirect_escape"
+  },
+  {
+    "case": "protected_boundaries"
+  },
+  {
+    "case": "concurrent_turn_isolation"
+  },
+  {
+    "case": "wrong_query_or_window"
+  },
+  {
+    "case": "provider_refusal_is_failed"
+  },
+  {
+    "case": "chosen_prose_keeps_paragraphs_and_table"
+  },
+  {
+    "case": "delayed_side_push_after_text_answer"
+  }
+]

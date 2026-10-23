@@ -176,18 +176,37 @@ SYSTEM = (
 VOICE_ONLY = re.compile(r"Everything you write is (?:read|spoken) aloud[^.]*\.\s*")
 
 TEXT_MODE_NOTE = (
-    "This turn is read on a screen, not spoken, and that overrides anything above saying your reply "
-    "is read aloud: write for the eye. Put a short list, a line of figures or three named options in "
-    "where it saves him reading. The page draws structure, so write it where the facts are "
-    "structural rather than describing it: a comparison or a set of figures goes in a pipe table "
-    "with a header row and a --- rule under it, a command or a snippet goes in a fenced "
-    "triple-backtick block, a warning worth setting apart starts with '> ', and options or "
-    "recommendations go on '- ' lines that each open with a bold name. A long or multi-topic answer "
-    "is scanned rather than read, so give it a shape: the substance in the first line, then short "
-    "blocks under a bold heading that names each subject, two sentences to a block at most, and "
-    "figures and items on '- ' lines rather than inside a paragraph. The shape is layout and not "
-    "voice, so stay yourself inside it: plain words, the conclusion first, no hedging, no "
-    "cheerleading and no sign-off."
+    "This turn is read on a screen. This overrides spoken-only restrictions on lists and markup. "
+    "Lead with the answer in plain words. A simple calculation needs its result and working, "
+    "usually one or two sentences; numbers alone do not justify a table. Use bullets for short "
+    "recommendations, steps for an ordered process, metrics for a few deciding figures, comparison "
+    "panels for two or three entities with several attributes, and a gallery only when pictures "
+    "help identify the subject. Use a chart when the shape of verified data matters. A table earns "
+    "its place when the reader needs an exact matrix of shared attributes or explicitly asks for "
+    "one. Choose by the information, not keywords such as compare, weather or savings. Do not add "
+    "a table to an explanation, a calculation or a list merely to make it look structured. "
+    "Reuse the existing supported components; prose and lists remain valid answers. Do not add "
+    "controls unless the user asked to interact. Keep long answers in short sections, with no "
+    "filler, repeated dataset or sign-off. Layout limits are not tool limits: use the available "
+    "research tools for facts, and do not claim a venue directory or another tool is unavailable "
+    "merely because there is no matching UI component. If retrieval actually fails, name that gap."
+)
+
+# The shared MECHANICS below also serves voice. Keep that contract unchanged, and give both
+# written paths the same screen contract rather than conflicting bare-JSON/fenced-JSON advice.
+TEXT_MECHANICS = (
+    "Write each legacy display component as one complete fenced ui JSON object using the library "
+    "below. Declared interactive components follow the separate exact schema; never mix the two "
+    "contracts. Never write HTML or executable code to create a response component. A pipe table "
+    "has a header and separator, with the same number of cells in every row. A rank needs its own "
+    "header. Preserve full names, meaningful labels and units; do not abbreviate a label into "
+    "ambiguity to fit a phone. Prefer a compact matrix; wide tables scroll. Put sentence-length "
+    "explanations in prose or steps. Escape literal pipes inside cells as \\|. Write a dataset "
+    "once, in its component or table, and explain only the useful conclusion beside it. Cite "
+    "retrieved figures with their source and observation date. Calculations identify their user "
+    "inputs and assumptions. Never invent observations, pad missing periods or imply an "
+    "illustration was measured. A source label alone is not proof of retrieval. Code requested "
+    "as the answer uses a language-tagged code fence; ordinary lists use '- ' lines."
 )
 
 
@@ -451,7 +470,7 @@ def format_directive(shape, mode):
     shape is imposed, and the component is chosen from the payload as the answer is written.
     """
     if mode == "text":
-        return FAMILIES + " " + RESTRAINT + " " + MECHANICS + " " + COMPOSE + RESPONSE_LAYER.prompt_note()
+        return TEXT_MODE_NOTE + " " + FAMILIES + " " + RESTRAINT + " " + TEXT_MECHANICS + " Supported display library: " + UI_LIBRARY + RESPONSE_LAYER.prompt_note()
     return FAMILIES + " " + RESTRAINT + " " + MECHANICS + " " + SPOKEN_NOTE + " " + COMPOSE
 
 KAMPALA = zoneinfo.ZoneInfo("Africa/Kampala")
@@ -1484,7 +1503,7 @@ def accounts():
     """Every account this node serves. One, seeded from the owner's own address, and no sign-up."""
     d = _load_json(ACCOUNTS_FILE, None)
     if not isinstance(d, dict) or not d.get("accounts"):
-        d = {"accounts": {"operator@example.com": {"id": "acc_owner", "name": "Mohammad",
+        d = {"accounts": {"owner@example.com": {"id": "acc_owner", "name": "Mohammad",
                                                  "role": "admin", "providers": ["email"],
                                                  "created": time.strftime("%Y-%m-%d %H:%M:%S")}},
              "signup": "closed"}
@@ -1917,11 +1936,8 @@ def shape_hint(mode, prompt):
     """
     if mode != "text":
         return ""
-    return ("\n\n[Layout: none is imposed, because an answer has whatever shape its content has. "
-            "Prose by default; a pipe table where attributes read better in columns; a '- ' line per "
-            "item where there is a list. Where a component genuinely carries the answer - a "
-            "comparison, a process, the deciding figures, a trend, pictures, the evidence under a "
-            "claim - write ONE fenced ui block holding it, in exactly this form: " + UI_LIBRARY + "]" + RESPONSE_LAYER.prompt_note())
+    return ("\n\n[" + TEXT_MODE_NOTE + " " + TEXT_MECHANICS +
+            " Supported display library: " + UI_LIBRARY + "]" + RESPONSE_LAYER.prompt_note())
 
 
 @RESPONSE_AUTHORING.text_stream
@@ -1931,14 +1947,15 @@ def front_stream(prompt, history=None, mode="voice"):
     prior = recall() if history is None else history
     messages = ([{"role": "system", "content": system}] + for_model(prior)
                 + [{"role": "user", "content": prompt + "\n\n" + now_line() + shape_hint(mode, prompt)}])
-    if mode == "text" and RESPONSE_AUTHORING.requested(prompt):
-        status, authored = yield from RESPONSE_AUTHORING.author_chunks(prompt, messages, FRONT_MODEL, DS_KEY)
-        if status == "failed":
-            raise RuntimeError(authored)
-        if status == "stopped":
+    if mode == "text" and RESPONSE_AUTHORING.requested(prompt) not in (None, "unsupported"):
+        with RESPONSE_AUTHORING.SOURCES.turn(prompt):
+            status, authored = yield from RESPONSE_AUTHORING.author_chunks(prompt, messages, FRONT_MODEL, DS_KEY)
+            if status == "failed":
+                raise RuntimeError(authored)
+            if status == "stopped":
+                return
+            yield authored
             return
-        yield authored
-        return
     # max_tokens covers the model's REASONING as well as its words, and reasoning is not
     # streamed, so a low cap fails silently: measured on ten substantive questions, six came
     # back with reasoning_tokens=500, finish_reason=length and an EMPTY reply, and the page
@@ -2835,15 +2852,12 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
     # The register follows the mode, for the same reason the fast layer's prompt does: a written
     # answer forbidden from using a list is worse to read than no structure at all.
     if mode == "text":
-        # The screen draws four shapes and only these, so the answer is written in the one this
-        # question wants rather than in whatever a model reaches for. Prose is not the fallback
-        # for a list: it is the shape for a question that has no parts.
+        # Use the same display contract as the fast text path. The old opening said there were
+        # only four shapes, then appended a second contract demanding unfenced component JSON.
         opening = ("You are answering Mohammad in writing, on his own private page, because he "
                    "typed rather than spoke. Lead with the result, in plain English: no emoji, no "
-                   "file paths, no tool output, no status lines. He reads it on a screen that "
-                   "draws four shapes and only these: a pipe table, a fenced code block, '- ' "
-                   "lines, and prose. "
-                   + format_directive(shape, "text") + " " + UI_NOTE + " " + NO_FILLER + " "
+                   "file paths, no tool output, no status lines. "
+                   + format_directive(shape, "text") + " " + NO_FILLER + " "
                    + NO_VOICE_LOSS + " "
                    "If you cannot do it or are not sure, say so plainly rather than guessing, and "
                    "never state a figure you did not just verify. Put the reply between <<<SPOKEN "
@@ -2882,6 +2896,10 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
            "are the first steps of most jobs, and they are exactly the ones that end up listed as a "
            "bare machine action. A step listed that way tells him nothing, and eight of them in a "
            "row tell him less, so write the line in his words, not the tool's. "
+           + ("For this written turn, put display components in the answer itself using the "
+              "inline contract above. Do not also publish the same answer through screen_show "
+              "or build a separate reply widget. A downloadable file is still handed over with "
+              "its file marker when requested.\n\n" if mode == "text" else
            "He also has a screen in front of him, and screen_show puts a thing on it. Showing is "
            "separate from speaking, so whenever the answer is a thing rather than a sentence - a "
            "table, a set of numbers, a list, a file's contents, a picture - show it with "
@@ -2903,7 +2921,7 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
            "printed. A single table, list or set of numbers is still its own artifact kind; the "
            "widget is for a composition that has to respond to a tap. A control that does "
            "nothing is a lie, so never draw one. Write nothing about it afterwards: the widget is "
-           "the answer, and a sentence pointing at it is the filler he asked you to stop writing.\n\n"
+           "the answer, and a sentence pointing at it is the filler he asked you to stop writing.\n\n")
            + (WEB_NOTE if web else "") + ("" if memory else NO_MEMORY_NOTE) + thread_note(conv) + prompt)
     _guard_path("enter", conv, "hermes_answer")
     model = config_model()
@@ -5602,6 +5620,8 @@ async def art(request: Request):
         return JSONResponse({"error": "malformed body"}, status_code=400)
     if not isinstance(payload, dict):
         return JSONResponse({"error": "malformed body"}, status_code=400)
+    if not RESPONSE_AUTHORING.SOURCES.artifact_allowed(payload):
+        return JSONResponse({"error": "This text turn publishes its answer inline; a separate screen artifact is refused."}, status_code=409)
     if payload.get("clear"):
         payload = {"kind": "clear"}
     kind = str(payload.get("kind") or "")
@@ -6658,7 +6678,7 @@ async def stream(request: Request):
                                 try:
                                     _note = RESPONSE_LAYER.prompt_note()
                                     if _note:
-                                        ask_q = RESPONSE_UI_RULE + RESPONSE_UI_EXAMPLE + "\n\n" + q + "\n" + _note
+                                        ask_q = q + "\n" + _note
                                 except Exception as _ne:
                                     print("response note unavailable: %r" % (_ne,), flush=True)
                                 print("ask prompt: q=%d chars, note=%d chars, total=%d" % (len(q), len(ask_q)-len(q), len(ask_q)), flush=True)
@@ -8570,7 +8590,7 @@ async def api_account(request: Request):
          "status": "Bound" if phone else "Unbound", "primary": False},
     ]
     devs = devices_summary(tok if tok in entries else None)
-    acct = account_for("operator@example.com") or {}
+    acct = account_for("owner@example.com") or {}
     return JSONResponse({"ok": True, "name": acct.get("name") or "Mohammad",
                          "role": (acct.get("role") or "admin").title(), "bindings": bindings,
                          "this_device": {"label": device_display(mine.get("label") or device_key_for(
@@ -8581,7 +8601,7 @@ async def api_account(request: Request):
                          "sessions": len(entries),
                          "others": max(0, len(devs) - 1),
                          "account": {"id": acct.get("id") or "acc_owner",
-                                     "email": "operator@example.com",
+                                     "email": "owner@example.com",
                                      "role": (acct.get("role") or "admin").title()},
                          "default_mode": mode})
 
@@ -9194,7 +9214,7 @@ def _nudge_later(qid: str, plain: str) -> None:
                     % (plain or "an action needs your approval"))
             _bin = os.environ.get("JARVIS_HERMES_BIN") or "/home/ubuntu/.local/bin/hermes"
             subprocess.run([_bin, "send",
-                            "-t", "whatsapp:000000000000@lid", text],
+                            "-t", "whatsapp:<operator-lid>@lid", text],
                            timeout=60, check=False,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
