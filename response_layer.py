@@ -1,5 +1,6 @@
 """Declarative response assets and response-only preferences; no turn/session machinery."""
 import base64
+import copy
 import functools
 import hashlib
 import json
@@ -110,6 +111,11 @@ def prompt_note():
     """Added only to existing text prompts; never calls a model or reads recall."""
     try:
         manifest = assets()[0]
+        # This note also serves the paused voice path. Keep its historical declaration exact;
+        # text authoring advertises the optional primitive extension in its typed tool instead.
+        manifest = copy.deepcopy(manifest)
+        manifest['schema']['properties'].pop('layout', None)
+        manifest['schema']['$defs'].pop('layoutNode', None)
         contract = {
             "type": "widget", "version": manifest["contractVersion"], "id": "quote",
             "component": "quote-estimator", "props": {"title": "Quote", "currency": "UGX"},

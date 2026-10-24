@@ -1,0 +1,640 @@
+{
+  "quote": {
+    "title": "Inspection quote",
+    "currency": "UGX",
+    "inputs": [
+      {
+        "id": "quantity",
+        "label": "Quantity",
+        "kind": "stepper",
+        "default": 4,
+        "min": 1,
+        "max": 10000,
+        "step": 1
+      },
+      {
+        "id": "price",
+        "label": "Unit price",
+        "kind": "number",
+        "default": 80000,
+        "min": 0,
+        "max": 10000000,
+        "step": 1,
+        "display": "money"
+      },
+      {
+        "id": "discount",
+        "label": "Discount (%)",
+        "kind": "range",
+        "default": 1000,
+        "min": 0,
+        "max": 10000,
+        "step": 1,
+        "display": "basisPoints"
+      }
+    ],
+    "graph": [
+      {
+        "id": "subtotal",
+        "op": "mul",
+        "args": [
+          {
+            "ref": "quantity"
+          },
+          {
+            "ref": "price"
+          }
+        ]
+      },
+      {
+        "id": "discountProduct",
+        "op": "mul",
+        "args": [
+          {
+            "ref": "subtotal"
+          },
+          {
+            "ref": "discount"
+          }
+        ]
+      },
+      {
+        "id": "discountRaw",
+        "op": "div",
+        "args": [
+          {
+            "ref": "discountProduct"
+          },
+          10000
+        ]
+      },
+      {
+        "id": "saving",
+        "op": "round",
+        "args": [
+          {
+            "ref": "discountRaw"
+          }
+        ]
+      },
+      {
+        "id": "total",
+        "op": "sub",
+        "args": [
+          {
+            "ref": "subtotal"
+          },
+          {
+            "ref": "saving"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "metrics",
+        "items": [
+          {
+            "label": "Total",
+            "value": {
+              "ref": "total"
+            },
+            "format": "money"
+          },
+          {
+            "label": "Discount",
+            "value": {
+              "ref": "saving"
+            },
+            "format": "money"
+          }
+        ]
+      },
+      {
+        "kind": "table",
+        "columns": [
+          {
+            "label": "Item"
+          },
+          {
+            "label": "Amount",
+            "format": "money"
+          }
+        ],
+        "rows": [
+          [
+            "Subtotal",
+            {
+              "ref": "subtotal"
+            }
+          ],
+          [
+            "Total",
+            {
+              "ref": "total"
+            }
+          ]
+        ]
+      }
+    ],
+    "actions": [],
+    "layout": [
+      {
+        "id": "root",
+        "kind": "Col",
+        "children": [
+          "heading",
+          "grid",
+          "more"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "heading",
+        "kind": "Title",
+        "children": [],
+        "text": "Inspection quote",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "grid",
+        "kind": "Grid",
+        "children": [
+          "form",
+          "total"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 2
+      },
+      {
+        "id": "form",
+        "kind": "Form",
+        "children": [
+          "qty",
+          "price",
+          "discount"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "qty",
+        "kind": "Input",
+        "children": [],
+        "text": "",
+        "bind": "quantity",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "price",
+        "kind": "Input",
+        "children": [],
+        "text": "",
+        "bind": "price",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "discount",
+        "kind": "Slider",
+        "children": [],
+        "text": "",
+        "bind": "discount",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "total",
+        "kind": "Card",
+        "children": [
+          "metrics"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "metrics",
+        "kind": "Output",
+        "children": [],
+        "text": "",
+        "bind": "0",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "more",
+        "kind": "Popover",
+        "children": [
+          "breakdown"
+        ],
+        "text": "Calculation details",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "breakdown",
+        "kind": "Output",
+        "children": [],
+        "text": "",
+        "bind": "1",
+        "gap": 3,
+        "columns": 1
+      }
+    ],
+    "fallback": "Four inspections at UGX 80,000 each less 10%: UGX 288,000. Inputs are your supplied figures."
+  },
+  "plan": {
+    "title": "A quiet afternoon",
+    "currency": "UGX",
+    "inputs": [],
+    "graph": [],
+    "outputs": [
+      {
+        "kind": "text",
+        "value": "A flexible sequence; no bookings or reservations have been made."
+      }
+    ],
+    "actions": [],
+    "layout": [
+      {
+        "id": "root",
+        "kind": "Col",
+        "children": [
+          "title",
+          "timeline",
+          "cards",
+          "note"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "title",
+        "kind": "Title",
+        "children": [],
+        "text": "A quiet afternoon",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "timeline",
+        "kind": "Timeline",
+        "children": [
+          "walk",
+          "lunch"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "walk",
+        "kind": "ListItem",
+        "children": [
+          "walk-text"
+        ],
+        "text": "Start outside",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "walk-text",
+        "kind": "Text",
+        "children": [],
+        "text": "Take a short walk before lunch.",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "lunch",
+        "kind": "ListItem",
+        "children": [
+          "lunch-text"
+        ],
+        "text": "Pause for lunch",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "lunch-text",
+        "kind": "Caption",
+        "children": [],
+        "text": "Choose somewhere comfortable nearby.",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "cards",
+        "kind": "Carousel",
+        "children": [
+          "indoor",
+          "outdoor"
+        ],
+        "text": "Choose an activity",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "indoor",
+        "kind": "Card",
+        "children": [
+          "indoor-text"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "indoor-text",
+        "kind": "Text",
+        "children": [],
+        "text": "Read indoors if it rains.",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "outdoor",
+        "kind": "Card",
+        "children": [
+          "outdoor-text"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "outdoor-text",
+        "kind": "Text",
+        "children": [],
+        "text": "Spend more time outside if the weather suits you.",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "note",
+        "kind": "Output",
+        "children": [],
+        "text": "",
+        "bind": "0",
+        "gap": 3,
+        "columns": 1
+      }
+    ],
+    "fallback": "Take a walk, pause for lunch, then choose an indoor or outdoor activity."
+  },
+  "preferences": {
+    "title": "Inspection preferences",
+    "currency": "UGX",
+    "inputs": [
+      {
+        "id": "note",
+        "label": "Inspection note",
+        "kind": "text",
+        "default": "Check brakes",
+        "maxLength": 80
+      },
+      {
+        "id": "date",
+        "label": "Preferred date",
+        "kind": "date",
+        "default": "2026-10-24"
+      },
+      {
+        "id": "format",
+        "label": "Report detail",
+        "kind": "select",
+        "default": "short",
+        "options": [
+          {
+            "label": "Short",
+            "value": "short"
+          },
+          {
+            "label": "Detailed",
+            "value": "detailed"
+          }
+        ]
+      },
+      {
+        "id": "include",
+        "label": "Include photos",
+        "kind": "toggle",
+        "default": true
+      }
+    ],
+    "graph": [
+      {
+        "id": "photos",
+        "op": "select",
+        "args": [
+          {
+            "ref": "include"
+          },
+          "Photos included",
+          "Photos excluded"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "text",
+        "label": "Note",
+        "value": {
+          "ref": "note"
+        }
+      },
+      {
+        "kind": "text",
+        "label": "Date",
+        "value": {
+          "ref": "date"
+        }
+      },
+      {
+        "kind": "text",
+        "label": "Report",
+        "value": {
+          "ref": "format"
+        }
+      },
+      {
+        "kind": "text",
+        "value": {
+          "ref": "photos"
+        }
+      }
+    ],
+    "actions": [
+      {
+        "id": "no-photos",
+        "class": "LOCAL",
+        "label": "No photos",
+        "set": {
+          "input": "include",
+          "value": false
+        }
+      }
+    ],
+    "layout": [
+      {
+        "id": "root",
+        "kind": "Col",
+        "children": [
+          "title",
+          "fields",
+          "result",
+          "button"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "title",
+        "kind": "Title",
+        "children": [],
+        "text": "Inspection preferences",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "fields",
+        "kind": "Form",
+        "children": [
+          "note",
+          "date",
+          "format",
+          "include"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "note",
+        "kind": "TextArea",
+        "children": [],
+        "text": "",
+        "bind": "note",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "date",
+        "kind": "DatePicker",
+        "children": [],
+        "text": "",
+        "bind": "date",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "format",
+        "kind": "Select",
+        "children": [],
+        "text": "",
+        "bind": "format",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "include",
+        "kind": "Checkbox",
+        "children": [],
+        "text": "",
+        "bind": "include",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "result",
+        "kind": "Card",
+        "children": [
+          "out0",
+          "out1",
+          "out2",
+          "out3"
+        ],
+        "text": "",
+        "bind": "",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "out0",
+        "kind": "Output",
+        "children": [],
+        "text": "",
+        "bind": "0",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "out1",
+        "kind": "Output",
+        "children": [],
+        "text": "",
+        "bind": "1",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "out2",
+        "kind": "Output",
+        "children": [],
+        "text": "",
+        "bind": "2",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "out3",
+        "kind": "Output",
+        "children": [],
+        "text": "",
+        "bind": "3",
+        "gap": 3,
+        "columns": 1
+      },
+      {
+        "id": "button",
+        "kind": "Button",
+        "children": [],
+        "text": "",
+        "bind": "no-photos",
+        "gap": 3,
+        "columns": 1
+      }
+    ],
+    "fallback": "Inspection preferences: note, date, report detail and photo selection. All changes stay local."
+  }
+}

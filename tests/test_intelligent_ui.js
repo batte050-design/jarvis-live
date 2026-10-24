@@ -57,11 +57,15 @@ check('source notes and headings survive malformed-table fallback', () => {
   assert.ok(n.textContent.includes('Source: supplied test data'));
   assert.equal(n.querySelectorAll('.rc-table-fallback').length,1);
 });
-check('valid tables still sort whole rows by their proper numeric column', () => {
-  const n=p.draw(table(['Name','Height'],[['Merdeka 118',679],['Burj Khalifa',828]]));
-  const th=n.querySelectorAll('th')[1];
-  th.fire('click'); assert.deepEqual(values(n),['Merdeka 118','679','Burj Khalifa','828']);
-  th.fire('keydown',{key:'Enter',preventDefault(){}}); assert.deepEqual(values(n),['Burj Khalifa','828','Merdeka 118','679']);
+check('table headers preserve source row order on tap and keyboard activation', () => {
+  const n=p.draw(table(['Name','Height'],[['Burj Khalifa',828],['Merdeka 118',679]]));
+  const expected=['Burj Khalifa','828','Merdeka 118','679'];
+  for(const th of n.querySelectorAll('th')) {
+    th.fire('click'); th.fire('keydown',{key:'Enter',preventDefault(){}});
+    assert.deepEqual(values(n),expected);
+    assert.notEqual(th.getAttribute('role'),'button');
+    assert.equal(th.getAttribute('aria-sort'),null);
+  }
 });
 check('stream reconciliation converges to a complete correctly labeled table', () => {
   const text=table(['Building','City','Height'],[[1,'Burj Khalifa','Dubai',828],[2,'Merdeka 118','Kuala Lumpur',679]]);

@@ -18,6 +18,7 @@ SOURCE = (ROOT / 'server.py').read_text()
 spec = importlib.util.spec_from_file_location('ui_response_layer', ROOT / 'response_layer.py')
 LAYER = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(LAYER)
+import response_openui as OPENUI
 
 
 def prompt_environment(source=SOURCE):
@@ -44,31 +45,23 @@ def prompt_environment(source=SOURCE):
 
 
 class IntelligentUITests(unittest.TestCase):
-    def test_fast_and_deep_have_one_consistent_display_contract(self):
-        e = prompt_environment()
-        questions = [
-            "What's the weather looking like in Kampala for the next seven days?",
-            'Compare the iPhone 17 Pro Max and Samsung Galaxy S26 Ultra.',
-            'Find me three good restaurants around Kololo.',
-            'Explain how a car engine works.',
-            'How much would I save if I put aside 20,000 UGX daily for a year?',
-            "Show me the world's tallest buildings.",
-            'Give me an exact table of these specifications.',
-        ]
-        for question in questions:
-            for prompt in [e['system_for']('text')+e['shape_hint']('text',question), e['hermes_answer'](question,mode='text')]:
-                with self.subTest(question=question):
-                    for wording in [e['TEXT_MODE_NOTE'],e['TEXT_MECHANICS'],LAYER.prompt_note(),e['UI_LIBRARY']]:
-                        self.assertIn(wording,prompt)
-                    for contradiction in ['a comparison or a set of figures goes in a pipe table','draws four shapes and only these','with no code fence around it','under about ten characters','show it with screen_show']:
-                        self.assertNotIn(contradiction,prompt)
-                    self.assertIn('numbers alone do not justify a table',prompt)
-                    self.assertIn('source label alone is not proof',prompt)
+    def test_fast_presentation_and_deep_findings_have_separate_consistent_roles(self):
+        e=prompt_environment()
+        for question in ['Show me buildings.', 'Explain how an engine works.', 'Price four jobs at 80,000 UGX each.']:
+            findings=e['hermes_answer'](question,mode='text')
+            self.assertIn('separate text presenter',findings)
+            self.assertIn('Do not author UI JSON',findings)
+            self.assertNotIn(LAYER.prompt_note(),findings)
+        prompt=OPENUI.system_prompt()
+        for primitive in ['Col(', 'Image(', 'Slider(', 'Popover(', 'Form(']:self.assertIn(primitive,prompt)
+        self.assertIn('You choose how to answer EACH text question',prompt)
+        self.assertIn('ordinary prose',prompt)
+        self.assertIn('retrieval',prompt)
 
     def test_actual_fast_request_receives_the_new_policy_without_extra_provider_call(self):
         import response_authoring
         e = prompt_environment()
-        e.update(RESPONSE_AUTHORING=response_authoring,FRONT_MODEL='fixture',DS_KEY='fixture',
+        e.update(OPENUI=OPENUI,RESPONSE_AUTHORING=response_authoring,FRONT_MODEL='fixture',DS_KEY='fixture',
                  identity=lambda:'',recall=lambda:[],for_model=lambda rows:rows,now_line=lambda:'clock')
         env = symbols(ROOT,['front_stream'],e)
         seen = []
@@ -79,12 +72,12 @@ class IntelligentUITests(unittest.TestCase):
             text = ''.join(env['front_stream']('How much would I save at 20,000 UGX a day for a year?',mode='text'))
         self.assertEqual(text,'7,300,000 UGX.')
         self.assertEqual(len(seen),1)
-        self.assertIn(e['TEXT_MODE_NOTE'],seen[0]['messages'][0]['content'])
-        self.assertIn(e['TEXT_MECHANICS'],seen[0]['messages'][-1]['content'])
+        self.assertIn(OPENUI.system_prompt(),seen[0]['messages'][0]['content'])
+        self.assertEqual(seen[0]['messages'][-1]['content'],'How much would I save at 20,000 UGX a day for a year?')
 
     def test_deep_text_owns_inline_presentation_and_keeps_requested_files(self):
         text = prompt_environment()['hermes_answer']('Show me buildings.',mode='text')
-        self.assertIn('Do not also publish the same answer through screen_show',text)
+        self.assertIn('Do not publish through screen_show',text)
         self.assertNotIn('run its check command on that file with a short label',text)
         self.assertIn('A downloadable file is still handed over',text)
 

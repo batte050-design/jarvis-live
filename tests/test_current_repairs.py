@@ -24,6 +24,8 @@ QUERY={'provider':'user_input','symbol':'','start':'','end':'','period':'month'}
 
 
 def screen_module():
+    if not (ROOT/'plugins/screen/tools.py').exists():
+        raise unittest.SkipTest('plugins/screen is absent from the exact public base 8c2e433')
     spec=importlib.util.spec_from_file_location('screen_publisher',ROOT/'plugins/screen/tools.py')
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
     return module
@@ -198,7 +200,7 @@ class CurrentRepairs(unittest.TestCase):
         wrapped=A.agent_result(agent)
         with patch.dict(agent.__globals__,FRONT_MODEL='fixture',DS_KEY='fixture'),patch.object(A,'author',return_value=('failed',A.FAILED)):
             status,text=wrapped('Compare these choices.',mode='text')
-        self.assertEqual(status,'ok')
+        self.assertEqual(status,'partial')
         self.assertNotIn('"data"',text)
         self.assertNotIn('```',text)
 

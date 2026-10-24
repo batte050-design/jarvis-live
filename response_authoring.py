@@ -13,6 +13,7 @@ import time
 import urllib.request
 
 import response_layer
+import response_composition as COMPOSITION
 import response_sources as SOURCES
 
 LOG = logging.getLogger(__name__)
@@ -30,6 +31,8 @@ def settings():
     if not isinstance(value, dict) or value.get('version') != 1:
         raise ValueError('authoring manifest unavailable')
     value['tools']={name:tool for name,tool in value['tools'].items() if tool['component'] in manifest['components']}
+    if 'primitives' in manifest:
+        value['tools']['emit_composition'] = COMPOSITION.definition(manifest)
     currencies=manifest['schema']['properties']['props']['properties']['currency']['enum']
     for tool in value['tools'].values():
         field=tool['parameters']['properties'].get('currency')
@@ -106,6 +109,7 @@ def requested(question):
     # not a request for prose. A table is deliberately absent: the painter draws those.
     if re.search(r'\b(?:diagram|flow ?chart|schematic|wiring|org ?chart|hierarchy)\b', q): return 'auto'
     if re.search(r'\bmap\b', q) and re.search(r'\b(?:show|plot|draw|render|put|place|pin)\b', q): return 'auto'
+    if re.search(r'\b(?:plan|organize|organise|schedule|itinerary|timeline|checklist|form|carousel)\b', q): return 'auto'
     if re.search(r'\b(?:widget|calculator|interactive|editable|adjustable)\b|\b(?:adjust|change|edit|tweak)\b.*\b(?:myself|locally)\b', q): return 'unsupported'
     return None
 
@@ -198,6 +202,13 @@ def emit(name, arguments):
     tool = config['tools'].get(name)
     if not tool: raise ValueError('unknown emitter')
     arguments = decode(arguments) if isinstance(arguments, str) else copy.deepcopy(arguments)
+    if name == 'emit_composition':
+        evidence = SOURCES.CURRENT.get()
+        if evidence is None: raise ValueError('no turn evidence for composition')
+        spec = COMPOSITION.emit(arguments,manifest,evidence.question,evidence.clock)
+        _walk(spec)
+        if len(response_layer.canonical(spec).encode()) > manifest['budgets']['componentBytes']: raise ValueError('component byte budget')
+        return spec
     if len(response_layer.canonical(arguments).encode()) > config['argumentBytes']: raise ValueError('argument byte budget')
     _walk(arguments); _schema(arguments, tool['parameters'])
     component = tool['component']
@@ -279,6 +290,7 @@ def emit(name, arguments):
     _walk(expanded)
     if len(response_layer.canonical(expanded).encode()) > manifest['budgets']['componentBytes']: raise ValueError('component byte budget')
     SOURCES.check_spec(spec)
+    COMPOSITION.template_layout(spec,manifest)
     return spec
 
 
@@ -296,7 +308,7 @@ def tools(name):
         # the full canonical schema locally before constructing or emitting anything.
         return {k:strict(v) if isinstance(v,dict) else [strict(x) if isinstance(x,dict) else x for x in v] if isinstance(v,list) else v
                 for k,v in schema.items() if k not in ('minLength','maxLength','minItems','maxItems')}
-    return [{'type':'function','function':{'name':n,'description':e['description'],'strict':True,'parameters':strict(e['parameters'])}}
+    return [{'type':'function','function':{'name':n,'description':e['description'],'strict':n != 'emit_composition','parameters':strict(e['parameters'])}}
             for n,e in entries]
 
 
@@ -330,6 +342,8 @@ def author_chunks(question, messages, model, key, stop=None, _step=0):
         allowed = tuple(t['function']['name'] for t in tools(name))
         if not key: raise ValueError('provider credentials unavailable')
         instruction = ('Choose the response that best carries this request; the user need not name a format. Call one emitter or reply_prose. '
+                       'Use emit_composition for an arranged answer, timeline, carousel, or a locally working form beyond the fixed templates. '
+                       'Its layout vocabulary comes from Open Intelligent UI; bind inputs to the existing graph and outputs. '
                        'For any data series or budget, first call retrieve_series and use its exact source object and values. '
                        'Never invent series values, dates or provenance. A comparison need not be interactive if prose/table is better. '
                        'Use emit_illustration only for an explicitly requested synthetic illustration. '
@@ -433,6 +447,7 @@ class TextSafety:
     def __init__(self, forbid_html=False):
         self.forbid_html=forbid_html
         self.pending = ''; self.open = None; self.ui = False; self.block = []; self.block_bytes = 0; self.bad_ui = False; self.drop_line = False
+        self.failed = False
 
     def _line(self, line):
         match = FENCE.match(line)
@@ -444,7 +459,7 @@ class TextSafety:
                 if not self.bad_ui: self.block.append(line)
                 if not close: return ''
                 if self.bad_ui:
-                    self.open=None; self.ui=False; self.bad_ui=False; return FAILED+'\n'
+                    self.open=None; self.ui=False; self.bad_ui=False; self.failed=True; return FAILED+'\n'
                 original = ''.join(self.block); body = ''.join(self.block[1:-1]); self.block=[]
                 try: value = json.loads(body); parsed = True
                 except (ValueError,RecursionError): value = None; parsed = False
@@ -455,6 +470,20 @@ class TextSafety:
                     except (ValueError, TypeError, KeyError, ArithmeticError):
                         LOG.error('response series rejected before painter')
                         return SOURCES.unavailable(SOURCES.CURRENT.get().question if SOURCES.CURRENT.get() else 'a chart')+'\n'
+                if isinstance(value,dict) and 'component' in value and 'version' in value:
+                    try:
+                        manifest = response_layer.assets()[0]
+                        expanded = copy.deepcopy(value)
+                        expanded.setdefault('actions',[])
+                        expanded.setdefault('props',{})
+                        template = manifest['components'].get(value['component'],{}).get('template')
+                        if template:
+                            expanded.update(copy.deepcopy(template))
+                            for i in expanded['inputs']: i['default'] = value.get('initial',{}).get(i['id'],i['default'])
+                        COMPOSITION.validate(expanded,manifest)
+                    except (ValueError,KeyError,TypeError,ArithmeticError):
+                        self.failed=True
+                        return 'The interactive response could not be displayed.\n'
                 if isinstance(value,dict) and (isinstance(value.get('type'),str) and value['type'] in response_layer.assets()[0]['legacySchemas'] or 'component' in value and 'version' in value): return original
                 if parsed and not isinstance(value,str) or body.lstrip().startswith(('{','[')):
                     # A fence holding something that is not a declaration is not an error to show
@@ -492,7 +521,7 @@ class TextSafety:
 
     def finish(self):
         tail = self._line(self.pending) if self.pending and not self.drop_line else ''; self.pending=''
-        if self.ui: self.block=[]; self.open=None; self.ui=False; return FAILED
+        if self.ui: self.block=[]; self.open=None; self.ui=False; self.failed=True; return FAILED
         return tail
 
 
@@ -516,6 +545,7 @@ def text_stream(fn):
                 yield text  # empty chunks preserve the caller's existing stop checks
             tail=safety.finish()
             if tail: yield tail
+            if safety.failed: raise RuntimeError('The interactive response did not complete.')
         finally:
             iterator.close()
     return wrapped
@@ -601,7 +631,11 @@ def agent_result(fn):
             return result
         tail=safety.finish()
         if callback and tail: callback('live','',tail)
-        return 'ok',clean(result[1],html_forbidden(question))
+        final = TextSafety(html_forbidden(question))
+        text = final.feed(result[1])+final.finish()
+        if safety.failed or final.failed:
+            return 'partial', (strip_absent_controls(text.replace(FAILED,''))+'\n\n'+ABSENT).strip()
+        return 'ok',text
     return wrapped
 
 

@@ -22,6 +22,7 @@ SUITES = [
     ('failure-client', ['node','tests/test_cold_failure_client.js']),
     ('prestart-client', ['node','tests/test_prestart_client.js']),
     ('supplied-data-publication', [sys.executable,'tests/test_current_repairs.py']),
+    ('openui-lang', [sys.executable,'tests/test_openui_lang.py']),
     ('defect6', [sys.executable,'tests/test_defect6.py']),
 ]
 
@@ -34,6 +35,7 @@ def main():
     suites = list(SUITES)
     if args.browser:
         suites.append(('native-browser',['node','tools/native_ui_acceptance.js','--browser',str(args.browser.resolve())]))
+        suites.append(('native-openui',['node','tools/native_openui_acceptance.js','--browser',str(args.browser.resolve())]))
     rows = []
     for name,command in suites:
         started = time.monotonic()
@@ -46,12 +48,12 @@ def main():
         rows.append(row)
         print(('PASS' if row['exit']==0 else 'FAIL')+' '+name,flush=True)
         if row['exit']:
-            print(row['output'],flush=True)
+            print(row['output'][-6000:],flush=True)
     report = {
-        'base':'f60309bf429074bcb6055048b3a753c5607b0616',
+        'base':'8c2e433200da23002e0be657e1baacf1e4d5c680',
         'kind':'Offline tests using actual helpers/painter and scripted provider/child boundaries; optional real Chromium.',
         'not_covered':['Human input during a deployed streaming turn','Real STT/TTS and /read audio command',
-                       'Private persona voice-system hash (persona excluded from public snapshot)',
+                       'Unscripted model selection and Lang generation with the deployed provider',
                        'Intermittent agent_empty root cause and external service-restart caller',
                        'Two unnamed layout known failures from acceptance tools not present in this snapshot'],
         'passed':sum(row['exit']==0 for row in rows),

@@ -20,6 +20,7 @@ from authoring_agent_support import agent_environment, symbols, module
 P=argparse.ArgumentParser();P.add_argument('--root',type=Path,default=Path(__file__).resolve().parents[1]);P.add_argument('--report',type=Path);P.add_argument('--prompt-note-sha256');A,REST=P.parse_known_args();ROOT=A.root.resolve();HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE.parent))
 spec=importlib.util.spec_from_file_location('authoring_test',HERE.parent/'response_authoring.py');AUTHOR=importlib.util.module_from_spec(spec);spec.loader.exec_module(AUTHOR)
+import response_openui as OPENUI
 LAYER=module(ROOT,'response_layer');ROWS=json.loads((HERE/'authoring10.json').read_text())
 
 
@@ -56,12 +57,13 @@ def provider(row,seen,*,events=None):
 
 
 def front(root,row,seen):
-    env={'RESPONSE_AUTHORING':AUTHOR,'FRONT_MODEL':'fixture-model','DS_KEY':'fixture-key',
-         'identity':lambda:'profile','system_for':lambda mode:'system','recall':lambda:[],
-         'for_model':lambda rows:rows,'now_line':lambda:'clock','shape_hint':lambda mode,q:LAYER.prompt_note() if mode=='text' else ''}
-    fn=decorated(root,'front_stream',env)
+    # The old typed emitter remains for stored components and voice compatibility, not text routing.
+    if row['shape']=='prose':
+        fn=symbols(root,['front_stream'],{'OPENUI':OPENUI,'FRONT_MODEL':'fixture-model','DS_KEY':'fixture-key','recall':lambda:[],'for_model':lambda h:h})['front_stream']
+        with patch('urllib.request.urlopen',provider(row,seen,events=[{'choices':[{'delta':{'content':row['answer']}}]}])):
+            return ''.join(fn(row['prompt'],mode='text'))
     with patch('urllib.request.urlopen',provider(row,seen)):
-        return ''.join(fn(row['prompt'],mode='text'))
+        return AUTHOR.author(row['prompt'],[{'role':'user','content':row['prompt']+LAYER.prompt_note()}],'fixture-model','fixture-key')[1]
 
 
 def deep(root,row,seen):
@@ -70,7 +72,7 @@ def deep(root,row,seen):
         facts=row.get('answer','A calculation can use the supplied numbers. Drag the slider below. [[file:calculator.html]]')
         binary.write_text('#!'+sys.executable+'\nimport json\nprint(json.dumps({"type":"text","text":'+repr('<<<SPOKEN '+facts+' SPOKEN>>>')+'}))\nprint(json.dumps({"type":"result","text":'+repr('<<<SPOKEN '+facts+' SPOKEN>>>')+'}))\n');binary.chmod(0o700)
         env=agent_environment(root,home,binary);env.update(RESPONSE_AUTHORING=AUTHOR,FRONT_MODEL='fixture-model',DS_KEY='fixture-key')
-        fn=decorated(root,'hermes_answer',env);live=[]
+        fn=AUTHOR.agent_result(symbols(root,['hermes_answer'],env)['hermes_answer']);live=[]
         with patch('urllib.request.urlopen',provider(row,seen)):
             status,text=fn(row['prompt'],mode='text',web=True,conv='a'*32,on_event=lambda kind,tool,line,*a,**k:live.append((kind,line)))
         return status,text,live
@@ -85,7 +87,7 @@ def shape(text):
 
 
 class AuthoringTests(unittest.TestCase):
-    def test_ten_expected_shapes_through_actual_fast_and_deep_helpers(self):
+    def test_legacy_typed_emitters_and_decorated_agent_compatibility(self):
         report=[]
         for row in ROWS:
             for lane in ('fast','deep'):
@@ -161,24 +163,25 @@ class AuthoringTests(unittest.TestCase):
 
     def test_front_provider_failure_uses_the_existing_failure_path(self):
         row=ROWS[0]
-        env={'RESPONSE_AUTHORING':AUTHOR,'FRONT_MODEL':'fixture','DS_KEY':'fixture','identity':lambda:'','system_for':lambda mode:'system','recall':lambda:[],
+        env={'OPENUI':OPENUI,'RESPONSE_AUTHORING':AUTHOR,'FRONT_MODEL':'fixture','DS_KEY':'fixture','identity':lambda:'','system_for':lambda mode:'system','recall':lambda:[],
              'for_model':lambda rows:rows,'now_line':lambda:'clock','shape_hint':lambda mode,q:LAYER.prompt_note()}
         fn=decorated(ROOT,'front_stream',env)
         with patch('urllib.request.urlopen',side_effect=OSError('refused')):
-            with self.assertRaisesRegex(RuntimeError,'The agent turn failed'):
-                list(fn(row['prompt'],mode='text'))
+            text=''.join(fn(row['prompt'],mode='text'))
+            self.assertEqual(OPENUI.finalize(text)[0],'partial')
+            self.assertNotIn('refused',text)
 
     def test_front_cancellation_closes_provider_before_any_spec_is_painted(self):
         row=ROWS[0];seen=[];opened=[]
-        factory=provider(row,seen)
         def open_request(*a,**kw):
-            response=factory(*a,**kw);opened.append(response);return response
-        env={'RESPONSE_AUTHORING':AUTHOR,'FRONT_MODEL':'fixture','DS_KEY':'fixture','identity':lambda:'','system_for':lambda mode:'system','recall':lambda:[],
+            response=io.BytesIO(b'data: {"choices":[{"delta":{"content":"Useful answer.\\n"}}]}\n\ndata: [DONE]\n')
+            opened.append(response);return response
+        env={'OPENUI':OPENUI,'RESPONSE_AUTHORING':AUTHOR,'FRONT_MODEL':'fixture','DS_KEY':'fixture','identity':lambda:'','system_for':lambda mode:'system','recall':lambda:[],
              'for_model':lambda rows:rows,'now_line':lambda:'clock','shape_hint':lambda mode,q:LAYER.prompt_note()}
         fn=decorated(ROOT,'front_stream',env)
         with patch('urllib.request.urlopen',open_request):
             stream=fn(row['prompt'],mode='text')
-            self.assertEqual(next(stream),'','partial arguments reached the painter')
+            self.assertEqual(next(stream),'Useful answer.\n')
             stream.close()
         self.assertTrue(opened[0].closed,'cancel did not close the HTTPS response')
 
@@ -197,8 +200,8 @@ class AuthoringTests(unittest.TestCase):
         # model answers in words. Assert both halves of that contract.
         self.assertEqual(AUTHOR.requested('Build me something I can adjust myself.'),'unsupported')
         code=(ROOT/'server.py').read_text()
-        self.assertIn('RESPONSE_AUTHORING.requested(prompt) not in (None, "unsupported")',code,
-                      'the front path can once again die on an unsupported authoring request')
+        self.assertNotIn('RESPONSE_AUTHORING.requested(prompt)',code,
+                         'classifier must not gate the new text composer')
 
     def test_table_requests_stay_with_the_painter(self):
         for prompt in ['Compare three Kampala buildings in a table: name, units, monthly rent.',

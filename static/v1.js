@@ -158,6 +158,10 @@
   // renderer — so the settle folds whatever became complete and rebuilds only if the structure really
   // differs. Nothing that is already right is drawn twice.
   function settleBody(el, text, shape) {
+    if (textMode && window.JarvisOpenUI && window.JarvisOpenUI.handles(text, el)) {
+      window.JarvisOpenUI.paint(el, text, function (target, prose) { paintBodyInto(target, prose, true, shape, true); }, answerSettled);
+      return;
+    }
     if (textMode && window.JarvisResponses && window.JarvisResponses.handles(text, el)) {
       window.JarvisResponses.reconcile(el, function (target) { paintBodyInto(target, text, true, shape, true); });
       outboxLinks(el);
@@ -444,6 +448,10 @@
   }
 
   function paintBodyInto(el, text, structured, shape, responsePass) {
+    if (!responsePass && textMode && window.JarvisOpenUI && window.JarvisOpenUI.handles(text, el)) {
+      window.JarvisOpenUI.paint(el, text, function (target, prose) { paintBodyInto(target, prose, structured, shape, true); }, true);
+      return;
+    }
     if (!responsePass && textMode && structured && window.JarvisResponses && window.JarvisResponses.handles(text, el)) {
       window.JarvisResponses.reconcile(el, function (target) { paintBodyInto(target, text, structured, shape, true); });
       outboxLinks(el);
@@ -1460,6 +1468,12 @@
   // success nor a failure. The server says so before the words arrive, and the badge says it too,
   // because a WORKED pill over an answer with no input in it claims an interaction that never
   // happened.
+  window.addEventListener("jarvis:openui-partial", function (event) {
+    if (liveBlock && String(liveBlock.dataset.id) === String(event.detail && event.detail.turn)) {
+      turnPartial = true;
+      if (answerSettled) setPhase("partial");
+    }
+  });
   var turnPartial = false;
 
   function setPhase(p) {
@@ -6853,44 +6867,7 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
       tb.appendChild(trr);
     });
     t.appendChild(tb); wrap.appendChild(t);
-    // Sorting is only offered when there is something to order: on a single row it is a control that
-    // cannot do anything, which is the lie this page does not tell.
-    if (bodyRows.length > 1) {
-      Array.prototype.forEach.call(tr.children, function (th, idx) {
-        th.classList.add("sort");
-        th.setAttribute("role", "button");
-        th.setAttribute("tabindex", "0");
-        th.setAttribute("aria-sort", "none");
-        var dir = 0;
-        var sortBy = function () {
-          dir = dir === 1 ? -1 : 1;
-          var rows = Array.prototype.slice.call(tb.children);
-          rows.sort(function (a, b) {
-            var x = a.children[idx] ? a.children[idx].textContent.trim() : "";
-            var y = b.children[idx] ? b.children[idx].textContent.trim() : "";
-            var r;
-            if (isNum(x) && isNum(y)) {
-              r = parseFloat(x.replace(/[^0-9.+-]/g, "")) - parseFloat(y.replace(/[^0-9.+-]/g, ""));
-              if (isNaN(r)) r = 0;
-            } else {
-              r = x.localeCompare(y, undefined, { numeric: true, sensitivity: "base" });
-              r = r < 0 ? -1 : r > 0 ? 1 : 0;
-            }
-            return dir * r;
-          });
-          rows.forEach(function (r) { tb.appendChild(r); });
-          Array.prototype.forEach.call(tr.children, function (o) {
-            o.setAttribute("aria-sort", "none"); o.classList.remove("asc", "desc");
-          });
-          th.setAttribute("aria-sort", dir === 1 ? "ascending" : "descending");
-          th.classList.add(dir === 1 ? "asc" : "desc");
-        };
-        th.addEventListener("click", sortBy);
-        th.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sortBy(); }
-        });
-      });
-    }
+    // Table headings label columns. Reading or touching one never changes row order.
     var group = document.createDocumentFragment();
     if (heading) {
       var hd = document.createElement("div");
@@ -10583,7 +10560,7 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
         return;
       }
       toast("Signed out on this device");
-      try { if (window.JarvisResponses) window.JarvisResponses.signOut(); } catch (e) {}
+      try { if (window.JarvisResponses) window.JarvisResponses.signOut(); if (window.JarvisOpenUI) window.JarvisOpenUI.signOut(); } catch (e) {}
       try { localStorage.removeItem("jarvis.v1.sessionstore"); } catch (e) {}
       setTimeout(function () { location.reload(); }, 800);
     });
@@ -10703,4 +10680,4 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
     } catch (e) {}
   })();
 
-/* response-assets: 55cd34b228f0a77cc746795e20b53769f966853bf2ad828652da04582fd0c4e2 */
+/* response-assets: 4f4f50cd70db432d8a209513c5c7c86ddcc1a5b1cbdfb7201d517f41d7235e71 */

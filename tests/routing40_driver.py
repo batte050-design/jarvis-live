@@ -9,6 +9,10 @@ import queue
 import re
 import threading
 import time
+import sys
+from unittest.mock import patch
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+import response_openui as OPENUI
 from types import SimpleNamespace as NS
 from turn_test_support import assignments, symbols, Response
 
@@ -36,7 +40,7 @@ def drive(root,home,row,agent_impl=None):
     import urllib.request as request
     def open_provider(req,**kwargs):state['front'].append(json.loads(req.data));return FrontResponse()
     constants=assignments(root,['WORKISH','AUTO_REASONING','AUTO_EFFORT','REASONING_LEVELS','WORK_MARK','PROMISE','WEB_CAPABLE','WEB_STEP_WORDS','AGENT_SAYS','AGENT_CUES'])
-    extras=dict(constants,HERE=str(home),CHAT_SETTINGS_PATH=str(home/'chat_settings.json'),payload=payload,mode='text',
+    extras=dict(constants,OPENUI=OPENUI,HERE=str(home),CHAT_SETTINGS_PATH=str(home/'chat_settings.json'),payload=payload,mode='text',
         time=NS(time=time.time,sleep=lambda n:None),threading=NS(Thread=ImmediateThread),
         identity=lambda:'PRIVATE_MEMORY_CANARY',system_for=lambda m:'system',for_model=lambda h:h,now_line=lambda:'clock',shape_hint=lambda *a:'',FRONT_MODEL='fixture-model',DS_KEY='fixture-key',
         urllib=NS(request=NS(Request=request.Request,urlopen=open_provider)),
@@ -68,6 +72,7 @@ def drive(root,home,row,agent_impl=None):
         elif row['web_behavior']=='private-read':on_event('run','browser_exec','Read private fixture',title='Read private fixture')
         return 'ok','Fixture answer.'
     env['hermes_answer']=agent
-    nested=symbols(root,['run'],env,nested='stream');nested['run']()
+    nested=symbols(root,['run'],env,nested='stream')
+    with patch('urllib.request.urlopen',open_provider):nested['run']()
     return {'selected':{'web':env['_cs']['web'],'memory':env['_cs']['memory'],'want_web':env['want_web'],'web_off':env['web_off'],'want_memory':env['want_memory']},
             'front_requests':state['front'],'agent_calls':state['agent'],'observed_tools':[d['tool'] for k,d in state['events'] if k=='term' and d.get('kind')=='run'],'errors':[d for k,d in state['events'] if k=='err'],'finished':state['finished'],'stored':state['stored']}

@@ -158,6 +158,7 @@
     });
     var cost = { charts: spec.outputs.filter(function (o) { return o.kind === 'chart'; }).length, components: 1, nodes: 0, inputsPerResponse: spec.inputs.length, responseBytes: bytes(JSON.stringify(spec)), tableCells: 0, chartPoints: 0, svgPrimitives: 0, hotspots: 0, domNodes: 20 + spec.inputs.length * 8 + spec.actions.length * 6 };
     var count = { n: 0 }; walk(spec, 0, count); cost.nodes = count.n;
+    cost.domNodes += (spec.layout || []).length * 4;
     function action(id) { if (id) { if (!own(actions, id)) fail('hotspot action'); cost.hotspots++; cost.domNodes += 3; } }
     spec.outputs.forEach(function (o) {
       cost.domNodes += 8;
@@ -258,6 +259,36 @@
     var credit = {kind:'text',value:sourceLine(source)};
     if (source.kind === 'illustration') spec.outputs.unshift(credit); else spec.outputs.push(credit);
   }
+  function composition(spec) {
+    if (!spec.layout) return;
+    var lib = manifest.primitives, nodes = Object.create(null), seen = new Set(), fields = new Set(), outputs = new Set(), actions = new Set();
+    spec.layout.forEach(function (n) { if (own(nodes,n.id)) fail('duplicate layout node'); nodes[n.id] = n; });
+    function visit(id,depth) {
+      var n = nodes[id]; if (!n || seen.has(id) || depth > lib.maxDepth) fail('layout cycle, shared child or depth'); seen.add(id);
+      if (lib.containers.includes(n.kind)) { if (n.bind) fail('container binding'); n.children.forEach(function (c) { visit(c,depth+1); }); }
+      else if (n.children.length) fail('leaf children');
+      var kinds = {Input:['number','stepper','text'],Slider:['range'],Select:['select'],Checkbox:['toggle'],TextArea:['text'],DatePicker:['date']};
+      if (kinds[n.kind]) {
+        var i = spec.inputs.find(function (i) { return i.id === n.bind; });
+        if (!i || fields.has(n.bind) || !kinds[n.kind].includes(i.kind)) fail('layout input binding'); fields.add(n.bind);
+      } else if (n.kind === 'Output') {
+        if (!/^(0|[1-9][0-9]*)$/.test(n.bind) || Number(n.bind) >= spec.outputs.length || outputs.has(n.bind)) fail('layout output binding'); outputs.add(n.bind);
+      } else if (n.kind === 'Button') {
+        if (!spec.actions.some(function (a) { return a.id === n.bind; }) || actions.has(n.bind)) fail('layout action binding'); actions.add(n.bind);
+      } else if (!lib.containers.includes(n.kind) && n.bind) fail('unused layout binding');
+    }
+    if (!lib.containers.includes(spec.layout[0].kind)) fail('layout root container');
+    visit(spec.layout[0].id,1);
+    if (seen.size !== spec.layout.length || fields.size !== spec.inputs.length || outputs.size !== spec.outputs.length || actions.size !== spec.actions.length) fail('layout must display every declaration exactly once');
+    var deps = Object.create(null), used = new Set();
+    spec.inputs.forEach(function (i) { deps[i.id] = new Set([i.id]); });
+    spec.graph.forEach(function (g) { deps[g.id] = new Set(); g.args.forEach(function (v) { if (object(v) && deps[v.ref]) deps[v.ref].forEach(function (id) { deps[g.id].add(id); }); }); });
+    function refs(v) {
+      if (object(v)) { if (v.ref && deps[v.ref]) deps[v.ref].forEach(function (id) { used.add(id); }); if (v.kind === 'quiz') used.add(v.input); Object.values(v).forEach(refs); }
+      else if (Array.isArray(v)) v.forEach(refs);
+    }
+    refs(spec.outputs); if (spec.inputs.some(function (i) { return !used.has(i.id); })) fail('dead input');
+  }
   function validate(raw) {
     var text = typeof raw === 'string' ? raw : '', type = 'unparseable';
     try {
@@ -288,6 +319,7 @@
       }
       spec.actions = spec.actions || []; spec.props = spec.props || {};
       schema(spec, manifest.schema, manifest.schema.$defs);
+      composition(spec);
       provenance(spec);
       schema(spec, manifest.schema, manifest.schema.$defs);
       var result = semantic(spec);
@@ -323,5 +355,5 @@
   }
   return { manifest: manifest, budgets: B, validate: validate, inputs: inputs, initial: initial, inputValue: inputValue,
     evaluate: evaluate, outputValues: outputValues, resolve: resolve, ledger: ledger, message: message, schema: schema,
-    bytes: bytes, clone: clone, bucket: bucket, sourceLine: sourceLine };
+    bytes: bytes, clone: clone, bucket: bucket, sourceLine: sourceLine, composition: composition };
 });

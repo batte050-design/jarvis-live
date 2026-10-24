@@ -32,7 +32,7 @@ class WarmTests(unittest.TestCase):
                 self.assertFalse(any(r['event']=='cold' for r in rows),'decision ignored the built child')
                 prompt=next(r for r in rows if r['event']=='prompt')
                 self.assertEqual(prompt['chat'],conv);self.assertTrue(prompt['guard_context_present'])
-                self.assertIn('THREAD '+conv,prompt['prompt']);self.assertIn('TEXT FORMAT.',prompt['prompt'])
+                self.assertIn('THREAD '+conv,prompt['prompt']);self.assertIn('separate text presenter',prompt['prompt'])
                 self.assertTrue(any(r[0]=='live' for r in live))
             finally:
                 for agent in env['WARM_AGENTS'].values():agent.close()

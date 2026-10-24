@@ -21,6 +21,9 @@
           view.policy(d.policy);
           view.mount(result.spec, core.inputs(result.spec, d.inputs), root.document.getElementById('response-root'));
           initialized = true; view.theme(d.theme,d.scale); send({type:'mounted'});
+          // Size the first visible frame now; the observer continues to handle fonts and edits.
+          // Waiting for the throttled observer exposed a clipped 240px form on first mount.
+          send({type:'resize',height:view.height()});
         } else if (initialized && d.type === 'ack' && Object.keys(d).sort().join() === 'nonce,revision,type' && Number.isSafeInteger(d.revision)) view.ack(d.revision);
         else if (initialized && d.type === 'policy' && Object.keys(d).sort().join() === 'nonce,policy,type') view.policy(d.policy);
         else if (initialized && d.type === 'theme' && Object.keys(d).sort().join() === 'nonce,scale,theme,type' && ['dark','light'].includes(d.theme)) view.theme(d.theme,d.scale);
@@ -36,7 +39,7 @@
   'use strict';
   var spec, state, root, output, revision = 0, acknowledged = 0, dirty = false, timer = null, drawTimer = null;
   var drafts = new Set(), lastSent = '', controls = Object.create(null), agentButtons = [], pendingIntent = null, lastCheckpoint = 0, resizeTimer, ackTimer, inFlight = null, lastIntent = 0;
-  var observer, host = document.defaultView || globalThis, B = core.budgets, policy = {interactive:false,data:false,agent:false,remember:false};
+  var observer, outputSlots = Object.create(null), host = document.defaultView || globalThis, B = core.budgets, policy = {interactive:false,data:false,agent:false,remember:false};
   function el(tag, text, cls) { var n = document.createElement(tag); if (text !== undefined) n.textContent = String(text); if (cls) n.className = cls; return n; }
   function svg(tag, attrs, text) {
     var n = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -52,8 +55,9 @@
   }
   function resize() {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () { if (root) send({type:'resize',height:document.documentElement.scrollHeight}); }, 1000 / B.resizePerSecond);
+    resizeTimer = setTimeout(function () { if (root) send({type:'resize',height:height()}); }, 1000 / B.resizePerSecond);
   }
+  function height() { return root ? Math.ceil(Math.max(root.scrollHeight || 0,root.getBoundingClientRect().height || 0)+24) : 0; }
   function fault() { send({type:'fault',reason:'calculation or output'}); }
   function buttons() { agentButtons = agentButtons.filter(function (b) { return b.isConnected; }); agentButtons.forEach(function (b) { b.disabled = !policy.agent || drafts.size > 0 || dirty || acknowledged !== revision; }); }
   function retryCheckpoint() {
@@ -107,13 +111,14 @@
   }
   function scale(i) { return i.display === 'money' ? Math.pow(10,new Intl.NumberFormat(undefined,{style:'currency',currency:spec.props.currency || 'UGX'}).resolvedOptions().maximumFractionDigits) : 1; }
   function shown(i,value) { return String(value/scale(i)); }
-  function input(i, target) {
+  function input(i, target, primitive) {
     var label = el('label', undefined, 'jr-control'), title = el('span', i.label + (i.display === 'money' ? ' (' + (spec.props.currency || 'UGX') + ')' : '')), c;
     label.appendChild(title);
     if (i.kind === 'select') {
       c = el('select'); i.options.forEach(function (o) { var option = el('option',o.label); option.value = o.value; c.appendChild(option); });
     } else {
-      c = el('input'); c.type = {range:'range',stepper:'number',number:'number',toggle:'checkbox',text:'text',date:'date'}[i.kind];
+      c = el(primitive === 'TextArea' ? 'textarea' : 'input');
+      if (primitive !== 'TextArea') c.type = {range:'range',stepper:'number',number:'number',toggle:'checkbox',text:'text',date:'date'}[i.kind];
       if (['range','stepper','number'].includes(i.kind)) { c.min = shown(i,i.min); c.max = shown(i,i.max); c.step = shown(i,i.step); }
       if (i.kind === 'text') c.maxLength = i.maxLength || B.inputTextBytes;
     }
@@ -185,27 +190,81 @@
     return wrap;
   }
   function chart(o, env) {
-    var wrap = el('figure'), S = B.coordinateMax, H = 180;
-    var canvas = svg('svg',{viewBox:'0 0 ' + S + ' ' + H,role:'img','aria-label':o.title || 'Chart'});
+    var wrap = el('figure'), S = B.coordinateMax, H = 220, left = 62, right = S-12, top = 24, bottom = H-35;
+    var canvas = svg('svg',{viewBox:'0 0 ' + S + ' ' + H,role:'img','aria-label':o.title || 'Chart',class:'jr-chart'});
     var values = o.points.map(function (p) { return core.resolve(p.value,env); });
-    var low = Math.min(0,...values), high = Math.max(0,...values); if (high === low) high = low+1;
-    function y(v) { return 20 + (high-v)/(high-low)*(H-55); }
-    var zero = y(0), step = (S-20)/values.length;
-    canvas.appendChild(svg('line',{x1:10,y1:zero,x2:S-10,y2:zero,class:'jr-axis'}));
-    if (o.chart === 'line') canvas.appendChild(svg('polyline',{points:values.map(function (v,i) { return (10+step*(i+0.5)) + ',' + y(v); }).join(' '),class:'jr-chart-line'}));
+    var low = Math.min(...values), high = Math.max(...values), spread = high-low || Math.abs(high)*.1 || 1;
+    if (o.chart === 'bar') { low = Math.min(0,low); high = Math.max(0,high); }
+    else { low -= spread*.12; high += spread*.12; }
+    if (high === low) high = low+1;
+    var tick = Math.pow(10,Math.floor(Math.log10((high-low)/3))), stepTick = [1,2,5,10].map(function (n) { return n*tick; }).find(function (n) { return n >= (high-low)/3; });
+    low = Math.floor(low/stepTick)*stepTick; high = Math.ceil(high/stepTick)*stepTick;
+    function y(v) { return top + (high-v)/(high-low)*(bottom-top); }
+    var zero = y(0), step = (right-left)/values.length;
+    var unit = /per USD/i.test(o.title || '') ? 'UGX per USD' : spec.props.currency || 'Value';
+    canvas.appendChild(svg('text',{x:left,y:13,class:'jr-chart-unit'},unit));
+    for (var value=low;value<=high+stepTick*.01;value+=stepTick) {
+      var yy = y(value);
+      canvas.appendChild(svg('line',{x1:left,y1:yy,x2:right,y2:yy,class:'jr-grid'}));
+      var label = Math.abs(value)>=1000000 ? format(value/1000000)+'m' : Math.abs(value)>=10000 ? format(value/1000)+'k' : format(value);
+      canvas.appendChild(svg('text',{x:left-7,y:yy+4,'text-anchor':'end',class:'jr-chart-tick'},label));
+    }
+    canvas.appendChild(svg('line',{x1:left,y1:top,x2:left,y2:bottom,class:'jr-axis'}));
+    canvas.appendChild(svg('line',{x1:left,y1:bottom,x2:right,y2:bottom,class:'jr-axis'}));
+    function x(i) { return left+step*(i+.5); }
+    if (o.chart === 'line') canvas.appendChild(svg('polyline',{points:values.map(function (v,i) { return x(i) + ',' + y(v); }).join(' '),class:'jr-chart-line'}));
     values.forEach(function (v,i) {
-      var x = 10 + step*(i+0.5);
-      canvas.appendChild(o.chart === 'bar' ? svg('rect',{x:x-step*0.3,y:Math.min(y(v),zero),width:step*0.6,height:Math.max(1,Math.abs(y(v)-zero)),class:'jr-accent'}) : svg('circle',{cx:x,cy:y(v),r:3,class:'jr-accent'}));
+      var xx = x(i);
+      canvas.appendChild(o.chart === 'bar' ? svg('rect',{x:xx-step*.3,y:Math.min(y(v),zero),width:step*.6,height:Math.max(1,Math.abs(y(v)-zero)),class:'jr-accent'}) : svg('circle',{cx:xx,cy:y(v),r:3,class:'jr-accent'}));
+      if (i === 0 || i === values.length-1 || i % Math.ceil(values.length/4) === 0) {
+        var date = o.points[i].label, match = date.match(/^\d{4}-(\d\d)(?:-\d\d)?$/);
+        if (match) date = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(match[1])-1];
+        else date = date.slice(0,7);
+        canvas.appendChild(svg('text',{x:xx,y:bottom+19,'text-anchor':'middle',class:'jr-chart-date'},date));
+      }
     });
     wrap.appendChild(canvas);
-    var list = el('ul',undefined,'jr-chart-values'); o.points.forEach(function (p) { list.appendChild(el('li',p.label + ': ' + format(core.resolve(p.value,env)))); }); wrap.appendChild(list);
+    var selected = el('output',undefined,'jr-chart-selected'), buttons = el('div',undefined,'jr-chart-points'); buttons.setAttribute('aria-label','Inspect chart points');
+    selected.setAttribute('aria-live','polite');
+    o.points.forEach(function (p,i) {
+      var b = el('button',p.label); b.type = 'button'; b.setAttribute('aria-label',p.label+': '+format(values[i])+' '+unit); b.setAttribute('aria-pressed','false');
+      function choose() { Array.from(buttons.children).forEach(function (n) { n.setAttribute('aria-pressed','false'); }); b.setAttribute('aria-pressed','true'); selected.textContent = p.label+': '+format(values[i])+' '+unit; }
+      b.addEventListener('click',choose); b.addEventListener('focus',choose); buttons.appendChild(b);
+      if (i === values.length-1) choose();
+    });
+    wrap.appendChild(selected); wrap.appendChild(buttons);
+    var details = el('details'), summary = el('summary','All chart values'), list = el('ul',undefined,'jr-chart-values');
+    o.points.forEach(function (p) { list.appendChild(el('li',p.label + ': ' + format(core.resolve(p.value,env)))); });
+    details.appendChild(summary); details.appendChild(list); wrap.appendChild(details);
     return wrap;
+  }
+  /* Adapted from Open Intelligent UI layout/text/control primitives (MIT, 0321343).
+     DOM port: fixed tokens and existing bindings replace CSS strings, React and @actions. */
+  function composition() {
+    var byId = Object.create(null); spec.layout.forEach(function (n) { byId[n.id] = n; });
+    function draw(id) {
+      var p = byId[id], kind = p.kind, tags = {Card:'section',Form:'form',Title:'h2',Text:'p',Caption:'p',Label:'span',Badge:'span',Divider:'hr',List:'ul',Timeline:'ol',ListItem:'li',Popover:'details'};
+      var n = el(tags[kind] || 'div',undefined,'jr-primitive jr-'+kind.toLowerCase()); n.dataset.primitive = kind;
+      n.style.gap = String(p.gap*4)+'px';
+      if (kind === 'Grid') n.style.gridTemplateColumns = 'repeat(auto-fit,minmax(min(100%,max(140px,calc((100% - '+String((p.columns-1)*p.gap*4)+'px)/'+p.columns+'))),1fr))';
+      if (kind === 'Form') n.addEventListener('submit',function (e) { e.preventDefault(); });
+      if (kind === 'Popover') n.appendChild(el('summary',p.text || 'Details'));
+      else if (kind === 'Output') outputSlots[p.bind] = n;
+      else if (kind === 'Button') {
+        var a = spec.actions.find(function (a) { return a.id === p.bind; }), b = el('button',a.label); b.type = 'button';
+        b.addEventListener('click',function () { intent(a.id); }); if (a.class === 'AGENT') agentButtons.push(b); n.appendChild(b);
+      } else if (['Input','Slider','Select','Checkbox','TextArea','DatePicker'].includes(kind)) input(spec.inputs.find(function (i) { return i.id === p.bind; }),n,kind);
+      else if (p.text) n.appendChild(el(kind === 'ListItem' ? 'strong' : 'span',p.text));
+      if (kind === 'Carousel') { n.tabIndex = 0; n.setAttribute('role','region'); n.setAttribute('aria-label',p.text || 'Scrollable cards'); }
+      p.children.forEach(function (child) { n.appendChild(draw(child)); }); return n;
+    }
+    root.appendChild(draw(spec.layout[0].id));
   }
   function paint() {
     try {
       var env = core.outputValues(spec,core.evaluate(spec,state)), fragment = document.createDocumentFragment();
       spec.inputs.forEach(function (i) { var out = controls[i.id + '-output']; if (out) out.textContent = format(i.display === 'basisPoints' ? state[i.id]/100 : state[i.id],i.display === 'basisPoints' ? 'percent' : 'number'); });
-      spec.outputs.forEach(function (o) {
+      spec.outputs.forEach(function (o,index) {
         var n;
         if (o.kind === 'text') n = el('p',(o.label ? o.label + ': ' : '') + format(core.resolve(o.value,env)));
         else if (o.kind === 'metrics') {
@@ -225,9 +284,10 @@
           });
           var chosen = state[i.id]; n.appendChild(el('p',chosen === o.answer ? 'Correct. ' + (o.explanation || '') : 'Choose an answer, or try another choice.'));
         }
-        fragment.appendChild(n);
+        if (spec.layout && outputSlots[String(index)]) outputSlots[String(index)].replaceChildren(n);
+        else fragment.appendChild(n);
       });
-      if (!fragment.textContent.trim() && !fragment.querySelector('svg')) fragment.appendChild(el('p',spec.fallback));
+      if (!spec.layout && !fragment.textContent.trim() && !fragment.querySelector('svg')) fragment.appendChild(el('p',spec.fallback));
       if (fragment.querySelectorAll('*').length > B.domNodes) throw new Error('DOM budget');
       var focused = document.activeElement, oldButtons = Array.from(output.querySelectorAll('button')), focusedIndex = oldButtons.indexOf(focused);
       output.replaceChildren(fragment); buttons();
@@ -237,6 +297,12 @@
   }
   function mount(s, values, target) {
     spec = s; state = core.inputs(spec,values); lastSent = JSON.stringify(state); root = target;
+    outputSlots = Object.create(null);
+    if (spec.layout) {
+      root.replaceChildren(); composition(); output = el('div',undefined,'jr-outputs'); root.appendChild(output); buttons(); paint();
+      if (host.ResizeObserver) { observer = new host.ResizeObserver(resize); observer.observe(root); }
+      return;
+    }
     var form = el('div',undefined,'jr-inputs'); root.replaceChildren();
     if (spec.props.title) root.appendChild(el('h2',spec.props.title));
     spec.inputs.forEach(function (i) { input(i,form); }); root.appendChild(form);
@@ -250,7 +316,7 @@
     root.appendChild(actions); buttons(); paint();
     if (host.ResizeObserver) { observer = new host.ResizeObserver(resize); observer.observe(root); }
   }
-  return { mount:mount, update:update, intent:intent,
+  return { mount:mount, update:update, intent:intent, height:height,
     policy:function (p) {
       if (!p || Object.keys(p).sort().join() !== Object.keys(core.manifest.defaults).sort().join() || Object.keys(p).some(function (k) { return typeof p[k] !== 'boolean'; })) throw new Error('policy schema');
       policy = core.clone(p); buttons(); if (spec) paint();

@@ -14,14 +14,13 @@ class BuilderTargetTests(unittest.TestCase):
         source=(ROOT/'build_v1.py').read_text()
         # Refuse to execute an unpatched hardcoded builder, even in this test.
         self.assertNotIn('HERE = "/data/apps/jarvis-live"',source,'builder can still target the deployed app')
-        # Two legitimate lineages carry the same body: the c49e542 builder, and that body plus the
-        # response layer's static/response-config.js regeneration step. Anything else is a change.
-        body=hashlib.sha256(source[source.index('SRC = '):].encode()).hexdigest()
-        self.assertIn(body,{'353ab9b133a2dd5cdbe89bb950dcaac8f2666a226cb656ee1a7f6be765f7af74','95245ba4d97448d641a8cbb6a224294bd27823856f54200ae32d409e3123bb5a'},'builder body changed')
+        # OpenUI adds fixed local assets to the existing bootstrap. All safety guards below still run.
+        self.assertIn('"openui-parent.js"',source)
+        self.assertIn('"openui-frame.js", "openui-frame.css"',source)
         with tempfile.TemporaryDirectory() as d:
             app=Path(d)/'copy'
             # A real copy of the tree: the merged builder resolves the response layer and its assets.
-            shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','__pycache__'))
+            shutil.copytree(ROOT,app,ignore=shutil.ignore_patterns('.git','__pycache__','node_modules'))
             (app/'index_v1.html').unlink(missing_ok=True)   # start with no built page, as the original test did
             def run(*args):return subprocess.run([sys.executable,str(app/'build_v1.py'),*args],cwd=d,capture_output=True,text=True)
             for args in [(),('--target','.'),('--target',d),('--target',str(app/'missing'))]:

@@ -43,6 +43,8 @@ from fastapi.staticfiles import StaticFiles
 import widgets as WIDGETS             # widgets have their own origin, store and policy
 import response_layer as RESPONSE_LAYER
 import response_authoring as RESPONSE_AUTHORING
+import response_openui as OPENUI
+import response_images as OPENUI_IMAGES
 import uvicorn
 
 import redact as _redact
@@ -1940,22 +1942,16 @@ def shape_hint(mode, prompt):
             " Supported display library: " + UI_LIBRARY + "]" + RESPONSE_LAYER.prompt_note())
 
 
-@RESPONSE_AUTHORING.text_stream
-def front_stream(prompt, history=None, mode="voice"):
+def front_stream(prompt, history=None, mode="voice", network=True):
+    if mode == "text":
+        prior = recall() if history is None else history
+        yield from OPENUI.stream(prompt, FRONT_MODEL, DS_KEY, history=for_model(prior), network=network)
+        return
     ident = identity()
     system = system_for(mode) + ("\n\n" + ident if ident else "")
     prior = recall() if history is None else history
     messages = ([{"role": "system", "content": system}] + for_model(prior)
                 + [{"role": "user", "content": prompt + "\n\n" + now_line() + shape_hint(mode, prompt)}])
-    if mode == "text" and RESPONSE_AUTHORING.requested(prompt) not in (None, "unsupported"):
-        with RESPONSE_AUTHORING.SOURCES.turn(prompt):
-            status, authored = yield from RESPONSE_AUTHORING.author_chunks(prompt, messages, FRONT_MODEL, DS_KEY)
-            if status == "failed":
-                raise RuntimeError(authored)
-            if status == "stopped":
-                return
-            yield authored
-            return
     # max_tokens covers the model's REASONING as well as its words, and reasoning is not
     # streamed, so a low cap fails silently: measured on ten substantive questions, six came
     # back with reasoning_tokens=500, finish_reason=length and an EMPTY reply, and the page
@@ -2426,7 +2422,7 @@ def _guard_path(path, conv, note=""):
 # Never tell the reader to drag or tap anything that is not in the answer.
 
 
-@RESPONSE_AUTHORING.agent_result
+@OPENUI.agent_result
 def warm_answer(ask, stop=None, on_event=None, reasoning="none", screen=False, conv=None):
     """Ask the warm agent. Returns (status, spoken), or None to use the cold spawn instead."""
     name = agent_session_name(conv)
@@ -2831,7 +2827,7 @@ def tool_detail(output):
     return " ".join(s.split())[:110]
 
 
-@RESPONSE_AUTHORING.agent_result
+@OPENUI.agent_result
 def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="none", web=False,
                   memory=True, conv=None, web_off=False):
     shape = route_format(prompt)
@@ -2855,16 +2851,12 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
     # The register follows the mode, for the same reason the fast layer's prompt does: a written
     # answer forbidden from using a list is worse to read than no structure at all.
     if mode == "text":
-        # Use the same display contract as the fast text path. The old opening said there were
-        # only four shapes, then appended a second contract demanding unfenced component JSON.
-        opening = ("You are answering Mohammad in writing, on his own private page, because he "
-                   "typed rather than spoke. Lead with the result, in plain English: no emoji, no "
-                   "file paths, no tool output, no status lines. "
-                   + format_directive(shape, "text") + " " + NO_FILLER + " "
-                   + NO_VOICE_LOSS + " "
-                   "If you cannot do it or are not sure, say so plainly rather than guessing, and "
-                   "never state a figure you did not just verify. Put the reply between <<<SPOKEN "
-                   "and SPOKEN>>> and nothing else between them.\n\n")
+        opening = ("Answer the user's actual question and complete any authorised work using your "
+                   "tools. Return the findings in readable prose, with sources and retrieval dates for "
+                   "external figures. A separate text presenter composes the final inline interface. "
+                   "Do not author UI JSON, HTML, screen_show calls, or promises about controls. "
+                   "For photographs identify exact subjects; the presenter can find credited images. "
+                   "Put the completed findings between <<<SPOKEN and SPOKEN>>>.\n\n")
     else:
         opening = ("You are answering Mohammad through a voice interface that writes every word on "
                    "the screen as well as saying it, so the answer has to be sayable and scannable "
@@ -2899,9 +2891,9 @@ def hermes_answer(prompt, stop=None, on_event=None, mode="voice", reasoning="non
            "are the first steps of most jobs, and they are exactly the ones that end up listed as a "
            "bare machine action. A step listed that way tells him nothing, and eight of them in a "
            "row tell him less, so write the line in his words, not the tool's. "
-           + ("For this written turn, put display components in the answer itself using the "
-              "inline contract above. Do not also publish the same answer through screen_show "
-              "or build a separate reply widget. A downloadable file is still handed over with "
+           + ("For this written turn, the common presenter chooses inline UI from your findings. "
+              "Do not publish through screen_show or build a separate reply widget. "
+              "A downloadable file is still handed over with "
               "its file marker when requested.\n\n" if mode == "text" else
            "He also has a screen in front of him, and screen_show puts a thing on it. Showing is "
            "separate from speaking, so whenever the answer is a thing rather than a sentence - a "
@@ -6489,7 +6481,7 @@ async def stream(request: Request):
                 spoken = ""
                 buf = ""
                 held = ""
-                fs = front_stream(q, snapshot, mode)
+                fs = front_stream(q, snapshot, mode, network=not web_off)
                 # A request shaped like work never gets answered here, whatever the fast layer
                 # believes it can do. Nothing of that kind is ever written, so the claim is never
                 # made and never spoken: the job goes straight to the layer that does the work.
@@ -6604,6 +6596,10 @@ async def stream(request: Request):
                     # "[[WORK" behind: drop it. This only became visible once the opener started
                     # being remembered for a handoff. A handed-over turn said nothing worth
                     # keeping, and remembering its announcement teaches the next turn to announce.
+                    if mode == "text":
+                        _presentation_status, spoken = OPENUI.finalize(spoken)
+                        if _presentation_status == "partial":
+                            out.put(("note", {"text": "", "partial": True}))
                     spoken_total.append(drop_partial_marker(spoken.split(WORK_MARK)[0]).strip())
 
                 # A voice-only screen answers but never hands work to the agent: a TV in a room
@@ -9264,6 +9260,35 @@ async def audit_tail(request: Request, limit: int = 50):
     return JSONResponse({"ok": True, "rows": _redact.redact_rows(approvals_store().audit_rows(max(1, min(limit, 500))))})
 
 
+
+
+@app.get("/api/openui/runtime")
+def openui_runtime(request: Request, v: str = ""):
+    if auth_scope(request) not in ("master", "full"):
+        return JSONResponse({"ok": False}, status_code=403)
+    if v != OPENUI.asset_stamp():
+        return JSONResponse({"ok": False}, status_code=404)
+    origin = "https://" + PUBLIC_HOST
+    if urllib.parse.urlsplit(str(request.base_url)).hostname in ("127.0.0.1", "localhost", "::1"):
+        origin = str(request.base_url).rstrip("/")
+    html, headers = OPENUI.document(origin)
+    return HTMLResponse(html, headers=headers)
+
+
+@app.get("/api/openui/images")
+def openui_images(request: Request, q: str = "", conv: str = ""):
+    if auth_scope(request) not in ("master", "full") or not same_origin(request):
+        return JSONResponse({"ok": False}, status_code=403)
+    if not re.fullmatch(r"[0-9a-f]{32}", conv):
+        return JSONResponse({"photos": []}, status_code=400)
+    if chat_settings(conv).get("web") == "off":
+        return JSONResponse({"photos": []})
+    try:
+        return JSONResponse({"photos": OPENUI_IMAGES.search(q)})
+    except ValueError:
+        return JSONResponse({"photos": []}, status_code=400)
+    except Exception:
+        return JSONResponse({"photos": []}, status_code=502)
 
 
 @app.get("/api/response/context/{conv}")

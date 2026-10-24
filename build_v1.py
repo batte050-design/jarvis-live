@@ -576,9 +576,18 @@ import response_layer as _response
 _response_config = os.path.join(HERE, "static", "response-config.js")
 with open(_response_config, "w", encoding="utf-8") as _f:
     _f.write(_response.config_script())
-_response_names = ("response-config.js", "response-core.js", "response-store.js", "response-parent.js")
+with open(os.path.join(HERE, "static", "openui-frame.js"), "rb") as _f:
+    _openui_bytes = _f.read()
+with open(os.path.join(HERE, "static", "openui-frame.css"), "rb") as _f:
+    _openui_bytes += _f.read()
+with open(os.path.join(HERE, "static", "openui-config.js"), "w", encoding="utf-8") as _f:
+    _f.write('window.JarvisOpenUIStamp="' + hashlib.sha256(_openui_bytes).hexdigest() + '";\n')
+_response_names = ("response-config.js", "response-core.js", "response-store.js", "response-parent.js", "openui-config.js", "openui-parent.js")
 _response_css = os.path.join(HERE, "static", "response-parent.css")
 _response_digest = hashlib.sha256()
+for _asset in ("openui-frame.js", "openui-frame.css"):
+    with open(os.path.join(HERE, "static", _asset), "rb") as _f:
+        _response_digest.update(_f.read())
 for _name in _response_names + ("response-parent.css",):
     with open(os.path.join(HERE, "static", _name), "rb") as _f:
         _response_digest.update(_f.read())

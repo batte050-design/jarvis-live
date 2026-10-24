@@ -57,5 +57,13 @@
  "b242d4feda644897b8d0db7e190650b7": {
   "memory": "off",
   "web": "always"
+ },
+ "d0887068775a4dbba8b20c035c4e1c1c": {
+  "response": {
+   "interactive": true,
+   "data": false,
+   "agent": false,
+   "remember": true
+  }
  }
 }

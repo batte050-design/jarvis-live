@@ -153,6 +153,7 @@ class BuilderTests(unittest.TestCase):
             names=['server.py','response_layer.py','response-capabilities.json','build_v1.py','index.html','index_v1.html',
                    'static/v1.js','static/v1.css','static/approvals-ui.js']
             names += [str(p.relative_to(ROOT)) for p in (ROOT/'static').glob('response-*') if p.is_file()]
+            names += [str(p.relative_to(ROOT)) for p in (ROOT/'static').glob('openui-*') if p.is_file()]
             names += [str(p.relative_to(ROOT)) for p in (ROOT/'static/fonts').glob('*.woff2')]
             for name in names:
                 dest=target/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,dest)
