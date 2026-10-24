@@ -1,0 +1,6 @@
+[
+  {"class": "text-fast",  "q": "what is 12 times 12",                  "mode": "text",  "expect": "answer"},
+  {"class": "text-work",  "q": "read me my diary for tomorrow",        "mode": "text",  "expect": "work"},
+  {"class": "voice-fast", "q": "hello",                                "mode": "voice", "expect": "answer"},
+  {"class": "voice-work", "q": "how many files are in my home folder", "mode": "voice", "expect": "work"}
+]

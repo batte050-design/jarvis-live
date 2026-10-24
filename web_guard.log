@@ -1,0 +1,46 @@
+{"ts": 1792426722.246, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 5.76, "cmd": "free -h", "tier": "safe", "note": "safe"}
+{"ts": 1792426731.932, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.19, "cmd": "df -h / /data", "tier": "safe", "note": "safe"}
+{"ts": 1792426764.343, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792426884.436, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask-error", "ms": 0.0, "cmd": "", "tier": "", "note": "TimeoutError"}
+{"ts": 1792426884.437, "tool": "terminal", "class": "unclassified", "mode": "ask", "verdict": "block", "ms": 120099.55, "cmd": "ls -la /data/tmp-warm-probe 2>&1 | head -50; echo \"---\"; du -sh /data/tmp-warm-probe 2>&1", "tier": "medium"}
+{"ts": 1792426922.542, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792427042.604, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask-error", "ms": 0.0, "cmd": "", "tier": "", "note": "TimeoutError"}
+{"ts": 1792427042.605, "tool": "terminal", "class": "unclassified", "mode": "ask", "verdict": "block", "ms": 120071.34, "cmd": "# Checking what is inside the folder before deleting it\nif [ -d /home/ubuntu/probe-del ]; then ls -laR /home/ubuntu/prob", "tier": "medium"}
+{"ts": 1792427104.386, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 6.34, "cmd": "ls -la /home/ubuntu/probe-del2 2>&1; echo \"---\"; du -sh /home/ubuntu/probe-del2 2>&1; echo \"---\"; find /home/ubuntu/prob", "tier": "safe", "note": "safe"}
+{"ts": 1792427107.575, "tool": "approval", "class": "irreversible_delete", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792427108.085, "tool": "terminal", "class": "irreversible_delete", "mode": "ask", "verdict": "block", "ms": 510.04, "cmd": "cd /home/ubuntu && tar czf /data/apps/jarvis-live/.probe-del2-backup.tgz probe-del2 && rm -rf /home/ubuntu/probe-del2 &&", "tier": "high"}
+{"ts": 1792427110.089, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792427230.164, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask-error", "ms": 0.0, "cmd": "", "tier": "", "note": "TimeoutError"}
+{"ts": 1792427230.165, "tool": "terminal", "class": "unclassified", "mode": "ask", "verdict": "block", "ms": 120076.71, "cmd": "cd /home/ubuntu && tar czf /data/apps/jarvis-live/.probe-del2-backup.tgz probe-del2 && ls -la /data/apps/jarvis-live/.pr", "tier": "medium"}
+{"ts": 1792427281.051, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 8.63, "cmd": "wc -l /var/log/syslog", "tier": "safe", "note": "safe"}
+{"ts": 1792427282.736, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.31, "cmd": "ls -la /var/log/ | head -40; echo ---; journalctl --disk-usage 2>/dev/null", "tier": "safe", "note": "safe"}
+{"ts": 1792427293.5, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.29, "cmd": "wc -l /var/log/auth.log; ls -la /var/log/auth.log* 2>/dev/null", "tier": "safe", "note": "safe"}
+{"ts": 1792427904.991, "tool": "skill_view", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 5.7, "cmd": "", "tier": "safe", "note": "safe"}
+{"ts": 1792427905.073, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792428025.175, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask-error", "ms": 0.0, "cmd": "", "tier": "", "note": "TimeoutError"}
+{"ts": 1792428025.175, "tool": "terminal", "class": "unclassified", "mode": "ask", "verdict": "block", "ms": 120102.49, "cmd": "hermes config get telegram 2>/dev/null | head -40; echo \"---\"; grep -ri \"telegram\" ~/.hermes/config.yaml 2>/dev/null | h", "tier": "medium"}
+{"ts": 1792428026.935, "tool": "skill_view", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.06, "cmd": "", "tier": "safe", "note": "safe"}
+{"ts": 1792428027.016, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.37, "cmd": "date -Is", "tier": "safe", "note": "safe"}
+{"ts": 1792428028.883, "tool": "skill_view", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.06, "cmd": "", "tier": "safe", "note": "safe"}
+{"ts": 1792428028.96, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792428149.048, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask-error", "ms": 0.0, "cmd": "", "tier": "", "note": "TimeoutError"}
+{"ts": 1792428149.048, "tool": "terminal", "class": "unclassified", "mode": "ask", "verdict": "block", "ms": 120087.84, "cmd": "grep -n -iE \"telegram\" /home/ubuntu/.hermes/config.yaml | head -30", "tier": "medium"}
+{"ts": 1792428151.374, "tool": "search_files", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.06, "cmd": "/home/ubuntu/.hermes/config.yaml", "tier": "safe", "note": "safe"}
+{"ts": 1792428151.41, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.17, "cmd": "uptime", "tier": "safe", "note": "safe"}
+{"ts": 1792428153.198, "tool": "read_file", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.06, "cmd": "/home/ubuntu/.hermes/config.yaml", "tier": "safe", "note": "safe"}
+{"ts": 1792428153.201, "tool": "read_file", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.31, "cmd": "/home/ubuntu/.hermes/config.yaml", "tier": "safe", "note": "safe"}
+{"ts": 1792428154.766, "tool": "approval", "class": "unverifiable", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792428250.942, "tool": "skill_view", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 5.94, "cmd": "", "tier": "safe", "note": "safe"}
+{"ts": 1792428250.943, "tool": "skill_view", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 6.11, "cmd": "", "tier": "safe", "note": "safe"}
+{"ts": 1792428250.942, "tool": "skill_view", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 5.95, "cmd": "", "tier": "safe", "note": "safe"}
+{"ts": 1792428254.863, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792428283.313, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 9.77, "cmd": "wc -l /var/log/syslog", "tier": "safe", "note": "safe"}
+{"ts": 1792428284.78, "tool": "terminal", "class": "safe", "mode": "ask", "verdict": "allow", "ms": 0.46, "cmd": "ls /var/log/ | head -40; echo \"---\"; systemctl is-active systemd-journald 2>/dev/null; journalctl --no-pager -n 0 --sinc", "tier": "safe", "note": "safe"}
+{"ts": 1792428374.964, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask-error", "ms": 0.0, "cmd": "", "tier": "", "note": "TimeoutError"}
+{"ts": 1792428374.965, "tool": "terminal", "class": "unclassified", "mode": "ask", "verdict": "block", "ms": 120101.78, "cmd": "sudo ss -tulpn | head -40", "tier": "medium"}
+{"ts": 1792428374.971, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792428495.066, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask-error", "ms": 0.0, "cmd": "", "tier": "", "note": "TimeoutError"}
+{"ts": 1792428495.066, "tool": "terminal", "class": "unclassified", "mode": "ask", "verdict": "block", "ms": 120094.95, "cmd": "sudo ufw status verbose 2>&1 | head -20; echo '--- iptables ---'; sudo iptables -L -n 2>&1 | head -30", "tier": "medium"}
+{"ts": 1792428495.073, "tool": "approval", "class": "unclassified", "mode": "ask", "verdict": "ask", "ms": 0.0, "cmd": "", "tier": "", "note": "waiting for the owner"}
+{"ts": 1792749420.753, "tool": "terminal", "class": "unclassified", "mode": "deny", "verdict": "allow", "ms": 7.98, "cmd": "python3 -c \"q=12;p=45000;sub=q*p;d=round(sub*10/100);print(sub,d,sub-d)\"", "tier": "medium", "note": "deny mode, medium tier"}
+{"ts": 1792749630.876, "tool": "terminal", "class": "unclassified", "mode": "deny", "verdict": "allow", "ms": 0.96, "cmd": "python3 -c \"\nq,p,d=12,45000,1000\nsub=q*p\nsav=round(sub*d/10000)\nprint(sub,sav,sub-sav)\"", "tier": "medium", "note": "deny mode, medium tier"}

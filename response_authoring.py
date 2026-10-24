@@ -19,7 +19,7 @@ LOG = logging.getLogger(__name__)
 ACTIVE = contextvars.ContextVar('response_authoring_active', default=False)
 FAILED = 'The agent turn failed: I could not create the requested interactive response. No interactive controls or HTML attachment were delivered.'
 INSTRUCTIONS = "I can't offer adjustable controls here, so I won't describe any. Give me the figures and I'll lay them out as a card, a table or a chart instead."
-CLAIM = re.compile(r"\b(?:drag|tap|click|slide|adjust|change|move|select|choose|enter|type|use|press|touch|pull|swipe|rotate|switch|pick|edit|increase|decrease)\b[^\n.!?]{0,100}\b(?:slider|control|field|dropdown|button|widget|calculator|input|card|chart|option|choice|stepper|knob|handle|toggle|selector|picker)s?\b|\b(?:slider|control|field|dropdown|button|widget|calculator|input)s?\b[^\n.!?]{0,60}\b(?:below|above|here|on (?:the )?screen)\b", re.I)
+CLAIM = re.compile(r"\b(?:drag|tap|click|slide|adjust|change|move|select|choose|enter|type|use|press|touch|pull|swipe|rotate|switch|pick|edit|increase|decrease)\b[^\n.!?]{0,100}\b(?:slider|control|field|dropdown|button|widget|calculator|input|card|chart|option|choice|stepper|knob|handle|toggle|selector|picker|figure|number|value|amount|total|quantity|price|rate)s?\b|\b(?:slider|control|field|dropdown|button|widget|calculator|input)s?\b[^\n.!?]{0,60}\b(?:below|above|here|on (?:the )?screen)\b", re.I)
 FENCE = re.compile(r'^ {0,3}(`{3,}|~{3,})([^\r\n]*)')
 
 
@@ -44,6 +44,27 @@ def settings():
     return manifest, value
 
 
+_NUMBER_WORDS = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7,
+                 'eight': 8, 'nine': 9, 'ten': 10, 'eleven': 11, 'twelve': 12, 'fifteen': 15,
+                 'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70,
+                 'eighty': 80, 'ninety': 90, 'hundred': 100, 'dozen': 12, 'pair': 2}
+_PRICE_INTENT = re.compile(r"\b(?:price|pricing|priced|quote|quotation|estimate|cost|costs|charge|fee|invoice|total|discount|damage)\b")
+_MONEY = re.compile(r"\b(?:ugx|usd|kes|eur|gbp|shs|shillings?)\b|%|\bpercent\b|\bthousand\b|\bmillion\b|\bk\b|\beach\b|\bper\b|\bdiscount\b|\boff\b|\bapiece\b|\ba piece\b|\btimes\b")
+_EDIT_INTENT = re.compile(r"\b(?:adjust|adjustable|edit|editable|tweak|change|what if|try|play with)\b")
+
+
+def figures(question):
+    """How many numbers a question actually states, digits and words alike.
+
+    'four inspections at UGX 80,000 each' carries two figures and no keyword. Counting words
+    that name a quantity is the difference between reading the request and reading for verbs.
+    """
+    q = str(question).lower()
+    count = len(re.findall(r'\d[\d,]*(?:\.\d+)?', q))
+    count += len(re.findall(r'\b(?:%s)h?\b' % '|'.join(_NUMBER_WORDS), q))
+    return count
+
+
 def requested(question):
     """Select a requested form only; never extract prices or facts from prose."""
     q = str(question).lower()
@@ -59,16 +80,56 @@ def requested(question):
     if re.search(r'\b(?:in|as|into)\s+(?:a\s+)?table\b|\btable\s+of\b|\btabular\b|\btable\s+(?:showing|with|comparing)\b', q): return None
     if re.search(r'\b(?:trend|history|historical|over (?:the )?(?:last|past)|past \d+ (?:days|weeks|months|years))\b', q): return 'auto'
     if len(re.findall(r'\d+(?:\.\d+)?',q)) >= 3 and len(re.findall(r'[A-Za-z]+\s*[:=]?\s*\d+',q)) >= 3 and re.search(r'[:;]',q): return 'auto'
+    # A calculation is recognised by what it asks for, never by a keyword: something to price
+    # plus something to count is a quote however it is worded, and an editing intent on stated
+    # figures asks for the same form because that form is the one you can move.
+    count = figures(q)
+    strong_money = re.search(r'\b(?:ugx|usd|kes|eur|gbp|shs|shillings?)\b|%|\bpercent\b|\bthousand\b|\bmillion\b|\bk\b', q)
+    unit_rate = re.search(r'\b(?:per|each|apiece|times)\b|\ba piece\b', q)
+    if _PRICE_INTENT.search(q) and count >= 2 and (_MONEY.search(q) or unit_rate):
+        return 'emit_quote'
+    if count >= 2 and strong_money and unit_rate:
+        return 'emit_quote'
+    if _PRICE_INTENT.search(q) and _EDIT_INTENT.search(q) and count >= 1:
+        return 'emit_quote'
     if not re.search(r'\b(?:make|build|create|show|give|render|draw|plot|compare|split|plan|quiz|track|trend|versus|vs|which|budget|historical|history)\b', q):
         return None
     if re.search(r'\bquiz\b', q): return 'emit_quiz'
     if re.search(r'\b(?:quote|estimator|pricer)\b|\bcalculator\b.*\b(?:quantity|price|discount)\b', q): return 'emit_quote'
     if re.search(r'\bbill\b', q) and re.search(r'\b(?:split|splitter|people|person)\b', q): return 'emit_bill_split'
+    if re.search(r'\bsplit\b', q) and re.search(r'\b(?:ways?|among|between|each|people|persons?)\b', q) and count >= 2: return 'emit_bill_split'
     if re.search(r'\bbudget\b', q): return 'emit_budget'
     if re.search(r'\b(?:compar(?:e|ison)|versus|vs|tiers?)\b|\bwhich\b.*\b(?:choose|better|buy)\b', q): return 'auto'
     if re.search(r'\b(?:chart|plot|graph|trend|history|historical)\b|\bpast \d+ (?:days|weeks|months|years)\b', q): return 'auto'
+    # Forms the manifest already validates but no typed emitter names: a diagram and a map are
+    # authored through the same typed path, and a request for one of them is a request for a form,
+    # not a request for prose. A table is deliberately absent: the painter draws those.
+    if re.search(r'\b(?:diagram|flow ?chart|schematic|wiring|org ?chart|hierarchy)\b', q): return 'auto'
+    if re.search(r'\bmap\b', q) and re.search(r'\b(?:show|plot|draw|render|put|place|pin)\b', q): return 'auto'
     if re.search(r'\b(?:widget|calculator|interactive|editable|adjustable)\b|\b(?:adjust|change|edit|tweak)\b.*\b(?:myself|locally)\b', q): return 'unsupported'
     return None
+
+
+ABSENT = ("The interactive version could not be built, so this is the calculation in words; "
+          "nothing here is adjustable.")
+_CONTROL_SENTENCE = re.compile(r"\b(?:adjust|drag|tap|click|slide|change|move|type|enter|pick|choose|select|"
+                               r"set|edit|tweak|increase|decrease)\b", re.I)
+_SURFACE = re.compile(r"\b(?:below|above|on the screen|in the card|in this card|right here)\b", re.I)
+
+
+def strip_absent_controls(text):
+    """Remove instructions telling the reader to use a control that was never delivered.
+
+    A failed component must not leave the promise behind: 'Adjust any of the three figures below'
+    survives the claim regex only when it names a widget, and a promise of editable figures is
+    exactly the sentence that makes a text answer lie about itself.
+    """
+    keep = []
+    for sentence in re.split(r"(?<=[.!?])\s+", str(text)):
+        if CLAIM.search(sentence) or (_CONTROL_SENTENCE.search(sentence) and _SURFACE.search(sentence)):
+            continue
+        keep.append(sentence)
+    return " ".join(keep).strip()
 
 
 def _walk(value, depth=0):
@@ -523,9 +584,18 @@ def agent_result(fn):
             result=author(question,messages,_binding(fn,'FRONT_MODEL'),_binding(fn,'DS_KEY'),stop)
             if result[0] == 'failed':
                 # A card that cannot be authored must never cost the reader the answer that was
-                # already finished: fall back to the completed prose and say why in the log.
-                LOG.error('response authoring failed; serving the completed answer instead')
-                result = ('ok', clean(completed[1], html_forbidden(question)))
+                # already finished. It must not pretend either: the request was for something he
+                # could move, the control did not arrive, and the settlement says so instead of
+                # reading 'ok' because some text came back. The arithmetic is kept, the promise of
+                # a control is removed, and the turn ends as partial.
+                LOG.error('response authoring failed; serving the completed answer as text only')
+                # Strip the promise first, then clean: clean() replaces a whole answer that claims
+                # a control, which is how the arithmetic was being thrown away with the sentence.
+                kept = strip_absent_controls(completed[1])
+                kept = clean(kept, html_forbidden(question))
+                if kept == INSTRUCTIONS:
+                    kept = ''
+                result = ('partial', (kept + ('\n\n' if kept else '') + ABSENT).strip())
             elif result[0] == 'ok': result = ('ok', clean(result[1], html_forbidden(question)))
             if callback and result[0] in ('ok','failed'): callback('live','',result[1])
             return result

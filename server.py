@@ -6780,7 +6780,13 @@ async def stream(request: Request):
                         handoff_status = status       # ok means the handoff may be remembered
                         if status == "stopped":
                             return                     # he hung up: nothing is said, nothing kept
-                        if status != "ok":
+                        if status == "partial":
+                            # A delivered calculation whose interactive form failed. The answer is
+                            # real and the arithmetic is kept; what did not happen is the control.
+                            # The page is told so before the words arrive, so the pill settles on
+                            # TEXT ONLY rather than claiming the interaction worked.
+                            out.put(("note", {"text": "", "partial": True}))
+                        if status not in ("ok", "partial"):
                             if mode == "text":
                                 print("ERROR agent turn failed: conv=%s status=%s" % (conv, status), flush=True)
                                 out.put(("err", {"message": "The agent turn failed before a complete answer was produced. Please try again.",
@@ -6798,7 +6804,7 @@ async def stream(request: Request):
                                 out.put(("cue", {"name": AGENT_CUES.get(status, "agentfailed")}))
                                 out.put(("err", {"message": AGENT_SAYS.get(status, "That did not work."),
                                                  "type": "agent_" + status}))
-                        if status == "ok" and answer:
+                        if status in ("ok", "partial") and answer:
                             agent_spoken = answer
                             # Split the answer into speakable units, exactly as the fast layer's
                             # text is split: the agent returns its whole answer as ONE line, and
@@ -6820,7 +6826,7 @@ async def stream(request: Request):
                         out.put(("work", {"state": "done"}))
                     except Exception as e:
                         out.put(("work", {"state": "failed", "err": str(e)[:140]}))
-                completed = not work["needed"] or handoff_status == "ok"
+                completed = not work["needed"] or handoff_status in ("ok", "partial")
             except Exception as e:
                 out.put(("err", {"message": str(e)[:200], "type": "model_failed"}))
             finally:
@@ -6842,7 +6848,7 @@ async def stream(request: Request):
                 # a handoff, and nothing at all when the handoff failed.
                 if work["needed"]:
                     parts = [spoken_total[0] if spoken_total else "", agent_spoken]
-                    said = " ".join(p for p in parts if p).strip() if handoff_status == "ok" else ""
+                    said = " ".join(p for p in parts if p).strip() if handoff_status in ("ok", "partial") else ""
                 else:
                     said = " ".join(spoken_total).strip()
                 # An answer that was actually produced is written down even when the client left

@@ -1455,7 +1455,12 @@
   // finished says WORKED, with its total. A clock that only counts up cannot tell those apart, and
   // that is what it looked like from his side.
   var workPhase = "";                       // "" | thinking | working | worked
-  var WORK_WORD = { thinking: "THINKING", working: "WORKING", worked: "WORKED" };
+  var WORK_WORD = { thinking: "THINKING", working: "WORKING", worked: "WORKED", partial: "TEXT ONLY" };
+  // A turn that delivered a calculation but not the control it asked for is neither a clean
+  // success nor a failure. The server says so before the words arrive, and the badge says it too,
+  // because a WORKED pill over an answer with no input in it claims an interaction that never
+  // happened.
+  var turnPartial = false;
 
   function setPhase(p) {
     if (!p) workMs = 0;                       // a cleared phase is the end of that turn's number
@@ -1466,6 +1471,7 @@
   function startClock() {
     stopClock();
     workMs = 0;
+    turnPartial = false;                      // an old settlement never paints a new turn
     setPhase("thinking");                    // the turn is open and nothing has run yet
     // No clock: the pill is repainted when the phase changes, not four times a second to move a number
     // that is no longer there. The turn's duration is written once, when it ends.
@@ -1490,7 +1496,9 @@
     // the phase when no tool had run is why a code answer, a JSON answer and a plain reply carried no
     // status at all: the turn had happened and the page said nothing about it. The step count beside
     // the badge is what says whether anything ran.
-    setPhase("worked");
+    var word = turnPartial ? "partial" : "worked";
+    turnPartial = false;
+    setPhase(word);
   }
 
   // ---------------------------------------------------------------- the Summary timeline
@@ -3613,6 +3621,7 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
   // Summary; it is never the caption and never the answer.
   window.__jarvisNote = function (d) {
     if (!evBelongsHere()) return;
+    if (d && d.partial) turnPartial = true;
     var t = d && d.text ? String(d.text).trim() : "";
     if (!t) return;
     if (answerText && t === String(answerText).trim()) return;
@@ -7204,64 +7213,155 @@ try { if (liveBlock) attachTurnActions(liveBlock, String((liveBlock.querySelecto
     var rows = Array.isArray(spec.data) ? spec.data.slice(0, UI_CAP.points) : [];
     var pts = [];
     rows.forEach(function (r) {
-      var label = Array.isArray(r) ? uiTxt(r[0], 14) : "";
+      var raw = Array.isArray(r) ? r[0] : "";
+      var label = Array.isArray(r) ? uiTxt(raw, 24) : "";
       var v = uiFigure(Array.isArray(r) ? r[1] : r);
-      if (v !== null) pts.push({ label: label, value: v });
+      if (v !== null) pts.push({ label: label, raw: raw, value: v });
     });
     if (pts.length < 2) return null;
     var kind = spec.kind === "line" ? "line" : "bar";
-    // padT holds the value label above the tallest bar: the label sits 5px over the bar and is
-    // drawn at 10px, so anything under ~24 leaves the top figure flush to the edge of the box, and
-    // a container that clips paints it off. It is internal padding and not a bigger chart.
-    var W = 320, H = 142, padL = 6, padR = 6, padT = 26, padB = 22;
-    var maxV = Math.max.apply(null, pts.map(function (p) { return p.value; }));
-    var minV = kind === "line" ? Math.min.apply(null, pts.map(function (p) { return p.value; })) : 0;
-    if (maxV === minV) maxV = minV + 1;
-    var span = maxV - minV, innerW = W - padL - padR;
+    var unit = uiTxt(spec.unit, 16);
+    // The left gutter is the axis: a value with no scale beside it is a shape, not a measurement.
+    var W = 320, H = 172, padL = unit || kind === "line" ? 44 : 40, padR = 10, padT = 22, padB = 30;
+    var vals = pts.map(function (p) { return p.value; });
+    var maxV = Math.max.apply(null, vals);
+    var minV = Math.min.apply(null, vals);
+    if (kind === "bar") {
+      // A bar is a length from zero. Cutting its axis lies about the size of the difference, so bars
+      // keep the baseline no matter how close the values are.
+      minV = Math.min(0, minV);
+      if (maxV <= 0) maxV = 1;
+    } else {
+      // A line is a shape over time, and a range that starts at zero flattens every real movement
+      // into a straight edge. Give the data its own range with a margin, and label it so the cut is
+      // visible rather than hidden.
+      var pad = (maxV - minV) * 0.15;
+      if (!(pad > 0)) pad = Math.max(Math.abs(maxV) * 0.08, 1);
+      minV = minV - pad;
+      maxV = maxV + pad;
+      if (minV > 0 && minV < (maxV - minV) * 0.05) minV = 0;
+    }
+    var ticks = uiTicks(minV, maxV, 3);
+    minV = Math.min(minV, ticks[0]); maxV = Math.max(maxV, ticks[ticks.length - 1]);
+    var span = (maxV - minV) || 1, innerW = W - padL - padR;
     var yOf = function (v) { return H - padB - ((v - minV) / span) * (H - padT - padB); };
     var root = document.createElement("div");
     root.className = "ui ui-chart";
     var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
-    svg.setAttribute("aria-label", uiTxt(spec.title, 60) || "chart");
+    // Everything the eye reads is also readable by a screen reader: the series in words, not only
+    // in pixels.
+    var spoken = pts.map(function (p) { return (p.label || "") + " " + uiRound(p.value) + (unit ? " " + unit : ""); }).join(", ");
+    svg.setAttribute("aria-label", (uiTxt(spec.title, 60) || "chart") + ". " + spoken);
+    // Unit caption: what the numbers are, once, at the top of the axis.
+    if (unit) {
+      var ut = svgEl("text", { x: 4, y: 12, "class": "ui-unit" });
+      ut.textContent = unit;
+      svg.appendChild(ut);
+    }
     svg.appendChild(svgEl("line", { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, "class": "ui-axis" }));
+    svg.appendChild(svgEl("line", { x1: padL, y1: padT, x2: padL, y2: H - padB, "class": "ui-axis" }));
+    ticks.forEach(function (t) {
+      var y = yOf(t);
+      svg.appendChild(svgEl("line", { x1: padL, y1: y, x2: W - padR, y2: y, "class": "ui-grid" }));
+      var tl = svgEl("text", { x: padL - 5, y: y + 3, "class": "ui-tick", "text-anchor": "end" });
+      tl.textContent = uiTickText(t, unit);
+      svg.appendChild(tl);
+    });
     if (kind === "bar") {
       var step = innerW / pts.length, bw = Math.max(6, step * 0.56);
       pts.forEach(function (p, i) {
         var x = padL + i * step + (step - bw) / 2;
-        var h = Math.max(2, (H - padB) - yOf(p.value));
-        svg.appendChild(svgEl("rect", { x: x, y: (H - padB - h), width: bw, height: h, rx: 3, "class": "ui-bar" }));
+        var top = yOf(Math.max(p.value, Math.max(minV, 0)));
+        var h = Math.max(2, (H - padB) - top);
+        svg.appendChild(svgEl("rect", { x: x, y: H - padB - h, width: bw, height: h, rx: 3, "class": "ui-bar" }));
         var vl = svgEl("text", { x: x + bw / 2, y: H - padB - h - 5, "class": "ui-val", "text-anchor": "middle" });
         vl.textContent = uiRound(p.value);
         svg.appendChild(vl);
-        var ll = svgEl("text", { x: x + bw / 2, y: H - 7, "class": "ui-lab", "text-anchor": "middle" });
-        ll.textContent = p.label;
-        svg.appendChild(ll);
+        if (pts.length <= 7) {
+          var ll = svgEl("text", { x: x + bw / 2, y: H - 10, "class": "ui-lab", "text-anchor": "middle" });
+          ll.textContent = uiShortLabel(p);
+          svg.appendChild(ll);
+        }
       });
+      if (pts.length > 7) uiEdgeLabels(svg, pts, function (i) { return padL + i * step + step / 2; }, H);
     } else {
       var xOf = function (i) { return padL + (pts.length < 2 ? innerW / 2 : (i / (pts.length - 1)) * innerW); };
       var d = pts.map(function (p, i) { return (i ? "L" : "M") + xOf(i).toFixed(1) + " " + yOf(p.value).toFixed(1); }).join(" ");
       svg.appendChild(svgEl("path", { d: d, "class": "ui-line" }));
       pts.forEach(function (p, i) {
-        svg.appendChild(svgEl("circle", { cx: xOf(i), cy: yOf(p.value), r: 2.6, "class": "ui-dot" }));
-        // The figure at each point. A line with a cut axis shows a shape and hides the size, and on a
-        // phone he cannot hover a point to read it, so the numbers are drawn above the dots.
-        if (pts.length <= 8) {
-          var vt = svgEl("text", { x: xOf(i), y: Math.max(10, yOf(p.value) - 6), "class": "ui-val",
+        var cx = xOf(i), cy = yOf(p.value);
+        svg.appendChild(svgEl("circle", { cx: cx, cy: cy, r: 3, "class": "ui-dot" }));
+        // A point on a phone cannot be hovered, so every point carries its own value: drawn when
+        // there is room, and always reachable by a tap that has a generous target around the dot.
+        if (pts.length <= 9) {
+          var vt = svgEl("text", { x: cx, y: Math.max(11, cy - 7), "class": "ui-val",
                                    "text-anchor": i === 0 ? "start" : (i === pts.length - 1 ? "end" : "middle") });
           vt.textContent = uiRound(p.value);
           svg.appendChild(vt);
         }
-        if (i === 0 || i === pts.length - 1 || pts.length <= 5) {
-          var ll = svgEl("text", { x: xOf(i), y: H - 7, "class": "ui-lab",
-                                  "text-anchor": i === 0 ? "start" : (i === pts.length - 1 ? "end" : "middle") });
-          ll.textContent = p.label;
-          svg.appendChild(ll);
-        }
+        var hit = svgEl("rect", { x: cx - 22, y: cy - 22, width: 46, height: 46, "class": "ui-hit",
+                                  role: "button", tabindex: "0" });
+        hit.setAttribute("aria-label", (p.label || "point") + ": " + uiRound(p.value) + (unit ? " " + unit : ""));
+        var tip = svgEl("title", {});
+        tip.textContent = (p.label || "") + ": " + uiRound(p.value) + (unit ? " " + unit : "");
+        hit.appendChild(tip);
+        svg.appendChild(hit);
       });
+      uiEdgeLabels(svg, pts, xOf, H);
+      if (pts.length > 9) {
+        var mid = Math.floor((pts.length - 1) / 2), mx = xOf(mid);
+        var mv = svgEl("text", { x: mx, y: Math.max(11, yOf(pts[mid].value) - 7), "class": "ui-val", "text-anchor": "middle" });
+        mv.textContent = uiRound(pts[mid].value);
+        svg.appendChild(mv);
+      }
     }
     uiHeadInto(root, spec);
     root.appendChild(svg);
     return uiSourceInto(root, spec);
+  }
+
+  // A short, readable axis label: a date loses its year before it loses its day.
+  function uiShortLabel(p) {
+    var s = String(p.label || "");
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if (m) {
+      var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return months[Math.max(0, Math.min(11, parseInt(m[2], 10) - 1))] + " " + parseInt(m[3], 10);
+    }
+    return s.length > 9 ? s.slice(0, 8) + "\u2026" : s;
+  }
+
+  function uiEdgeLabels(svg, pts, xOf, H) {
+    var first = xOf(0), last = xOf(pts.length - 1);
+    [0, pts.length - 1].forEach(function (i, n) {
+      var x = i === 0 ? first : last;
+      var ll = svgEl("text", { x: x, y: H - 10, "class": "ui-lab",
+                              "text-anchor": n === 0 ? "start" : "end" });
+      ll.textContent = uiShortLabel(pts[i]);
+      svg.appendChild(ll);
+    });
+  }
+
+  // Three or four round numbers across the range, so the axis reads 0 / 50,000 / 100,000 instead of
+  // 0 / 37,412 / 74,824.
+  function uiTicks(lo, hi, want) {
+    var span = hi - lo;
+    if (!(span > 0)) return [lo, lo + 1];
+    var raw = span / Math.max(1, want);
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / mag, step = (norm <= 1.5 ? 1 : norm <= 3 ? 2 : norm <= 7 ? 5 : 10) * mag;
+    var out = [], t = Math.ceil(lo / step) * step;
+    for (; t <= hi + step * 0.001 && out.length < 8; t += step) out.push(Math.abs(t) < step * 1e-9 ? 0 : t);
+    if (out.length < 2) out = [lo, hi];
+    return out;
+  }
+
+  function uiTickText(v, unit) {
+    var a = Math.abs(v);
+    if (a >= 1e9) return (v / 1e9).toFixed(a % 1e9 ? 1 : 0) + "b";
+    if (a >= 1e6) return (v / 1e6).toFixed(a % 1e6 ? 1 : 0) + "m";
+    if (a >= 1e4) return (v / 1e3).toFixed(a % 1e3 ? 1 : 0) + "k";
+    return uiRound(v);
   }
 
   // Two or three things, the same kind of fact down each: the side-by-side reading of a comparison.

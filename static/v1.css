@@ -2510,6 +2510,11 @@ body[data-stop] #bar3 #live{ display: none }
 /* a change over time */
 .ui-chart svg{ display: block; width: 100%; height: auto; overflow: visible }
 .ui-axis{ stroke: var(--line); stroke-width: 1 }
+.ui-grid{ stroke: var(--line); stroke-width: .5; opacity: .55 }
+.ui-tick{ font-size: 9px; fill: var(--dim); font-variant-numeric: tabular-nums }
+.ui-hit{ fill: transparent; cursor: pointer }
+.ui-hit:focus{ outline: none; stroke: var(--accent); stroke-width: 1; fill: rgba(189,118,92,.12) }
+.ui-hit:hover{ fill: rgba(189,118,92,.10) }
 .ui-bar{ fill: var(--accent); opacity: .85 }
 .ui-line{ fill: none; stroke: var(--accent); stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round }
 .ui-dot{ fill: var(--accent) }

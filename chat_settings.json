@@ -1,0 +1,61 @@
+{
+ "optstest4823": {
+  "web": "off",
+  "memory": "off"
+ },
+ "probe-6af14748": {
+  "web": "off",
+  "memory": "on"
+ },
+ "probe-b2b5608f": {
+  "web": "off",
+  "memory": "on"
+ },
+ "probe-1224c993": {
+  "web": "auto",
+  "memory": "off"
+ },
+ "probe-b2a31fbc": {
+  "web": "off",
+  "memory": "on"
+ },
+ "probe-4f580eba": {
+  "web": "auto",
+  "memory": "off"
+ },
+ "statecheck4874": {
+  "web": "always"
+ },
+ "alwaysprobe01": {
+  "web": "always"
+ },
+ "alwaysprobe02": {
+  "web": "always"
+ },
+ "alwaysprobe03": {
+  "web": "always"
+ },
+ "alwaysprobe04": {
+  "web": "always"
+ },
+ "current": {
+  "web": "auto",
+  "memory": "on"
+ },
+ "6ac31d9d5df6425a86c388024e3d8911": {
+  "web": "always",
+  "memory": "on"
+ },
+ "0f3c803c5427489ea612e5cccfb966a6": {
+  "web": "always",
+  "memory": "off"
+ },
+ "7ef0d4c7dce4498ca318f3fe91c26f62": {
+  "web": "always",
+  "memory": "off"
+ },
+ "b242d4feda644897b8d0db7e190650b7": {
+  "memory": "off",
+  "web": "always"
+ }
+}
