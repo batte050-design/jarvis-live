@@ -1523,7 +1523,7 @@ def accounts():
     """Every account this node serves. One, seeded from the owner's own address, and no sign-up."""
     d = _load_json(ACCOUNTS_FILE, None)
     if not isinstance(d, dict) or not d.get("accounts"):
-        d = {"accounts": {"batte050@gmail.com": {"id": "acc_owner", "name": "Mohammad",
+        d = {"accounts": {"owner@example.com": {"id": "acc_owner", "name": "Mohammad",
                                                  "role": "admin", "providers": ["email"],
                                                  "created": time.strftime("%Y-%m-%d %H:%M:%S")}},
              "signup": "closed"}
@@ -8675,7 +8675,7 @@ async def api_account(request: Request):
          "status": "Bound" if phone else "Unbound", "primary": False},
     ]
     devs = devices_summary(tok if tok in entries else None)
-    acct = account_for("batte050@gmail.com") or {}
+    acct = account_for("owner@example.com") or {}
     return JSONResponse({"ok": True, "name": acct.get("name") or "Mohammad",
                          "role": (acct.get("role") or "admin").title(), "bindings": bindings,
                          "this_device": {"label": device_display(mine.get("label") or device_key_for(
@@ -8686,7 +8686,7 @@ async def api_account(request: Request):
                          "sessions": len(entries),
                          "others": max(0, len(devs) - 1),
                          "account": {"id": acct.get("id") or "acc_owner",
-                                     "email": "batte050@gmail.com",
+                                     "email": "owner@example.com",
                                      "role": (acct.get("role") or "admin").title()},
                          "default_mode": mode})
 
@@ -9300,7 +9300,7 @@ def _nudge_later(qid: str, plain: str) -> None:
                     % (plain or "an action needs your approval"))
             _bin = os.environ.get("JARVIS_HERMES_BIN") or "/home/ubuntu/.local/bin/hermes"
             subprocess.run([_bin, "send",
-                            "-t", "whatsapp:108590346063990@lid", text],
+                            "-t", "whatsapp:<operator-lid>@lid", text],
                            timeout=60, check=False,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
