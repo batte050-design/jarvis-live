@@ -16,6 +16,10 @@ from typing import Any, Callable
 LOG = logging.getLogger(__name__)
 
 
+_OP_CACHE = {}
+_TRACE = {"start": 0, "update": 0, "missing_id": 0}
+
+
 class WarmAgent:
     def __init__(self, hermes_bin, workdir, session_name, model=None,
                  idle_seconds=900, timeout=1800, ctx_path=None, *,
@@ -302,29 +306,41 @@ class WarmAgent:
                 if on_event:
                     on_event("text", {"type": "text", "text": delta})
         elif kind in ("tool_call", "tool_use"):
-            name = update.get("name") or update.get("title") or "tool"
-            raw = update.get("rawInput", update.get("input", {}))
-            if isinstance(raw, str):
-                try:
-                    raw = json.loads(raw)
-                except ValueError:
-                    raw = {"raw": raw}
+            # A display title is not an identity. Take ACP's toolCallId, keep the operation from
+            # structured metadata, and never forward arguments.
+            call_id = str(update.get("toolCallId") or update.get("tool_call_id") or update.get("id") or "")
+            title_derived = False
+            name = str(update.get("kind") or update.get("toolKind") or "")
+            if not name:
+                _TRACE["missing_operation"] = _TRACE.get("missing_operation", 0) + 1
+            elif name.lower() not in ("read","edit","delete","move","search","execute","think","fetch","other"):
+                _TRACE["unmapped_operation"] = _TRACE.get("unmapped_operation", 0) + 1
+            if name:
+                _OP_CACHE[call_id] = name
+            else:
+                name = _OP_CACHE.get(call_id, "")
+            _TRACE["start"] += 1
+            if not call_id:
+                _TRACE["missing_id"] += 1
             if on_event:
-                on_event("tool_use", {"type": "tool_use", "name": name, "input": raw or {}})
+                on_event("tool_use", {"type": "tool_use", "call_id": call_id, "name": name,
+                                      "status": "running", "title_derived": title_derived})
         elif kind in ("tool_call_update", "tool_result"):
-            name = update.get("name") or update.get("title") or "tool"
+            call_id = str(update.get("toolCallId") or update.get("tool_call_id") or update.get("id") or "")
             status = str(update.get("status") or "").lower()
-            output = update.get("rawOutput", update.get("output", ""))
-            if isinstance(output, dict) and "text" in output:
-                output = output["text"]
-            event = {
-                "type": "tool_result", "name": name,
-                "is_error": status in ("failed", "error") or bool(update.get("isError")),
-                "output": output,
-                "duration_ms": update.get("durationMs", update.get("duration_ms")),
-            }
+            done = status in ("completed", "complete", "failed", "error", "cancelled")
+            name = str(update.get("toolName") or update.get("name") or _OP_CACHE.get(call_id, ""))
+            if name:
+                _OP_CACHE[call_id] = name
+            _TRACE["update"] += 1
+            if not call_id:
+                _TRACE["missing_id"] += 1
             if on_event:
-                on_event("tool_result", event)
+                on_event("tool_result", {"type": "tool_result", "call_id": call_id, "name": name,
+                                         "status": "done" if done and status not in ("failed", "error") else
+                                                   ("error" if status in ("failed", "error") else "running"),
+                                         "is_error": status in ("failed", "error") or bool(update.get("isError")),
+                                         "duration_ms": update.get("durationMs", update.get("duration_ms"))})
 
     def ensure_ready(self) -> bool:
         """Build the process and its session now, so the first real turn does not pay for it."""

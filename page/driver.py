@@ -77,13 +77,21 @@ class ACPDriver:
         key=store.key(*(ctx[k] for k in ['owner','conv','session','turn','version']))
         seen=[None]
         def update(kind,data):
-            if kind=='tool_result':
-                marker=root()/('progress-'+key+'.json')
-                if marker.exists():
-                    ev=json.loads(marker.read_bytes())
-                    if ev['ts']!=seen[0]:
-                        seen[0]=ev['ts'];event('stored_progress',ev)
-            # Raw assistant text/tool traces are deliberately discarded.
+            # The page shows what the harness is doing. Forward only the call id, its lifecycle
+            # status and the operation name: never arguments, output, reasoning or free text.
+            if kind in ('tool_use','tool_result'):
+                d=data if isinstance(data,dict) else {}
+                op=str(d.get('name') or d.get('tool') or '')
+                call_id=str(d.get('id') or d.get('call_id') or d.get('tool_call_id') or '')
+                event('tool_step',{'op':op,'call_id':call_id,
+                                   'status':'running' if kind=='tool_use' else 'done'})
+                if kind=='tool_result':
+                    marker=root()/('progress-'+key+'.json')
+                    if marker.exists():
+                        ev=json.loads(marker.read_bytes())
+                        if ev['ts']!=seen[0]:
+                            seen[0]=ev['ts'];event('stored_progress',ev)
+            # Assistant text, reasoning and tool payloads are deliberately discarded.
         try:
             turn_prompt=[{"type":"text","text":question},
                          {"type":"text","text":"<page_turn_context>Current UTC: "+datetime.now(timezone.utc).isoformat()+". This is runtime context, not supplied calculation data.</page_turn_context>"}]

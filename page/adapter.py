@@ -14,6 +14,16 @@ import time
 import uuid
 from .plugin import VERSION
 from .plugin import approvals, store, progress
+
+# Fixed table: an operation the page can name, everything else is a generic step.
+TOOL_LABELS={'web_search':'Searching the web','web_extract':'Reading a page',
+ 'browser_exec':'Using the browser','browser':'Using the browser','read_file':'Reading a file',
+ 'search_files':'Looking through files','terminal':'Running a command',
+ 'execute_code':'Working out the numbers','execute':'Running a command','think':'Thinking',
+ 'fetch':'Reading a page','search':'Searching','read':'Reading something','edit':'Writing something',
+ 'delete':'Removing something','move':'Moving something','other':'Working','vision_analyze':'Looking at an image',
+ 'image_search':'Finding pictures','write_file':'Writing a file','todo_list':'Planning the steps',
+ 'fetch_photos':'Finding pictures','skill_view':'Consulting a procedure'}
 from .plugin.locks import root, digest, KeyLock
 
 LOG = logging.getLogger(__name__)
@@ -86,7 +96,7 @@ class Adapter:
 
     @staticmethod
     def public(row):
-        return {k:row.get(k) for k in ['conv','turn','status','version','session','terminal','current_progress','approval','timing']}
+        return {k:row.get(k) for k in ['conv','turn','status','version','session','terminal','current_progress','approval','timing','steps','steps_omitted','rev']}
 
     def snapshot(self,owner,conv,turn):
         return self.public(self.read(owner,conv,turn))
@@ -167,18 +177,27 @@ class Adapter:
                 def event(kind,data):
                     # Never forward a raw tool name, arguments, output, text or reasoning.
                     if not isinstance(data,dict):return
-                    if kind in ('tool_step','tool_call','step'):
-                        # The reader audited the steps before; a harness turn must show the same
-                        # kind of line. Map the tool to a readable action, never the raw name,
-                        # arguments or output.
-                        tool=str(data.get('tool') or data.get('name') or '').lower()
-                        if 'browser' in tool or 'web' in tool or 'search' in tool: state,label='reading_source','Searching the web'
-                        elif 'file' in tool or 'read' in tool or 'pdf' in tool: state,label='gathering_file','Reading the source'
-                        elif 'calc' in tool or 'python' in tool or 'code' in tool or 'exec' in tool: state,label='computing','Working out the numbers'
-                        elif 'image' in tool or 'photo' in tool: state,label='checking_figures','Finding pictures'
-                        else: state,label='drafting','Putting it together'
-                        ev=progress.accept(state,owner,conv,session['session'],turn,row['version'])
-                        if ev: ev=dict(ev,label=label)
+                    if kind=='tool_step':
+                        d=data if isinstance(data,dict) else {}
+                        label=TOOL_LABELS.get(str(d.get('op') or '').lower()) or 'Tool action'
+                        call_id=(str(d.get('call_id') or '')or ('call-%d'%int(time.time()*1000)))[:64]
+                        status='done' if d.get('status')=='done' else 'running'
+                        def add_step(r):
+                            if r['terminal']:return
+                            steps=r.setdefault('steps',[])
+                            hit=next((x for x in steps if x['call_id']==call_id),None)
+                            r['rev']=r.get('rev',0)+1
+                            if hit is not None:
+                                hit['status']=status; hit['rev']=r['rev']
+                            elif len(steps)<64:
+                                steps.append(dict(call_id=call_id,seq=len(steps)+1,action=label,
+                                                  status=status,ts=round(time.time()*1000),rev=r['rev']))
+                            else:
+                                r['steps_omitted']=r.get('steps_omitted',0)+1
+                            if r['timing']['first_progress_ms'] is None:
+                                r['timing']['first_progress_ms']=round((time.time()-r['created_at'])*1000)
+                        self._update(owner,conv,turn,add_step)
+                        return
                     elif kind=='progress':
                         ev=progress.accept(data.get('state'),owner,conv,session['session'],turn,row['version'])
                     elif kind=='stored_progress':

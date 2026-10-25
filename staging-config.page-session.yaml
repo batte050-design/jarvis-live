@@ -1,0 +1,346 @@
+model:
+  provider: deepseek
+  default: deepseek-flash
+fallback_providers: []
+agent:
+  max_turns: 150
+  reasoning_effort: high
+web:
+  backend: ddgs
+browser:
+  cdp_url: http://127.0.0.1:9222
+  cloud_provider: nous
+auxiliary:
+  free_only: false
+  vision:
+    provider: deepseek
+    model: deepseek-flash
+  compression:
+    provider: deepseek
+    model: deepseek-flash
+    reasoning_effort: low
+  skills_hub:
+    provider: deepseek
+    model: deepseek-flash
+    reasoning_effort: low
+  approval:
+    provider: deepseek
+    model: deepseek-flash
+    reasoning_effort: low
+  mcp:
+    provider: deepseek
+    model: deepseek-flash
+    reasoning_effort: low
+  title_generation:
+    provider: auto
+    model: qwen2.5:7b
+    base_url: http://127.0.0.1:11434/v1
+    api_key: ollama
+    reasoning_effort: none
+  memory_query_rewrite:
+    provider: deepseek
+    model: deepseek-flash
+  tts_audio_tags:
+    provider: custom
+    model: qwen2.5:7b
+    base_url: http://127.0.0.1:11434/v1
+    api_key: ollama
+    reasoning_effort: none
+  triage_specifier:
+    provider: auto
+    model: qwen2.5:7b
+    base_url: http://127.0.0.1:11434/v1
+    api_key: ollama
+    reasoning_effort: none
+  kanban_decomposer:
+    provider: deepseek
+    model: deepseek-flash
+  profile_describer:
+    provider: deepseek
+    model: deepseek-flash
+    reasoning_effort: low
+  curator:
+    provider: deepseek
+    model: deepseek-flash
+    reasoning_effort: low
+  web_extract:
+    provider: deepseek
+    model: deepseek-flash
+display:
+  memory_notifications: 'off'
+  skin: owl
+  status_phrases:
+    path: status_phrases.yaml
+    mode: replace
+  platforms:
+    telegram:
+      tool_progress: new
+      thinking_progress: true
+      tool_progress_commands: intent
+      tool_preview_length: 80
+      tool_progress_grouping: accumulate
+      interim_assistant_messages: false
+      busy_ack_detail: false
+      long_running_notifications: generic
+    whatsapp:
+      tool_progress: new
+      interim_assistant_messages: false
+      tool_preview_length: 80
+      tool_progress_grouping: accumulate
+      tool_progress_commands: intent
+      thinking_progress: true
+      busy_ack_detail: false
+      long_running_notifications: generic
+      progress_chats: 108590346063990@lid,0758837036,51578648174793@lid
+      cleanup_progress: false
+  tool_progress: new
+dashboard:
+  theme: default
+  basic_auth:
+    username: mohammad
+    password_hash: scrypt$16384$8$1$hX0gtm7kLLhmZ55NWBIKzQ==$0tp2ECnB7GAbo+uXaHVGWV+Bwv29Armifnj+Jyr2bKM=
+  public_url: https://dashboard.battemohammad.com
+  font: system-sans
+tts:
+  provider: fishaudio
+  edge:
+    voice: en-GB-RyanNeural
+  elevenlabs:
+    voice_id: 2ZsFHm8xTo9vNFP00Eri
+  gemini:
+    voice: Iapetus
+    persona_prompt_file: ''
+  piper:
+    voice: jarvis-high
+  providers:
+    fishaudio:
+      type: command
+      output_format: mp3
+      voice: 79554ca723f442a3af718d5aee6751ab
+      model: s2.1-pro-free
+      voice_compatible: true
+      command: python3 /home/ubuntu/.hermes/scripts/fish_tts.py --input {input_path} --output {output_path} --voice {voice} --model {model} --format {format}
+    executive:
+      type: command
+      output_format: mp3
+      voice: 104bdee30f5d42b0a06b03cf5b9c0c68
+      model: s2.1-pro-free
+      voice_compatible: true
+      command: python3 /home/ubuntu/.hermes/scripts/fish_tts.py --input {input_path} --output {output_path} --voice {voice} --model {model} --format {format}
+stt:
+  provider: local_command
+  local:
+    model: small
+memory:
+  memory_char_limit: 6000
+  user_char_limit: 4500
+  provider: holographic
+delegation:
+  max_concurrent_children: 2
+approvals:
+  destructive_slash_confirm: false
+command_allowlist:
+  - access to SSH keys (Windows path)
+  - cua:key:foreground
+  - cua:type:foreground
+  - overwrite system file via redirection
+  - script execution via -e/-c flag
+  - script execution via heredoc
+  - shell execution via heredoc
+  - stop/restart system service
+plugins:
+  enabled:
+    - desk
+    - page_presentation
+    - disk-cleanup
+    - platforms/mattermost
+    - screen
+    - whatsapp-platform
+  disabled: []
+gateway:
+  reset_banner: false
+  help_short: true
+  attach_bare_paths: false
+onboarding:
+  seen:
+    busy_input_prompt: true
+    profile_build_offered: true
+_config_version: 46
+image_gen:
+  provider: nous
+session_reset:
+  mode: none
+video_gen:
+  provider: nous
+platforms:
+  whatsapp:
+    enabled: true
+    gateway_restart_notification: false
+    gateway_shutdown_notification: false
+    dm_policy: open
+    send_read_receipts: true
+    allow_admin_from: 108590346063990@lid,256758837036@s.whatsapp.net
+    group_allow_admin_from: 108590346063990@lid,256758837036@s.whatsapp.net
+    guest_toolsets:
+      - web
+      - vision
+      - clarify
+      - desk
+      - no_mcp
+  whatsapp_cloud:
+    enabled: false
+  webhook:
+    enabled: true
+    extra:
+      host: 127.0.0.1
+  email:
+    gateway_restart_notification: false
+    gateway_shutdown_notification: false
+  telegram:
+    enabled: true
+providers:
+  deepseek:
+    models:
+      deepseek-v4-flash:
+        stale_timeout_seconds: 900
+      deepseek-v4-pro:
+        stale_timeout_seconds: 900
+mcp_servers:
+  context7:
+    url: https://mcp.context7.com/mcp
+    enabled: false
+  deepwiki:
+    url: https://mcp.deepwiki.com/mcp
+    enabled: false
+  wolfram:
+    url: https://agenttools.wolfram.com/mcp
+    enabled: false
+  cloudflare:
+    url: https://mcp.cloudflare.com/mcp?codemode=false
+    auth: oauth
+    enabled: false
+    tools:
+      exclude:
+        - docs
+        - '*_radar_*'
+        - '*_accounts_magic_*'
+        - '*_accounts_mnm_*'
+        - '*_accounts_cni_*'
+        - '*_accounts_teamnet_*'
+        - '*_accounts_cloudforceone_*'
+        - '*_accounts_dlp_*'
+        - '*_accounts_devices*'
+        - '*_accounts_dex_*'
+        - '*_accounts_datasecurity_*'
+        - '*_accounts_emailsecurity_*'
+        - '*_accounts_scim_*'
+        - '*_accounts_gateway*'
+        - '*_accounts_zerotrust_*'
+        - '*_accounts_one_*'
+        - '*_accounts_brandprotection_*'
+        - '*_accounts_intel_*'
+        - '*_accounts_urlscanner_*'
+        - '*_accounts_vuln_scanner_*'
+        - '*_zones_securitycenter_*'
+        - '*_accounts_securitycenter_*'
+        - '*_zones_api_gateway_*'
+        - '*_zones_schema_validation*'
+        - '*_zones_token_validation*'
+        - '*_zones_waiting_rooms*'
+        - '*_accounts_addressing_*'
+        - '*_accounts_shares*'
+        - '*_accounts_slurper_*'
+        - '*_zones_web3_*'
+        - '*_accounts_flagship_*'
+        - '*_zones_secondary_dns_*'
+        - '*_accounts_secondary_dns_*'
+        - '*_user_load_balancers*'
+  globalping:
+    url: https://mcp.globalping.dev/mcp
+    auth: oauth
+    enabled: false
+    tools:
+      exclude:
+        - help
+        - compareLocations
+        - limits
+    oauth:
+      timeout: 900
+  hugging_face:
+    url: https://huggingface.co/mcp
+    auth: oauth
+    enabled: false
+  twelve-data:
+    url: https://mcp.twelvedata.com/mcp
+    auth: oauth
+    enabled: false
+    tools:
+      exclude:
+        - oauth_login
+        - auth_status
+        - oauth_configure
+        - get_api_usage
+    oauth:
+      timeout: 900
+  kiwi:
+    url: https://mcp.kiwi.com
+    enabled: false
+    tools:
+      include:
+        - search-flight
+  semgrep:
+    url: https://mcp.semgrep.ai/mcp
+    auth: oauth
+    enabled: false
+    tools:
+      exclude:
+        - security_check
+        - supported_languages
+        - semgrep_rule_schema
+    oauth:
+      client_id: client_01M411HBDMR18MSWCXKH8XXEYG
+      redirect_port: 8420
+  serena:
+    command: /home/ubuntu/.local/bin/serena
+    args:
+      - start-mcp-server
+      - --context
+      - ide
+      - --enable-web-dashboard
+      - "false"
+    enabled: false
+    env:
+      PATH: /home/ubuntu/.hermes/bin:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  github:
+    url: https://api.githubcopilot.com/mcp/
+    headers:
+      Authorization: Bearer ${MCP_GITHUB_API_KEY}
+    enabled: false
+cron:
+  wrap_response: false
+bot_desktop:
+  auto_start: true
+timezone: Africa/Kampala
+platform_toolsets:
+  email:
+    - web
+    - vision
+    - clarify
+    - no_mcp
+skills:
+  disabled: []
+platform_hints:
+  acp:
+    append: |-
+      You are running as an ACP agent inside the operator's code editor (VS Code) — the same
+      agent core as on WhatsApp and the CLI, standing in a different room. Your replies render
+      as markdown in the editor's agent panel, and the project open in the workspace is the
+      subject of the conversation.
+      Work file by file, never tree-wide: locate the exact file and the exact function or line
+      range a task needs, read only that region, and say which files and which parts will change
+      before touching anything. Never take the codebase in wholesale, and never ask him to paste it.
+      There is no attachment surface here: MEDIA: tags are not intercepted, so hand over a file by
+      stating its absolute path. File edits land as reviewable changes the operator accepts or
+      rejects, so state what you are about to change and where it lives, keep chat answers short,
+      and put code in fenced blocks with the file named above them. This session keeps its own
+      history, separate from the messaging threads.
