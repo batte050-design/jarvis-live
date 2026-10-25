@@ -1,0 +1,7 @@
+name: page_presentation
+version: "1.0.0"
+description: "The page's presentation channel. The harness authors the answer, emit_ui validates and evaluates the interface in a side-effect-free runtime, accepted payloads are stored immutably per owner/conversation/session/turn/version, and only accepted ones reach the reader. No page-side model call exists."
+author: "JARVIS (built for Mohammad)"
+provides_tools:
+  - emit_ui
+  - emit_progress
