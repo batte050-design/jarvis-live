@@ -1,0 +1,47 @@
+{
+  "kind": "Actual r2 model output captured via authenticated staging /stream; provisional UI, not a successful staging mount. Local replay uses fixture photos.",
+  "rows": [
+    {
+      "id": "g06",
+      "question": "Tell me about the tallest completed buildings and include pictures.",
+      "answer": "The tallest completed buildings in the world are all in Asia or the Middle East:\n\n1. **Burj Khalifa** — Dubai, UAE — 828 m, 163 floors (2010)\n2. **Merdeka 118** — Kuala Lumpur, Malaysia — 679 m, 118 floors (2023)\n3. **Shanghai Tower** — Shanghai, China — 632 m, 128 floors (2015)\n4. **Abraj Al-Bait Clock Tower** — Mecca, Saudi Arabia — 601 m, 120 floors (2012)\n5. **Ping An Finance Center** — Shenzhen, China — 599 m, 115 floors (2017)\n6. **Lotte World Tower** — Seoul, South Korea — 555 m, 123 floors (2017)\n7. **One World Trade Center** — New York, USA — 541 m, 94 floors (2014)\n8. **Guangzhou CTF Finance Centre** — Guangzhou, China — 530 m, 111 floors (2016)\n9. **Tianjin CTF Finance Centre** — Tianjin, China — 530 m, 97 floors (2019)\n10. **China Zun (CITIC Tower)** — Beijing, China — 528 m, 108 floors (2018)\n\nHeights are architectural height (spires included, antennas excluded). Here are photographs of the top few:\n\n```openui\n// jarvis-context: W3siaWQiOiAiZWRpdGFibGUtaW5wdXRzIiwgInJvd3MiOiBbXSwgImNyZWRpdCI6ICJDYWxjdWxhdGVkIGxvY2FsbHkgZnJvbSBlZGl0YWJsZSBpbnB1dHM7IGFueSB1bnN0YXRlZCBzdGFydGluZyB2YWx1ZXMgYXJlIGFzc3VtcHRpb25zLiBSZWNvcmRlZCB0aGlzIHR1cm46IDIwMjYtMTAtMjRUMTI6NDU6MTdaIn1d\nt1 = Card([SearchImage(\"Burj Khalifa Dubai skyline\", 3), Title(\"Burj Khalifa\", \"md\"), Caption(\"Dubai, UAE · 828 m · completed 2010\")], \"outline\", 12, 8)\nt2 = Card([SearchImage(\"Merdeka 118 Kuala Lumpur\", 3), Title(\"Merdeka 118\", \"md\"), Caption(\"Kuala Lumpur, Malaysia · 679 m · completed 2023\")], \"outline\", 12, 8)\nt3 = Card([SearchImage(\"Shanghai Tower skyscraper\", 3), Title(\"Shanghai Tower\", \"md\"), Caption(\"Shanghai, China · 632 m · completed 2015\")], \"outline\", 12, 8)\nt4 = Card([SearchImage(\"Abraj Al Bait Clock Tower Mecca\", 3), Title(\"Abraj Al-Bait Clock Tower\", \"md\"), Caption(\"Mecca, Saudi Arabia · 601 m · completed 2012\")], \"outline\", 12, 8)\nroot = Col([Title(\"Tallest completed buildings\", \"lg\"), Grid([t1, t2, t3, t4], 2, 240, 4)])\n```",
+      "captured_build": {
+        "js": "1dc2b69363",
+        "css": "1522a5eb57",
+        "built": 1792841613
+      },
+      "captured_server_status": "partial",
+      "captured_errors": [
+        "[Errno 2] No such file or directory: 'node'"
+      ]
+    },
+    {
+      "id": "g18",
+      "question": "Split a UGX 153,000 bill among four friends, with an optional tip. Let us try different numbers.",
+      "answer": "Here's a split calculator — the total is UGX 153,000 and you can adjust the tip percentage.\n\n```openui\n// jarvis-context: W3siaWQiOiAiZWRpdGFibGUtaW5wdXRzIiwgInJvd3MiOiBbXSwgImNyZWRpdCI6ICJDYWxjdWxhdGVkIGxvY2FsbHkgZnJvbSBlZGl0YWJsZSBpbnB1dHM7IGFueSB1bnN0YXRlZCBzdGFydGluZyB2YWx1ZXMgYXJlIGFzc3VtcHRpb25zLiBSZWNvcmRlZCB0aGlzIHR1cm46IDIwMjYtMTAtMjRUMTI6NDU6NDBaIn1d\n$tip = 0\n$people = 4\ntipAmount = @Default($tip, 0) / 100 * 153000\ngrand = 153000 + tipAmount\nperPerson = grand / @Clamp(@Default($people, 4), 1, 20)\nroot = Col([Title(\"Bill split: UGX 153,000\", \"lg\"), Text(\"Four friends sharing UGX 153,000. Move the tip slider to see each share.\"), Slider($tip, 0, 30, 1, \"Tip\", \"%\"), Form([Input($people, \"Number of people\", \"number\")]), Card([Text(\"Tip amount\", \"sm\"), Title(@Format(tipAmount, \"number\"), \"xl\"), Text(\"Total with tip: UGX \" + @Format(grand, \"number\"), \"sm\"), Divider(), Text(\"Each person pays\", \"sm\"), Title(\"UGX \" + @Format(perPerson, \"number\"), \"2xl\")], \"soft\"), Caption(\"Tip is a percentage of the stated UGX 153,000 bill; the bill figure itself is not editable in this view.\")])\n```",
+      "captured_build": {
+        "js": "1dc2b69363",
+        "css": "1522a5eb57",
+        "built": 1792841613
+      },
+      "captured_server_status": "partial",
+      "captured_errors": [
+        "[Errno 2] No such file or directory: 'node'"
+      ]
+    },
+    {
+      "id": "g21",
+      "question": "Plot these supplied figures: Monday 12, Tuesday 19, Wednesday 15, Thursday 23, Friday 23.",
+      "answer": "I'll load the supplied figures as a verified series so the chart can render with a dated source.Your figures peak on Thursday and Friday (23 each), with Monday lowest at 12.Here are your five weekday figures plotted: Monday 12, Tuesday 19, Wednesday 15, Thursday 23, Friday 23.\n\n```openui\n// jarvis-context: W3siaWQiOiAiODhiYjljYjdiNjIxYmY5YzE4MjI0Mzc3OTY3YzY0YWUiLCAicm93cyI6IFt7ImxhYmVsIjogIk1vbmRheSIsICJ2YWx1ZSI6IDEyLjB9LCB7ImxhYmVsIjogIlR1ZXNkYXkiLCAidmFsdWUiOiAxOS4wfSwgeyJsYWJlbCI6ICJXZWRuZXNkYXkiLCAidmFsdWUiOiAxNS4wfSwgeyJsYWJlbCI6ICJUaHVyc2RheSIsICJ2YWx1ZSI6IDIzLjB9LCB7ImxhYmVsIjogIkZyaWRheSIsICJ2YWx1ZSI6IDIzLjB9XSwgImNyZWRpdCI6ICJTb3VyY2U6IHlvdXIgc3VwcGxpZWQgZmlndXJlczsgcmVjb3JkZWQgdGhpcyB0dXJuOiAyMDI2LTEwLTI0VDEyOjQ2OjA0WiJ9LCB7ImlkIjogImU2YmQ5ZGNkMzQ1NTdlZGZmNWQxMzdlMzFlNWQ4NWRiIiwgInJvd3MiOiBbeyJsYWJlbCI6ICJNb25kYXkiLCAidmFsdWUiOiAxMi4wfSwgeyJsYWJlbCI6ICJUdWVzZGF5IiwgInZhbHVlIjogMTkuMH0sIHsibGFiZWwiOiAiV2VkbmVzZGF5IiwgInZhbHVlIjogMTUuMH0sIHsibGFiZWwiOiAiVGh1cnNkYXkiLCAidmFsdWUiOiAyMy4wfSwgeyJsYWJlbCI6ICJGcmlkYXkiLCAidmFsdWUiOiAyMy4wfV0sICJjcmVkaXQiOiAiU291cmNlOiB5b3VyIHN1cHBsaWVkIGZpZ3VyZXM7IHJlY29yZGVkIHRoaXMgdHVybjogMjAyNi0xMC0yNFQxMjo0NjowNVoifSwgeyJpZCI6ICJlZGl0YWJsZS1pbnB1dHMiLCAicm93cyI6IFtdLCAiY3JlZGl0IjogIkNhbGN1bGF0ZWQgbG9jYWxseSBmcm9tIGVkaXRhYmxlIGlucHV0czsgYW55IHVuc3RhdGVkIHN0YXJ0aW5nIHZhbHVlcyBhcmUgYXNzdW1wdGlvbnMuIFJlY29yZGVkIHRoaXMgdHVybjogMjAyNi0xMC0yNFQxMjo0NjowNloifV0=\nroot = Col([Title(\"Weekday figures\", \"lg\"), Caption(\"Figures supplied by you\"), Chart(\"bar\", @Receipt(\"e6bd9dcd34557edff5d137e31e5d85db\"), \"label\", [\"value\"], \"number\", null, false, 260)])\n```",
+      "captured_build": {
+        "js": "1dc2b69363",
+        "css": "1522a5eb57",
+        "built": 1792841613
+      },
+      "captured_server_status": "partial",
+      "captured_errors": [
+        "[Errno 2] No such file or directory: 'node'"
+      ]
+    }
+  ]
+}

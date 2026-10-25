@@ -1,0 +1,52 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">Autel MS906 Pro landed in Kampala</h2><p class="wr-p">Autel sells it at US$1,569 and ships free inside the US only; it cannot be bought directly from Uganda, so it comes through a forwarder or a US shipping address. Unverified until a real quote is priced in the calculator you type into — I did not type a payment or address field.</p><section class="wr-card"><span class="wr-badge">UGX 8.2M - 9.2M</span><h4>If it clears at 10 percent (machinery band, HS 84)</h4><p class="wr-p">Duty 10 percent, VAT 18 percent on the duty-inclusive value, infrastructure levy about 1.5 percent. US$2,060 to US$2,318 depending on shipping. Clearing agent fees, port handling and inland transport are on top of that.</p><p class="wr-meta">FX rate US$1 = UGX 3,981, 9 October 2026. Autel price US$1,569, store.autel.com, 9 October 2026.</p></section><section class="wr-card"><span class="wr-badge">UGX 9.3M - 10.0M</span><h4>If it clears at 25 percent (finished electronics, HS 85)</h4><p class="wr-p">Duty 25 percent, everything else the same. US$2,338 to US$2,517. Which band applies turns entirely on how the clearing agent classifies it, and that one decision is worth about UGX 1.1M.</p><p class="wr-meta">Duty bands from basketadvisory.com, updated July 2026, and rateships.com, read 9 October 2026. Uganda has no duty-free threshold: duty applies from the first dollar.</p></section><section class="wr-card"><span class="wr-badge">add 6 percent plus fees</span><h4>Plus withholding and clearing</h4><p class="wr-p">A 6 percent withholding tax applies to certain imports and would add roughly UGX 374,000 to UGX 403,000 if charged. Clearing, port and transport typically add tens of percent more on top of the goods value.</p><p class="wr-meta">Withholding applies by goods and by importer tax status, so treat it as possible rather than certain.</p></section><hr class="wr-div"><h3 class="wr-h">The honest bottom line</h3><p class="wr-p">Budget UGX 9M to 11M to have it in your hands, on a tool worth US$1,569. Ask the clearing agent for a written landed-cost estimate with the correct HS code before anything ships, because the classification is the single biggest swing and reclassifying after arrival is how importers lose money. On this line of business that spend only pays back if customers start paying for coding and key work; for inspection scanning alone the MK808S does the job at a quarter of this.</p><section class="wr-choices"><h4>What do you want done next?</h4><label class="wr-opt"><input type="radio" name="next" value="price a US forwarder to Kampala"><span>Price a forwarder</span></label><label class="wr-opt"><input type="radio" name="next" value="price the MK808S to Kampala"><span>Price the MK808S instead</span></label><label class="wr-opt"><input type="radio" name="next" value="find the MS906 Pro locally in Uganda"><span>Find it inside Uganda</span></label></section><button class="jw-cta" id="wr-send" type="button" disabled>Continue</button><p class="wr-sent" id="wr-sent"></p><script>
+(function () {
+  var ids = ["next"], limit = 200;
+  var btn = document.getElementById("wr-send"), sent = document.getElementById("wr-sent");
+  if (!btn) return;
+  function chosen() {
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var picked = document.querySelector('input[name="' + ids[i] + '"]:checked');
+      if (picked) out.push(ids[i] + ": " + picked.value);
+    }
+    return out;
+  }
+  function refresh() {
+    var n = chosen().length;
+    btn.disabled = n < ids.length;
+    btn.style.opacity = btn.disabled ? "0.4" : "1";
+  }
+  document.addEventListener("change", refresh);
+  refresh();
+  btn.addEventListener("click", function () {
+    var answers = chosen();
+    if (!answers.length) return;
+    var text = ("Next step for the MS906 Pro:" + " " + answers.join(" ")).slice(0, limit);
+    // Shown whatever the transport: opened as a plain link, nothing can reach the page, and a
+    // control that silently did nothing would be the lie.
+    sent.textContent = "Sent to JARVIS: " + text;
+    try { if (window.JARVIS && window.JARVIS.ask) window.JARVIS.ask(text); } catch (e) {}
+  });
+})();
+</script>

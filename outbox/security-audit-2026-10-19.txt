@@ -1,0 +1,122 @@
+SECURITY AUDIT — hermes-agent-free
+Date: 19 October 2026, 17:25 EAT
+Basis: live reads of this host only. Nothing inferred beyond what is quoted.
+
+=== VERDICT ===
+No open door found. One real gap: the kernel firewall's default rule set
+allows all traffic ahead of its reject rule, so protection rests on
+fail2ban alone. Two smaller items: the file-transfer account has a full
+shell, and administrative rights are password-free.
+
+=== 1. SSH ===
+Config in force (main file + drop-ins):
+  PermitRootLogin            no        (99-hardening.conf)
+  PasswordAuthentication     no        (60-cloudimg-settings.conf)
+  KbdInteractiveAuthentication no
+  X11Forwarding              no        (99-hardening.conf)
+  UsePAM                     yes
+  Port                       22
+  Match User laptop: ForceCommand internal-sftp, AllowTcpForwarding yes
+
+Watch Note: the main sshd_config has password auth and an empty-password
+allowance commented out (defaults). The drop-ins override both. Removing a
+drop-in file silently re-enables password login.
+
+Log evidence:
+  Failed auth attempts, all time ......... 29,311
+  Failed auth attempts, last 24 h ........   672
+  Successful logins, last 7 days ......... publickey only, users ubuntu and laptop
+  Successful password logins ............ 0
+  Login sources .......................... 41.190.134.12 (MTN Uganda) and
+                                          102.142.231.250 (Airtel Uganda)
+  Top offenders .......................... 77.91.71.90 (919), 2.57.121.25 (594),
+                                          103.169.189.6 (532)
+  last(1) records no remote interactive logins since 6 September 2026.
+
+=== 2. fail2ban ===
+  Service ............ active
+  sshd jail .......... active
+  Total failed ....... 5,402
+  Currently banned ... 39 IPs
+  Total banned ....... 387 IPs
+  Journal matches .... _SYSTEMD_UNIT=sshd.service + _COMM=sshd
+
+=== 3. Firewall ===
+  ufw ................ not installed
+  nft ................ not installed
+  iptables INPUT policy ACCEPT
+
+  Rule order (live):
+    1  f2b-sshd    tcp dpt:22
+    2  ACCEPT      state RELATED,ESTABLISHED
+    3  ACCEPT      icmp
+    4  ACCEPT      all        <-- accepts everything
+    5  ACCEPT      tcp dpt:22
+    6  REJECT      icmp-host-prohibited
+
+  Rule 4 matches before rules 5 and 6 are ever reached, so the reject is
+  dead. Effective posture = default allow, with fail2ban as the only filter.
+  No service is reachable at present besides 22 because everything else
+  binds to 127.0.0.1 — that is the save, not the firewall.
+
+  Consequence: one bad install or a container publishing a port to 0.0.0.0
+  is exposed immediately, with no rule to stop it.
+
+=== 4. Open ports ===
+  Public: 22/tcp only (IPv4 and IPv6)
+  Loopback only: 53 (resolver), 3000, 3001, 20241 (cloudflared),
+                 5432 (postgres), 8088, 8140, 8150, 8151, 8152, 8199,
+                 8644, 8787, 9119, 11434 (ollama), 9222 (chrome CDP),
+                 34561 (VS Code server)
+  Note: Chrome DevTools on 127.0.0.1:9222 is loopback-bound but any local
+  process can drive the browser. Acceptable only because no other user has
+  shell access on this host.
+
+=== 5. Accounts with login shells ===
+  root        uid 0      /bin/bash      (SSH login refused)
+  ubuntu      uid 1001   /bin/bash      sudo via group sudo
+  laptop      uid 1002   /bin/bash      SSH restricted to SFTP only
+  postgres    uid 111    /bin/bash      service account, no remote login
+  Everything else is nologin or false.
+
+  Item: laptop has a /bin/bash shell and no per-account sudo entries were
+  readable, but if any local privilege path exists it is reachable from an
+  SFTP-only account because the shell field itself is not restricted.
+
+=== 6. Sudo ===
+  /etc/sudoers:
+    root      ALL=(ALL:ALL) ALL
+    %admin    ALL=(ALL) ALL
+    %sudo     ALL=(ALL:ALL) ALL
+  Group sudo members .... ubuntu
+  User ubuntu ..........  (ALL : ALL) ALL  AND  (ALL) NOPASSWD: ALL
+  Drop-ins present ..... 090-oca-vss-plugin-commands,
+                         100-oracle-cloud-agent-users,
+                         90-cloud-init-users, README
+
+  Item: ubuntu holds full administrative rights with no password prompt.
+  Correct for an automation host, wrong if anyone else ever gets a shell.
+
+=== 7. Patching ===
+  unattended-upgrades ... active
+  Reboot pending ........ not checked (file read blocked by guard)
+
+=== RISK SUMMARY, RANKED ===
+1. Firewall effectively open (rule 4). HIGH if a port is ever published
+   accidentally; currently LOW impact because all services bind to loopback.
+   Fix: add default-deny INPUT with explicit allow for 22, 443 and the
+   Cloudflare tunnel, then verify from outside.
+2. Password-free root-equivalent sudo on ubuntu. MEDIUM. Anyone reaching
+   that account becomes root instantly.
+3. File-transfer account laptop carries a real shell. LOW-MEDIUM. Set its
+   shell to a no-login shell and keep the SFTP ForceCommand.
+4. Firefox/X11 and legacy services. X11Forwarding is off in the drop-in —
+   confirmed, no action.
+5. Continuous brute force. 672 attempts in 24 h, 0 successes. Contained by
+   fail2ban; consider key-only + port change or Cloudflare Tunnel for SSH.
+
+=== NOT VERIFIED ===
+- No external port scan was run, so the public surface is confirmed only
+  from the host's own socket table.
+- /var/run/reboot-required could not be read.
+- Contents of sudo drop-ins were not opened.

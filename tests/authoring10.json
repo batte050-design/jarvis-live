@@ -1,0 +1,12 @@
+[
+  {"id":"quote","prompt":"Build an editable quote widget with quantity 6, unit price UGX 10,000 and discount 71.66 percent. Keep all three numbers editable.","shape":"quote-estimator","tool":"emit_quote","arguments":{"title":"Quote","currency":"UGX","quantity":6,"unit_price":10000,"discount_percent":71.66}},
+  {"id":"bill","prompt":"Create a bill splitter card for UGX 100,001 among 3 people, with zero tip.","shape":"bill-splitter","tool":"emit_bill_split","arguments":{"title":"Bill split","currency":"UGX","bill":100001,"people":3,"tip_percent":0}},
+  {"id":"budget","prompt":"Build an editable budget planner with a bar chart: monthly income UGX 1,000,000; housing 300,000; food 200,000; other expenses 100,000.","shape":"budget-planner","tool":"emit_budget","arguments":{"title":"Monthly budget","currency":"UGX","income":1000000,"housing":300000,"food":200000,"other":100000}},
+  {"id":"comparison","prompt":"Show a two-option comparison card: Basic is USD 5 per month for 10 GB; Pro is USD 10 per month for 20 GB. Let me select an option locally.","shape":"application","tool":"emit_comparison","arguments":{"title":"Cloud plans","currency":"USD","period":"month","options":[{"name":"Basic","price":5,"summary":"10 GB"},{"name":"Pro","price":10,"summary":"20 GB"}]}},
+  {"id":"chart","prompt":"Plot a bar chart from these supplied figures only: January 10, February 20, March 15.","shape":"chart","tool":"emit_chart","arguments":{"title":"Supplied figures","chart":"bar","points":[{"label":"January","value":10},{"label":"February","value":20},{"label":"March","value":15}]}},
+  {"id":"quiz","prompt":"Create a local quiz: Which number is even? Options 3, 4, 5. The correct answer is 4; explain that it is divisible by 2.","shape":"quiz","tool":"emit_quiz","arguments":{"title":"Even numbers","question":"Which number is even?","choices":["3","4","5"],"correct_index":1,"explanation":"4 is divisible by 2."}},
+  {"id":"arithmetic","prompt":"What is 7 times 8? One short answer.","shape":"prose","answer":"56."},
+  {"id":"source","prompt":"Who designed the original World Wide Web? Include a source URL.","shape":"prose","answer":"Tim Berners-Lee. Source: https://home.cern/science/computing/birth-web"},
+  {"id":"legal","prompt":"Explain in general terms what a contract is. This is a conceptual legal explanation, not advice for a particular case.","shape":"prose","answer":"A contract is an agreement that creates obligations enforceable under the applicable law."},
+  {"id":"greeting","prompt":"Hello Jarvis.","shape":"prose","answer":"Hello, Mohammad."}
+]

@@ -1,0 +1,37 @@
+{"ts": 1792222373.1972382, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222520.3956044, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222520.3957386, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222599.222164, "stage": "first_text"}
+{"ts": 1792222601.322695, "stage": "warm_done", "status": "ok", "chars": 1357}
+{"ts": 1792222601.367935, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222601.36806, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222603.660924, "stage": "first_text"}
+{"ts": 1792222664.2506876, "stage": "warm_done", "status": "ok", "chars": 2055}
+{"ts": 1792222664.298247, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222664.2983863, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222666.6005843, "stage": "first_text"}
+{"ts": 1792222671.480965, "stage": "warm_done", "status": "ok", "chars": 2077}
+{"ts": 1792222671.5274537, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222671.5275836, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222673.762457, "stage": "first_text"}
+{"ts": 1792222677.5981798, "stage": "warm_done", "status": "ok", "chars": 970}
+{"ts": 1792222677.6361563, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222677.636293, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222679.5716634, "stage": "first_text"}
+{"ts": 1792222753.8237925, "stage": "warm_done", "status": "ok", "chars": 2225}
+{"ts": 1792222758.5891752, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222758.5894206, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222760.5470998, "stage": "first_text"}
+{"ts": 1792222830.2528589, "stage": "warm_done", "status": "ok", "chars": 1893}
+{"ts": 1792222830.3196838, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222830.3198035, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222832.0754719, "stage": "first_text"}
+{"ts": 1792222835.820932, "stage": "warm_done", "status": "ok", "chars": 1992}
+{"ts": 1792222837.0075276, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222837.0076575, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222839.1575031, "stage": "first_text"}
+{"ts": 1792222880.6874745, "stage": "warm_done", "status": "ok", "chars": 2185}
+{"ts": 1792222880.7268405, "stage": "warm_enter", "session": "jarvis-live-13c548eab34c"}
+{"ts": 1792222880.726971, "stage": "warm_ask", "reasoning": "none"}
+{"ts": 1792222882.5463953, "stage": "first_text"}
+{"ts": 1792222886.6864202, "stage": "warm_done", "status": "ok", "chars": 1219}

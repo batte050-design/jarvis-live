@@ -1,0 +1,11 @@
+# Response rendering repair state model
+
+The original v1 painter owns every ordinary node and all parsing. The broker owns only complete, declared component islands (both `component` and `version` properties). A paint stages the original renderer's output, admits declared components through the existing validator/response ledger, and replaces ordinary siblings without detaching a retained island or its iframe. State is transient on the answer element: ordered source keys and component records. A changed declaration removes its old record; appended text preserves the record, frame, input values and checkpoint identity. A rendering exception leaves the prior live DOM intact and disposes staged records.
+
+Legacy shapes (`type` present, no `component`) never enter the validator, adapter, response ledger, review UI or frame runtime. The original renderer owns them. The adapter allowlist is removed.
+
+A rejected declaration owns no runtime record and has no review UI. Its sole output is a bounded nonempty `fallback` string, or fixed readable words. No rejection, budget failure, malformed JSON or unavailable-runtime path prints the payload. Diagnostics contain type and reason only. Valid frame failures retain the existing readable summary and current values.
+
+Mount identity is read from the connected real `.turn` and the existing active conversation hook. Turn IDs are opaque nonempty strings; the application's own fallback turn IDs have 16 hex characters, not 32. Conversation IDs retain the existing 32-hex server route requirement. A node awaiting identity stays readable and may mount once identity arrives, within the existing frame-ready budget; it never starts a turn to obtain identity. Detached draw probes are readable previews, not evidence of a live mount. The existing parent broker still owns nonces, origin checks, gesture tokens, approvals entry, checkpoint storage and settings. Those protocols and policies are unchanged.
+
+No server, stream engine, turn lane, replay, cancel, approval, recall, session storage or voice logic changes. Builder output is regenerated solely to stamp the changed assets. Exact deployed contract/layout/render-corpus acceptance and authenticated live-stream proof must be reported separately from local tests.

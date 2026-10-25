@@ -1,0 +1,4 @@
+# Preserve upstream source and literal whitespace in bundled Zod code-generation templates.
+/static/openui-frame.js -whitespace
+/openui/validate.cjs -whitespace
+/openui/src/reference/components/extra.tsx -whitespace

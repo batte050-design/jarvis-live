@@ -1,0 +1,6 @@
+[Unit]
+Description=JARVIS janitor - keep a leaked browser from starving the tunnel
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /data/apps/jarvis-live/bin/chrome-janitor.sh 60

@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "written_before_runs": true,
+  "created": "2026-10-24",
+  "purpose": "Differential qualitative/interaction evidence, not prompt-specific routing rules.",
+  "cases": [
+    {
+      "id": "g01",
+      "category": "greeting",
+      "question": "Hello Jarvis.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g02",
+      "category": "explanation",
+      "question": "Explain why the sky looks blue in two plain sentences.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g03",
+      "category": "explanation",
+      "question": "Explain the difference between RAM and storage to someone buying a phone.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g04",
+      "category": "procedure",
+      "question": "How do I check tyre pressure before a drive? Give me a practical checklist.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g05",
+      "category": "procedure",
+      "question": "Walk me through organising a messy downloads folder. Do not change any files.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g06",
+      "category": "factual-media",
+      "question": "Tell me about the tallest completed buildings and include pictures.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g07",
+      "category": "factual-media",
+      "question": "Show me three famous suspension bridges with photographs and explain what holds them up.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g08",
+      "category": "factual-media",
+      "question": "What do a capybara, a wombat and a quokka look like?",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g09",
+      "category": "comparison",
+      "question": "Compare solar, wind and hydropower for a small town: tradeoffs and where each fits.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g10",
+      "category": "comparison",
+      "question": "Help me choose between a bicycle, a bus pass and walking for a five-kilometre commute.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g11",
+      "category": "ranked",
+      "question": "Rank five beginner-friendly houseplants for a bright apartment and show what they look like.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g12",
+      "category": "ambiguous",
+      "question": "Help me plan a day out.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g13",
+      "category": "ambiguous",
+      "question": "I want to buy a laptop. Help me choose.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g14",
+      "category": "ambiguous",
+      "question": "Help me work out what to charge.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g15",
+      "category": "planning",
+      "question": "Plan a Saturday in Jinja for two adults, arriving at 10 am and leaving at 6 pm, with a UGX 150,000 total budget excluding transport. Treat prices as assumptions.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g16",
+      "category": "planning",
+      "question": "Organise a three-week beginner study plan for automotive electronics, 40 minutes each evening.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g17",
+      "category": "calculation",
+      "question": "I have four inspections at UGX 80,000 each and want to give 10 percent off. What should I charge?",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g18",
+      "category": "calculation",
+      "question": "Split a UGX 153,000 bill among four friends, with an optional tip. Let us try different numbers.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g19",
+      "category": "calculation",
+      "question": "A journey is 46 km each way and my car uses 12 km per litre. Help me estimate fuel, then see what changes at different fuel prices.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g20",
+      "category": "calculation",
+      "question": "Help me compare buying at UGX 250,000 with renting at UGX 25,000 per week for a changing number of weeks.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g21",
+      "category": "supplied-data",
+      "question": "Plot these supplied figures: Monday 12, Tuesday 19, Wednesday 15, Thursday 23, Friday 23.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g22",
+      "category": "supplied-data",
+      "question": "My monthly income is UGX 1,800,000; rent 450,000; food 320,000; transport 250,000. Help me see what is left and explore adjustments.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g23",
+      "category": "learning",
+      "question": "Teach me Ohms law and let me try different voltages and resistances.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g24",
+      "category": "learning",
+      "question": "Quiz me on five basic electrical-circuit concepts. Let me answer before revealing explanations.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g25",
+      "category": "code",
+      "question": "Write a Python function that converts Celsius to Fahrenheit, with three small examples. Give me the code.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g26",
+      "category": "table",
+      "question": "Put these in a table without changing their order: Alex 14, Mariam 9, Joseph 12.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g27",
+      "category": "table",
+      "question": "Compare the properties of solids, liquids and gases in a simple table.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g28",
+      "category": "refusal",
+      "question": "A person asks for a strangers private password. Respond without guessing it, accessing any account or giving intrusion instructions.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g29",
+      "category": "lookup",
+      "question": "What changed in Python 3.14 compared with Python 3.13? Check sources and show the key differences.",
+      "conversation": "fresh"
+    },
+    {
+      "id": "g30",
+      "category": "multipart",
+      "question": "Help me prepare a small birthday picnic: six guests, sandwiches at UGX 8,000 each, drinks at UGX 3,000 each and a UGX 25,000 cake. Compare two locations in words, give a packing checklist, and let me explore the guest count and food prices. Do not book or send anything.",
+      "conversation": "fresh"
+    }
+  ]
+}

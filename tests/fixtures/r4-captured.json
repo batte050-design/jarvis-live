@@ -1,0 +1,31 @@
+{
+  "kind": "Actual r3 staging g18 wire captures; one succeeds, one fails validation. No r4 model claim.",
+  "rows": [
+    {
+      "id": "g18-before",
+      "build": {
+        "js": "99588b17d6",
+        "css": "1522a5eb57",
+        "built": 1792848645
+      },
+      "seconds": 8.946,
+      "server_status": "ok",
+      "answer": "With no tip, the UGX 153,000 bill comes to UGX 38,250 per person.\n\n```openui\n// jarvis-context: W3siaWQiOiAiZWRpdGFibGUtaW5wdXRzIiwgInJvd3MiOiBbXSwgImNyZWRpdCI6ICJDYWxjdWxhdGVkIGxvY2FsbHkgZnJvbSBlZGl0YWJsZSBpbnB1dHM7IGFueSB1bnN0YXRlZCBzdGFydGluZyB2YWx1ZXMgYXJlIGFzc3VtcHRpb25zLiBSZWNvcmRlZCB0aGlzIHR1cm46IDIwMjYtMTAtMjRUMTU6NTM6NTBaIn1d\n$bill = 153000\n$people = 4\n$tip = 0\nroot = Col([Title(\"Bill split\", \"lg\"), Form([Input($bill, \"Bill (UGX)\", \"number\"), Input($people, \"People\", \"number\"), Slider($tip, 0, 30, 1, \"Tip\", \"%\")]), Card([Text(\"Per person\", \"sm\", \"muted\"), Title(@Format(@Default($bill, 0) * (1 + @Clamp(@Default($tip, 0), 0, 100) / 100) / @Clamp(@Default($people, 1), 1, 100), \"currency\", 0, \"UGX\"), \"2xl\"), Caption(\"Total with tip: \" + @Format(@Default($bill, 0) * (1 + @Clamp(@Default($tip, 0), 0, 100) / 100), \"currency\", 0, \"UGX\"))], \"soft\")])\n```",
+      "presentation_errors": []
+    },
+    {
+      "id": "g18-before2",
+      "build": {
+        "js": "99588b17d6",
+        "css": "1522a5eb57",
+        "built": 1792848645
+      },
+      "seconds": 15.293,
+      "server_status": "partial",
+      "answer": "Here's the split with editable tip and headcount.\n\nAt the original figures (UGX 153,000, 4 people, no tip): UGX 38,250 each.\n\n```openui\n// jarvis-context: W3siaWQiOiAiZWRpdGFibGUtaW5wdXRzIiwgInJvd3MiOiBbXSwgImNyZWRpdCI6ICJDYWxjdWxhdGVkIGxvY2FsbHkgZnJvbSBlZGl0YWJsZSBpbnB1dHM7IGFueSB1bnN0YXRlZCBzdGFydGluZyB2YWx1ZXMgYXJlIGFzc3VtcHRpb25zLiBSZWNvcmRlZCB0aGlzIHR1cm46IDIwMjYtMTAtMjRUMTU6NTQ6MzZaIn1d\n$bill = 153000\n$people = 4\n$tip = 0\nroot = Col([Title(\"Bill split\", \"lg\"), Form([Input($bill, \"Bill (UGX)\", \"number\"), Input($people, \"People\", \"number\"), Slider($tip, 0, 30, 1, \"Tip\", \"%\")]), Card([Col([Row([Text(\"Tip amount\"), Spacer(), Text(@Format(@Clamp(@Default($bill, 0), 0, 1000000000) * @Clamp(@Default($tip, 0), 0, 100) / 100, \"currency\", 0, \"UGX\"), \"md\", \"normal\", false, false, true)], \"start\", \"between\", false), Row([Text(\"Total\"), Spacer(), Text(@Format(@Clamp(@Default($bill, 0), 0, 1000000000) * (1 + @Clamp(@Default($tip, 0), 0, 100) / 100), \"currency\", 0, \"UGX\"), \"md\", \"normal\", false, false, true)], \"start\", \"between\", false), Divider(), Row([Text(\"Each person pays\", \"md\", \"normal\", \"semibold\"), Spacer(), Text(@Format(@Clamp(@Default($bill, 0), 0, 1000000000) * (1 + @Clamp(@Default($tip, 0), 0, 100) / 100) / @Clamp(@Default($people, 1), 1, 1000), \"currency\", 0, \"UGX\"), \"2xl\", \"normal\", \"semibold\", false, false, true)], \"start\", \"between\", false)])], \"soft\"), Caption(\"Rounded to whole shillings; adjust any field above. Tip and people defaults are assumptions you can change.\")])\n```\n```",
+      "presentation_errors": [
+        "Invalid OpenUI: {\"root\":true,\"incomplete\":false,\"unresolved\":[],\"errors\":[{\"code\":\"type-mismatch\",\"component\":\"Text\",\"path\":\"/weight\",\"message\":\"field \\\"/weight\\\" expects one of [\\\"normal\\\", \\\"medium\\"
+      ]
+    }
+  ]
+}

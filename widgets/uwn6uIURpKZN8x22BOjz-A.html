@@ -1,0 +1,52 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">Four relaxed evenings in Kampala</h2><p class="wr-p">All four sit in western Kampala, easy to move between by Bolt or Uber. Prices are what each venue publishes or what reviewers reported, so treat them as estimates and confirm before you commit a group.</p><section class="wr-card"><span class="wr-badge">Rooftop, sunset</span><h4>Ninety9 Rooftop, Naguru</h4><p class="wr-p">Open-air bar on the upper level of Skyz Hotel, the highest point in the city, with a wide view over the skyline. Calm, modern, lounge seating. Quiz night on Mondays, karaoke midweek, DJ on Fridays. Arrive half an hour before sunset, which reviewers name as the best moment there.</p><p class="wr-meta">1 Water Lane, Naguru - +256 312 554 000 - cocktail-led, premium pricing; budget about UGX 100,000-150,000 a head with food</p><span class="wr-link">Ninety9 Rooftop, Skyz Hotel - skyzhotelkampala.com</span></section><section class="wr-card"><span class="wr-badge">Best all-rounder</span><h4>Golden Hill Restaurant &amp; Lounge, Muyenga</h4><p class="wr-p">Terrace and rooftop on Tank Hill Road with 360 views. Cocktail list runs from about 3 PM to 10 PM, happy hour 5 PM to 8 PM, open until midnight weekdays and 2 AM Thursday to Sunday. Pool, games and a balcony deck. Rated 4.8 from 163 Tripadvisor reviews, ranked third of 359 restaurants in Kampala.</p><p class="wr-meta">Plot 3077, Tank Hill Road, Muyenga - +256 761 243813 - cocktails from around UGX 20,000-30,000; pitchers and platters share well for a group</p><span class="wr-link">Golden Hill Restaurant &amp; Lounge - goldenhillrestaurant.com</span></section><section class="wr-card"><span class="wr-badge">Cheapest, most character</span><h4>Capital Pub, Kabalagala</h4><p class="wr-p">The oldest pub in Uganda, trading since 1996, wedged in the fork where Muyenga Road meets Ggaba Road. Grass-thatched, a tree growing through the middle, several bars and pool tables in one compound, outdoor seating and parking. Open around the clock and relaxed by day, louder by night.</p><p class="wr-meta">Muyenga Road / Ggaba Road, Kabalagala - +256 784 806192 - beers around UGX 6,000, spirits around UGX 6,000 a tot</p><span class="wr-link">Capital Pub, Kabalagala - www.capitalpub.com</span></section><section class="wr-card"><span class="wr-badge">Neighbourhood favourite</span><h4>Reverie Lounge &amp; Bar, Kamwokya</h4><p class="wr-p">Lounge and bar at 99 Bukoto Street in the Kisementi pocket, the zone generally rated the easiest and most relaxed night out in the city: hipster bars, live bands, walkable, and considered safe to arrive alone. Call ahead, the good tables go early.</p><p class="wr-meta">99 Bukoto Street, Kamwokya - +256 785 028123 - local beer from about UGX 5,000, cocktails around UGX 15,000-20,000</p><span class="wr-link">Reverie Lounge &amp; Bar - reverie-kampala.com</span></section><hr class="wr-div"><section class="wr-choices"><h4>Which one should I take further?</h4><label class="wr-opt"><input type="radio" name="pick" value="Ninety9"><span>Ninety9 Rooftop, for the view</span></label><label class="wr-opt"><input type="radio" name="pick" value="Golden Hill"><span>Golden Hill, best all-round</span></label><label class="wr-opt"><input type="radio" name="pick" value="Capital Pub"><span>Capital Pub, cheap and classic</span></label><label class="wr-opt"><input type="radio" name="pick" value="Reverie"><span>Reverie, Kisementi lounge</span></label><label class="wr-opt"><input type="radio" name="pick" value="fix the night"><span>Group, night and budget</span></label></section><p class="wr-p">Two cautions. Kabalagala turns raw late, so the group stays together and the ride home is booked before the last drink. And call ahead for anything over six, because good rooftops fill on Friday and Saturday.</p><button class="jw-cta" id="wr-send" type="button" disabled>Continue</button><p class="wr-sent" id="wr-sent"></p><script>
+(function () {
+  var ids = ["pick"], limit = 200;
+  var btn = document.getElementById("wr-send"), sent = document.getElementById("wr-sent");
+  if (!btn) return;
+  function chosen() {
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var picked = document.querySelector('input[name="' + ids[i] + '"]:checked');
+      if (picked) out.push(ids[i] + ": " + picked.value);
+    }
+    return out;
+  }
+  function refresh() {
+    var n = chosen().length;
+    btn.disabled = n < ids.length;
+    btn.style.opacity = btn.disabled ? "0.4" : "1";
+  }
+  document.addEventListener("change", refresh);
+  refresh();
+  btn.addEventListener("click", function () {
+    var answers = chosen();
+    if (!answers.length) return;
+    var text = ("Kampala evening out:" + " " + answers.join(" ")).slice(0, limit);
+    // Shown whatever the transport: opened as a plain link, nothing can reach the page, and a
+    // control that silently did nothing would be the lie.
+    sent.textContent = "Sent to JARVIS: " + text;
+    try { if (window.JARVIS && window.JARVIS.ask) window.JARVIS.ask(text); } catch (e) {}
+  });
+})();
+</script>

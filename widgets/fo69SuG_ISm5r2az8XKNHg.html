@@ -1,0 +1,38 @@
+<!-- A demo widget: a comparison, in the house kit. Proves the kit, the light/dark tokens, the
+     resize message and the ask message on a real frame. -->
+<h1>Fuel cost by route</h1>
+<p class="jw-muted">Kampala, this week. Estimates.</p>
+
+<div class="jw-tiles">
+  <div class="jw-tile"><div class="v">UGX 42,000</div><div class="k">Entebbe return</div></div>
+  <div class="jw-tile"><div class="v">18.4 L</div><div class="k">Fuel used</div></div>
+  <div class="jw-tile"><div class="v">293</div><div class="k">UGX per km</div></div>
+</div>
+
+<div class="jw-card" id="bars"></div>
+
+<table class="jw-table">
+  <thead><tr><th>Route</th><th class="num">Km</th><th class="num">Fuel (L)</th><th class="num">Cost</th></tr></thead>
+  <tbody>
+    <tr><td>Entebbe return</td><td class="num">84</td><td class="num">8.4</td><td class="num">42,000</td></tr>
+    <tr><td>Ntinda to town</td><td class="num">14</td><td class="num">1.4</td><td class="num">7,000</td></tr>
+    <tr><td>Kampala to Jinja</td><td class="num">160</td><td class="num">16.0</td><td class="num">80,000</td></tr>
+  </tbody>
+</table>
+
+<div class="jw-legend" id="legend"></div>
+<p><button class="jw-cta" id="why">Why is Entebbe the worst?</button></p>
+
+<script>
+  JARVIS.bars(document.getElementById("bars"), [
+    { label: "Entebbe return", value: 42000 },
+    { label: "Jinja", value: 80000 },
+    { label: "Town", value: 7000 }
+  ], { unit: "" });
+  JARVIS.legend(document.getElementById("legend"), [
+    { label: "measured" }, { label: "estimated", variant: "dashed" }
+  ]);
+  document.getElementById("why").addEventListener("click", function () {
+    JARVIS.ask("Why is the Entebbe return the most expensive route?");
+  });
+</script>

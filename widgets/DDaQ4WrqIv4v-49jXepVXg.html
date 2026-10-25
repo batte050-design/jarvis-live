@@ -1,0 +1,126 @@
+<h1>What a driver clears</h1>
+<p class="jw-muted">Set what he takes in a day. Commission comes off at 17 percent.</p>
+
+<div class="jw-card">
+  <label class="jw-muted" for="fares">Fares per day (UGX)</label>
+  <input class="jw-input" id="fares" type="number" inputmode="numeric" min="0" step="5000" value="100000">
+  <input id="faresRange" type="range" min="10000" max="300000" step="5000" value="100000"
+         style="width:100%;margin-top:10px">
+</div>
+
+<div class="jw-card">
+  <label class="jw-muted" for="days">Days worked in the month</label>
+  <input class="jw-input" id="days" type="number" min="1" max="31" step="1" value="26">
+</div>
+
+<div class="jw-card">
+  <label class="jw-muted" for="km">Distance driven a day in km (leave at 0 to leave fuel out)</label>
+  <input class="jw-input" id="km" type="number" min="0" max="400" step="5" value="0">
+</div>
+
+<div class="jw-tiles">
+  <div class="jw-tile"><div class="v" id="tGross">&#8212;</div><div class="k">Fares in, the month</div></div>
+  <div class="jw-tile"><div class="v" id="tComm">&#8212;</div><div class="k">Commission, 17%</div></div>
+  <div class="jw-tile"><div class="v" id="tNet">&#8212;</div><div class="k">Cleared after commission</div></div>
+</div>
+
+<div class="jw-card">
+  <div class="jw-figure" id="big">&#8212;</div>
+  <div class="jw-muted" id="bigLabel">cleared in the month, after commission</div>
+  <div class="jw-muted" id="fuelLine">Fuel is not counted yet. Put a daily distance above to see it.</div>
+  <div class="jw-muted" id="bench"></div>
+</div>
+
+<table class="jw-table">
+  <tbody>
+    <tr><td>Cleared per day</td><td class="num" id="rDay">&#8212;</td></tr>
+    <tr><td>Cleared per week, 6 days</td><td class="num" id="rWeek">&#8212;</td></tr>
+    <tr><td>Cleared per month</td><td class="num" id="rMonth">&#8212;</td></tr>
+    <tr><td>Cleared per year, 12 months</td><td class="num" id="rYear">&#8212;</td></tr>
+  </tbody>
+</table>
+
+<p class="jw-muted">Fuel basis: 929 UGX a kilometre, from petrol at 6,875 a litre and the Noah's 7.4 km on a litre.</p>
+<p><button class="jw-cta" id="ask">What if he only drives five days a week?</button></p>
+
+<script>
+(function () {
+  "use strict";
+  var RATE = 0.17, FUEL_PER_KM = 929, BENCH = 2000000;
+  var el = function (id) { return document.getElementById(id); };
+  var fares = el("fares"), range = el("faresRange"), days = el("days"), km = el("km");
+
+  function num(node, fallback) {
+    var v = Number(node && node.value);
+    return isFinite(v) ? v : fallback;
+  }
+  function ugx(v) {
+    var n = Math.round(Number(v) || 0);
+    var s = String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (n < 0 ? "-UGX " : "UGX ") + s;
+  }
+  function set(id, text) { var n = el(id); if (n) n.textContent = text; }
+
+  function calc() {
+    var f = Math.max(0, num(fares, 0));
+    var d = Math.min(31, Math.max(1, Math.round(num(days, 26))));
+    var k = Math.max(0, num(km, 0));
+
+    var gross = f * d;
+    var commission = gross * RATE;
+    var net = gross - commission;
+
+    var fuelMonth = k * FUEL_PER_KM * d;
+    var afterFuel = net - fuelMonth;
+
+    set("tGross", ugx(gross));
+    set("tComm", ugx(commission));
+    set("tNet", ugx(net));
+
+    set("big", ugx(afterFuel > 0 || fuelMonth > 0 ? afterFuel : net));
+    set("bigLabel", fuelMonth > 0
+      ? "cleared in the month after commission and fuel"
+      : "cleared in the month, after commission");
+
+    set("fuelLine", fuelMonth > 0
+      ? "Fuel at 929 a kilometre costs " + ugx(fuelMonth) + " over " + d + " days."
+      : "Fuel is not counted yet. Put a daily distance above to see it.");
+
+    var pctOfBench = BENCH > 0 ? (net / BENCH) * 100 : 0;
+    set("bench", net > 0
+      ? "That is " + pctOfBench.toFixed(0) + " percent of a 2,000,000 shilling month."
+      : "Set a fare to see the month.");
+
+    set("rDay", ugx(net / d));
+    set("rWeek", ugx((net / d) * 6));
+    set("rMonth", ugx(net));
+    set("rYear", ugx(net * 12));
+  }
+
+  function fromNumber() {
+    var v = Math.min(300000, Math.max(0, num(fares, 0)));
+    if (range) range.value = String(v);
+    calc();
+  }
+  function fromRange() {
+    if (fares) fares.value = String(range.value);
+    calc();
+  }
+
+  if (range) range.addEventListener("input", fromRange);
+  if (fares) fares.addEventListener("input", fromNumber);
+  if (days) days.addEventListener("input", calc);
+  if (km) km.addEventListener("input", calc);
+
+  var askBtn = el("ask");
+  if (askBtn) askBtn.addEventListener("click", function () {
+    if (window.JARVIS && JARVIS.ask) {
+      JARVIS.ask("A Kampala driver takes " + ugx(num(fares, 0)) + " a day in fares over " +
+                 Math.round(num(days, 26)) + " days. After 17 percent commission, and " +
+                 Math.round(num(km, 0)) + " km a day of fuel, what does he actually clear a month?");
+    }
+  });
+
+  calc();
+})();
+</script>

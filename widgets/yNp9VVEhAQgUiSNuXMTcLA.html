@@ -1,0 +1,89 @@
+<h1>Why a late job costs trust</h1>
+<p class="jw-muted">Tap any box and I will explain that link out loud.</p>
+
+<style>
+  .lt-wrap { margin: 0 0 10px }
+  .lt-row { display: flex; flex-wrap: wrap; gap: 8px }
+  .lt-node {
+    flex: 1 1 46%; min-width: 140px; min-height: 44px; text-align: left;
+    font: inherit; color: var(--ink); background: none;
+    border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; cursor: pointer;
+  }
+  .lt-node:hover, .lt-node:focus-visible { border-color: var(--accent) }
+  .lt-node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+  .lt-root { border-color: var(--accent); font-size: var(--t2) }
+  .lt-arrow { color: var(--dim); margin: 6px 0; padding-left: 2px; font-variant-numeric: tabular-nums }
+  .lt-tail { color: var(--soft) }
+  .lt-said { color: var(--accent); min-height: 1.2em; margin: 8px 0 0 }
+</style>
+
+<div class="lt-wrap">
+  <div class="lt-row">
+    <button class="lt-node lt-root" data-q="Explain the root of this chain: a job runs late when a car-hire customer is waiting. What actually goes wrong first?">A job runs late</button>
+  </div>
+  <p class="lt-arrow">&#8595; and nobody tells him how late</p>
+  <div class="lt-row">
+    <button class="lt-node" data-q="Explain this link: the customer waits with no word. Why is silence worse than a delay he can plan around?">He waits with no word</button>
+    <button class="lt-node" data-q="Explain this link: he cannot plan the rest of his day. What is he losing while he waits?">He cannot plan his day</button>
+  </div>
+  <p class="lt-arrow">&#8595; so he calls to find out</p>
+  <div class="lt-row">
+    <button class="lt-node" data-q="Explain this link: the line gets chased and second-guessed. What does that cost the operator running the phone?">The line gets chased</button>
+    <button class="lt-node" data-q="Explain this link: the next job is squeezed to catch up. What does that do to the second customer?">The next job is squeezed</button>
+  </div>
+  <p class="lt-arrow">&#8595; which pushes the next customer too</p>
+  <div class="lt-row">
+    <button class="lt-node" data-q="Explain this link: the price stops matching the promise. Why does a late arrival make a fair price feel unjustified?">The price stops matching the promise</button>
+    <button class="lt-node" data-q="Explain this link: someone else is kept waiting too. How does one late job become two?">Someone else waits as well</button>
+  </div>
+  <p class="lt-arrow">&#8595; so he says it out loud</p>
+  <div class="lt-row">
+    <button class="lt-node" data-q="Explain this link: he asks for a discount or holds back the balance. How does lateness turn into money lost?">He asks for a discount, or holds back the balance</button>
+    <button class="lt-node" data-q="Explain this link: he tells his friends and workmates. Why does word of mouth carry further than a good job does?">He tells his friends and workmates</button>
+  </div>
+  <p class="lt-arrow">&#8595; which is where the money actually goes</p>
+  <div class="lt-row">
+    <button class="lt-node" data-q="Explain the end of this chain: repeat hire stops. Why is a lost repeat customer worth more than one lost fare?">Repeat hire stops</button>
+    <button class="lt-node" data-q="Explain the end of this chain: word of mouth turns negative. What does a bad reputation cost a new car-hire line in Kampala?">Word of mouth turns negative</button>
+  </div>
+</div>
+
+<div class="jw-card lt-tail">
+  <div class="jw-muted">The break in the chain</div>
+  <p style="margin:6px 0 0">A late car is a small problem. A late car with no message is a betrayal, and that is the one that travels.</p>
+  <div class="lt-row" style="margin-top:8px">
+    <button class="lt-node" data-q="If a car is going to be late anyway, what exactly should the operator do in the first two minutes, and what does that buy him?">So what actually fixes it?</button>
+  </div>
+  <p class="lt-said" id="lt-said"></p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var said = document.getElementById("lt-said");
+  var nodes = document.querySelectorAll(".lt-node");
+
+  function ask(text, node) {
+    for (var i = 0; i < nodes.length; i++) nodes[i].removeAttribute("aria-pressed");
+    node.setAttribute("aria-pressed", "true");
+    if (said) said.textContent = "Asked.";
+    var framed = false;
+    try { framed = window.parent && window.parent !== window; } catch (e) { framed = false; }
+    if (framed && window.JARVIS && JARVIS.ask) {
+      JARVIS.ask(text);
+    } else if (said) {
+      said.textContent = "Open this from the console to ask me here.";
+    }
+  }
+
+  for (var i = 0; i < nodes.length; i++) {
+    (function (node) {
+      node.type = "button";
+      node.setAttribute("aria-pressed", "false");
+      node.addEventListener("click", function () {
+        ask(node.getAttribute("data-q") || node.textContent, node);
+      });
+    })(nodes[i]);
+  }
+})();
+</script>

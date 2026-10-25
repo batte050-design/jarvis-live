@@ -1,0 +1,52 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">Cielo rooftop, tonight and this weekend</h2><p class="wr-p">Friday 9 Oct, past sunset already, so this is the late slot. Address: 5th floor, The Cube, Cooper Road, Kisementi, above Acacia Mall.</p><section class="wr-card"><span class="wr-badge">Friday, from 8:00 PM</span><h4>You and your boys, tonight</h4><p class="wr-p">Arrive by 8:00 PM to take a table while it is still calm. The room turns loud from about 10:00 PM when the DJ starts, so eat and talk first, then stay if you want the music.</p><p class="wr-meta">Expect 4 of you at roughly 120,000 to 250,000 total: 2 cocktails each at 12,000 to 25,000, plus light plates. Bottle service, if you take it, starts about 300,000.</p></section><section class="wr-card"><span class="wr-badge">Do this before you leave</span><h4>What to book and wear</h4><p class="wr-p">Weekends fill, so reserve a balcony table this afternoon. Smart casual is enforced, no slippers or vests. Ride home by Bolt or SafeBoda, sorted before you start drinking.</p><p class="wr-meta">RSVP 0200 910300 or 0742 891 326. Open daily 4:00 PM to 6:00 AM. Card and mobile money both accepted at the counter.</p></section><section class="wr-card"><span class="wr-badge">Best light about 6:40 PM</span><h4>Photo timing</h4><p class="wr-p">Sunset today was 6:41 PM, so the city lights and the dark sky read best from about 6:45 to 7:30 PM. If you want the view rather than the music, that is your window and you can leave by 9:00.</p><p class="wr-meta">Driving from central Kampala to Kisementi is 15 to 25 minutes in evening traffic, estimate only. No rooftop view tonight if you arrive at 8:00, only lights.</p></section><section class="wr-choices"><h4>What do you want next?</h4><label class="wr-opt"><input type="radio" name="next" value="Draft the booking message"><span>Text me the reserve message</span></label><label class="wr-opt"><input type="radio" name="next" value="Compare the quiet options again"><span>A quieter table instead</span></label><label class="wr-opt"><input type="radio" name="next" value="Find cheaper rooftops"><span>Cheaper night, same view</span></label><label class="wr-opt"><input type="radio" name="next" value="Plan Saturday"><span>Tomorrow evening instead</span></label></section><p class="wr-p">Sunset 6:41 PM and Cielo's floor and hours are verified today. The shilling amounts are estimates from the July 2026 Kampala guide and the venue's own notes, not quoted prices.</p><button class="jw-cta" id="wr-send" type="button" disabled>Continue</button><p class="wr-sent" id="wr-sent"></p><script>
+(function () {
+  var ids = ["next"], limit = 200;
+  var btn = document.getElementById("wr-send"), sent = document.getElementById("wr-sent");
+  if (!btn) return;
+  function chosen() {
+    var out = [];
+    for (var i = 0; i < ids.length; i++) {
+      var picked = document.querySelector('input[name="' + ids[i] + '"]:checked');
+      if (picked) out.push(ids[i] + ": " + picked.value);
+    }
+    return out;
+  }
+  function refresh() {
+    var n = chosen().length;
+    btn.disabled = n < ids.length;
+    btn.style.opacity = btn.disabled ? "0.4" : "1";
+  }
+  document.addEventListener("change", refresh);
+  refresh();
+  btn.addEventListener("click", function () {
+    var answers = chosen();
+    if (!answers.length) return;
+    var text = ("For the Cielo evening:" + " " + answers.join(" ")).slice(0, limit);
+    // Shown whatever the transport: opened as a plain link, nothing can reach the page, and a
+    // control that silently did nothing would be the lie.
+    sent.textContent = "Sent to JARVIS: " + text;
+    try { if (window.JARVIS && window.JARVIS.ask) window.JARVIS.ask(text); } catch (e) {}
+  });
+})();
+</script>

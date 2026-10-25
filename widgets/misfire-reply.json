@@ -1,0 +1,42 @@
+{
+  "title": "How a scanner finds a misfire",
+  "intro": "A misfire is a cylinder failing to burn its fuel at the right moment. The engine computer already knows this is happening before any scan tool is plugged in, and it records the evidence. The scanner's job is to read that recorded evidence, not to feel the fault itself. Here is the chain, and how the tool walks it.",
+  "sections": [
+    {"type": "heading", "text": "Step 1 - the crank sensor sets the heartbeat"},
+    {"type": "paragraph", "text": "A sensor on the crankshaft reports exactly where the engine is in its rotation, many times per revolution. The engine computer, the ECU, takes that signal as the clock. Every firing event is expected at a known angle of crank rotation, cylinder by cylinder, in a fixed order - the firing order."},
+
+    {"type": "heading", "text": "Step 2 - the ECU measures acceleration per cylinder"},
+    {"type": "paragraph", "text": "When a cylinder fires correctly it pushes the crank round slightly faster than expected for a moment. The ECU watches the time between crank pulses and compares each cylinder's contribution to the others. A cylinder that fires weakly or not at all shows up as a small dip in crank speed at exactly its turn. No extra sensor is needed for this - it is calculated from the crank signal alone."},
+    {"type": "cards", "items": [{
+      "title": "What the monitor compares",
+      "description": "Watching: the time between crank pulses. Expected: each cylinder fires in turn, in firing order. Detected: a dip in crank speed at exactly one cylinder's turn. No extra sensor is involved - it is all computed from the crank signal."
+    }]},
+
+    {"type": "heading", "text": "Step 3 - the misfire monitor counts, then judges"},
+    {"type": "paragraph", "text": "Two things are counted separately. A random single miss that the engine recovers from is a Type A event if it is bad enough to threaten the catalytic converter. A cylinder that misses a high percentage of its turns across a run is a Type B, a pattern - the one that lights the check engine light. The ECU then has to decide whether the fault is one cylinder or several, and whether it is persistent or intermittent, before it commits a code."},
+
+    {"type": "heading", "text": "Step 4 - the code, and which cylinder"},
+    {"type": "paragraph", "text": "The generic misfire code is P0300 - random or multiple cylinders. Add the cylinder number and it points at one: P0301 is cylinder 1, P0302 is cylinder 2, and so on up to P0308 for an eight-cylinder engine. That is the code's whole meaning on its own: this cylinder is not burning its fuel properly. It does not name a part. A coil, a plug, an injector, a valve or a wiring fault all produce the same code."},
+
+    {"type": "heading", "text": "Step 5 - the freeze frame is the photograph"},
+    {"type": "paragraph", "text": "The moment the ECU commits a misfire code it saves a snapshot of the running conditions at that instant. Engine speed, load, coolant temperature, throttle position, vehicle speed. This is the freeze frame, and it is the single most useful thing on the scanner screen. It says the fault happened at - for example - idle, hot, no load, rather than at motorway speed under load, and that narrows the cause before you have touched the car."},
+
+    {"type": "heading", "text": "Step 6 - live data turns a probability into evidence"},
+    {"type": "paragraph", "text": "The freeze frame says it happened. Live data shows it happening now. The misfire counters can be read per cylinder on a running engine, and the honest test is to watch them move. A healthy engine: all counters sit near zero and stay there. A failing one: one cylinder's counter climbs away from its neighbours within seconds. That is the proof, and it is why a single number read off the screen is not enough."},
+    {"type": "cards", "items": [{
+      "title": "Live misfire counters, 30 seconds of running",
+      "description": "Cylinder 1: 0. Cylinder 2: 0. Cylinder 3: 184 and climbing. Cylinder 4: 2. Cylinder 5: 0. Cylinder 6: 1.",
+      "metadata": "The shape to look for, not a real vehicle's figures: one counter running away while its neighbours stay flat. The scanner is showing you the ECU's own judgement made visible, cylinder by cylinder."
+    }]},
+
+    {"type": "heading", "text": "Step 7 - the scanner cannot yet name the part"},
+    {"type": "paragraph", "text": "Even with cylinder 3 clearly misfiring, the tool has told you where, not why. The next tests are physical and deliberate, in a fixed order: swap the suspected coil or injector to another cylinder and re-scan. If the misfire follows the part, the part is the fault. If the misfire stays on the original cylinder, the fault is mechanical or in the wiring - compression, valve, or harness. Only that second scan separates the two, and it is the step that a scan alone will never replace."},
+
+    {"type": "heading", "text": "The whole chain on one line"},
+    {"type": "paragraph", "text": "Crank sensor gives the expected rhythm. ECU compares each cylinder's turn against it and counts the misses. Enough misses on one cylinder becomes a code, P030X. The freeze frame records the conditions at that moment. Live counters prove it is happening and which cylinder. A swap test, run again, tells you which part."},
+    {"type": "divider"},
+    {"type": "paragraph", "text": "The rule that keeps this honest: a code reports a condition, never a failed component. P0302 means cylinder 2 is misfiring, not replace the coil. Everything after the code is a test."}
+  ],
+  "closing": "Build the diagram next, or walk one of the steps in more detail - pick and tap continue.",
+  "followUpPrompt": "Continue with the misfire explainer:"
+}

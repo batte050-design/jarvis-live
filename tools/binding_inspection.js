@@ -1,0 +1,5 @@
+/* Test-only reader for installed R5's pinned React 19 renderer. No label/value guessing. */
+const cp=require('node:child_process'),path=require('node:path');
+async function inspect(frame,program){if(!program)throw Error('No program for binding inspection');const r=JSON.parse(cp.execFileSync(process.execPath,['--max-old-space-size=128',path.join(__dirname,'../openui/validate.cjs')],{input:JSON.stringify({code:program.code,receipts:program.receipts}),encoding:'utf8',timeout:8000,maxBuffer:2*1024*1024}));if(!r.ok)throw Error(r.error);const info={states:r.states,formulaStates:r.formulaStates,inspection:'Pinned React binding read; no answer or state substituted'};
+ await frame.evaluate(info=>{for(const n of document.querySelectorAll('input,select,textarea,button[role=radio]')){let f=n[Object.keys(n).find(k=>k.startsWith('__reactFiber$'))];while(f){const p=f.memoizedProps?.props,b=p?.value??p?.checked;if(b?.__reactive==='assign'&&Object.hasOwn(info.states,b.target)){n.dataset.stateBinding=b.target;break;}f=f.return;}}},info);return info;}
+module.exports={inspect};

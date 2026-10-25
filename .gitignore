@@ -1,0 +1,23 @@
+venv/
+models/
+clips/
+cues/
+static/*
+!static/*.css
+!static/*.js
+!static/*.webmanifest
+!static/design
+__pycache__/
+session.json
+session.json.*
+*.tmp
+*.pyc
+*.wav
+*.mp3
+backups/
+_snap/
+tools/widget-shots/
+uploads/
+
+# fetched images, machine state
+.imgcache/

@@ -1,0 +1,55 @@
+{
+  "target": "99 percent reference parity; NOT established by this finite sample alone",
+  "minimum_frozen_passes": 30,
+  "repeat_runs": 3,
+  "widths": [
+    320,
+    390,
+    430
+  ],
+  "rules": {
+    "g01": "prose",
+    "g02": "prose",
+    "g03": "prose",
+    "g04": "prose",
+    "g05": "prose",
+    "g06": "composed",
+    "g07": "composed",
+    "g08": "composed",
+    "g09": "composed",
+    "g10": "composed",
+    "g11": "composed",
+    "g12": "composed",
+    "g13": "composed",
+    "g14": "composed",
+    "g15": "composed",
+    "g16": "composed",
+    "g17": "composed",
+    "g18": "composed",
+    "g19": "composed",
+    "g20": "composed",
+    "g21": "composed",
+    "g22": "composed",
+    "g23": "composed",
+    "g24": "composed",
+    "g25": "prose",
+    "g26": "prose",
+    "g27": "prose",
+    "g28": "prose",
+    "g29": "composed",
+    "g30": "composed"
+  },
+  "required_evidence": [
+    "answers.answers.md",
+    "browser.json",
+    "screenshots at all three widths",
+    "reference and staging build identities",
+    "repeat-stability.json",
+    "clarifying-form transcript"
+  ],
+  "prohibited": [
+    "blank frames",
+    "unexplained partials",
+    "claiming reference parity without paired reference evidence"
+  ]
+}

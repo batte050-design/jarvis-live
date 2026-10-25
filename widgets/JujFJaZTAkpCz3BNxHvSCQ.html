@@ -1,0 +1,22 @@
+<style>
+.wr-h{font:inherit;font-weight:400;margin:16px 0 8px}
+.wr-h:first-child{margin-top:0}
+.wr-p{margin:0 0 12px;color:var(--soft)}
+.wr-div{border:0;border-top:1px solid var(--border);margin:16px 0}
+.wr-card{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 10px;max-width:100%}
+.wr-card img{display:block;width:100%;max-width:100%;height:auto;border-radius:6px;margin-bottom:10px}
+.wr-card h4{margin:0 0 6px;font-weight:400;font-size:var(--t2)}
+.wr-badge{display:inline-block;border:1px solid var(--border);border-radius:999px;
+  padding:2px 10px;margin:0 0 6px;color:var(--dim)}
+.wr-meta{color:var(--dim);margin:8px 0 0}
+.wr-link{display:block;color:var(--soft);margin:6px 0 0;word-break:break-all}
+.wr-choices{border:1px solid var(--border);border-radius:8px;padding:12px;margin:0 0 12px;max-width:100%}
+.wr-choices h4{margin:0 0 8px;font-weight:400}
+.wr-opt{display:flex;align-items:center;gap:10px;cursor:pointer}
+.wr-opt input{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:44px;
+  margin:0;border:1px solid var(--border);border-radius:50%;background:none}
+.wr-opt input:checked{border-color:var(--accent);box-shadow:inset 0 0 0 11px var(--accent)}
+.wr-opt span{color:var(--soft)}
+.wr-opt input:checked + span{color:var(--ink)}
+.wr-sent{margin:10px 0 0;color:var(--accent)}
+</style><h2 class="wr-h">Object storage: S3 vs Cloud Storage vs Azure Blob</h2><p class="wr-p">Standard / Hot tier, single US region, list prices. Per GB-month stored, per GB out to the internet, and per 1,000 requests. Read 10 Oct 2026.</p><h3 class="wr-h">Pricing matrix</h3><section class="wr-card"><span class="wr-badge">us-east-1</span><h4>AWS S3 Standard</h4><p class="wr-p">Storage $0.023 per GB-month (first 50 TB). Egress $0.09 per GB. Requests $0.005 per 1,000 puts, $0.0004 per 1,000 gets. Uptime commitment 99.9%.</p></section><section class="wr-card"><span class="wr-badge">us-central1</span><h4>Google Cloud Storage Standard</h4><p class="wr-p">Storage $0.020 per GB-month. Egress $0.12 per GB. Requests $0.005 per 1,000 Class A, $0.0004 per 1,000 Class B. Uptime commitment 99.9% regional, 99.95% multi-region.</p></section><section class="wr-card"><span class="wr-badge">East US, LRS</span><h4>Azure Blob Hot</h4><p class="wr-p">Storage $0.0208 per GB-month (first 50 TB). Egress $0.087 per GB. Requests $0.005 per 1,000 writes, $0.0004 per 1,000 reads. Uptime commitment 99.9%, 99.99% on RA-GRS reads.</p></section><hr class="wr-div"><h3 class="wr-h">Best pick for a low-bandwidth media archive</h3><section class="wr-card"><span class="wr-badge">Best pick</span><h4>Google Cloud Storage Standard</h4><p class="wr-p">Cheapest storage of the three at $0.020 per GB-month, and an archive that is barely read pays almost nothing but storage. 1 TB archived costs $20.48 a month, against $21.30 on Azure and $23.55 on AWS. No minimum storage duration and no retrieval fee. Its $0.12 per GB egress is the highest here, so keep any bulk re-download off the critical path.</p></section><p class="wr-p">Storage decides it: GCS $20.48, Azure $21.30, AWS $23.55 per TB-month. Request costs are identical, so they break no tie.</p>

@@ -1,0 +1,9 @@
+{
+  "chart": {
+    "error": {
+      "code": "Not Found",
+      "description": "Fixture upstream unavailable"
+    },
+    "result": null
+  }
+}

@@ -1,0 +1,10 @@
+{
+ "base": "eace50e404baeffadf87f77a096e7244728217dd",
+ "description": "Hashes of real baseline prompt builders; no live provider output. Schema hash re-pinned to the deployed defect-6 expanded block (was 622b9f640d0f3f76); voice system/format/deep hashes unchanged.",
+ "sha256": {
+  "system": "c73e368211e5885ef99e63f53d957b0d409f703e67ebe952b51bba705c67a844",
+  "format": "9b7a2959f148ad02674fbfa9d771e33527573bec2bdc0fad35a6302ab0c31c44",
+  "deep": "87687ce4c4c322fd7ca1e8e432996d95727d832e733911b42b4d7b3d4542f2b4",
+  "schema": "4ccfbec465fd3fb2284d5f0e0c3147a71c81e1ac5377e9fa7956ba676c969b6e"
+ }
+}

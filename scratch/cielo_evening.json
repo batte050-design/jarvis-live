@@ -1,0 +1,26 @@
+{
+  "title": "Cielo rooftop, tonight and this weekend",
+  "intro": "Friday 9 Oct, past sunset already, so this is the late slot. Address: 5th floor, The Cube, Cooper Road, Kisementi, above Acacia Mall.",
+  "sections": [
+    {"type": "cards", "items": [
+      {"title": "You and your boys, tonight", "badge": "Friday, from 8:00 PM",
+       "description": "Arrive by 8:00 PM to take a table while it is still calm. The room turns loud from about 10:00 PM when the DJ starts, so eat and talk first, then stay if you want the music.",
+       "metadata": "Expect 4 of you at roughly 120,000 to 250,000 total: 2 cocktails each at 12,000 to 25,000, plus light plates. Bottle service, if you take it, starts about 300,000."},
+      {"title": "What to book and wear", "badge": "Do this before you leave",
+       "description": "Weekends fill, so reserve a balcony table this afternoon. Smart casual is enforced, no slippers or vests. Ride home by Bolt or SafeBoda, sorted before you start drinking.",
+       "metadata": "RSVP 0200 910300 or 0742 891 326. Open daily 4:00 PM to 6:00 AM. Card and mobile money both accepted at the counter."},
+      {"title": "Photo timing", "badge": "Best light about 6:40 PM",
+       "description": "Sunset today was 6:41 PM, so the city lights and the dark sky read best from about 6:45 to 7:30 PM. If you want the view rather than the music, that is your window and you can leave by 9:00.",
+       "metadata": "Driving from central Kampala to Kisementi is 15 to 25 minutes in evening traffic, estimate only. No rooftop view tonight if you arrive at 8:00, only lights."}
+    ]},
+    {"type": "choices", "id": "next", "prompt": "What do you want next?",
+     "options": [
+       {"label": "Text me the reserve message", "value": "Draft the booking message"},
+       {"label": "A quieter table instead", "value": "Compare the quiet options again"},
+       {"label": "Cheaper night, same view", "value": "Find cheaper rooftops"},
+       {"label": "Tomorrow evening instead", "value": "Plan Saturday"}
+     ]}
+  ],
+  "closing": "Sunset 6:41 PM and Cielo's floor and hours are verified today. The shilling amounts are estimates from the July 2026 Kampala guide and the venue's own notes, not quoted prices.",
+  "followUpPrompt": "For the Cielo evening:"
+}

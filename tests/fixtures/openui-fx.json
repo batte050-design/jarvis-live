@@ -1,0 +1,47 @@
+{
+  "note": "Complete synthetic source fixture for native chart labels/range/touch tests; not current market data. One scripted observation per calendar month; not a fill of the separate defect-6 missing-month fixture.",
+  "clock": "2026-10-23T12:00:00Z",
+  "request": {
+    "provider": "yahoo_chart",
+    "symbol": "UGX=X",
+    "start": "2026-04-23",
+    "end": "2026-10-23",
+    "period": "month"
+  },
+  "payload": {
+    "chart": {
+      "error": null,
+      "result": [
+        {
+          "meta": {
+            "symbol": "UGX=X"
+          },
+          "timestamp": [
+            1776945600,
+            1779537600,
+            1782216000,
+            1784808000,
+            1787486400,
+            1790164800,
+            1792756800
+          ],
+          "indicators": {
+            "quote": [
+              {
+                "close": [
+                  3684,
+                  3725,
+                  3674,
+                  3665,
+                  3694,
+                  3769,
+                  3994
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

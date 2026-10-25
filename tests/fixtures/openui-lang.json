@@ -1,0 +1,21 @@
+{
+  "quote": {
+    "question": "Help me price a job: four inspections at UGX 80,000 each, with a 10% discount.",
+    "prose": "At your original figures, four inspections total UGX 288,000 after the discount.",
+    "code": "root = Col([Title(\"Inspection quote\", \"xl\"), Card([Title(@Format($quantity * $price * (1 - $discount / 100), \"currency\", 0, \"UGX\"), \"2xl\"), Caption(\"Total after discount\")], \"soft\"), Form([Input($quantity, \"Inspections\", \"number\"), Input($price, \"Price per inspection (UGX)\", \"number\"), Slider($discount, 0, 100, 1, \"Discount\", \"%\")]), Accordion(\"Calculation\", [Text(@Format($quantity * $price, \"currency\", 0, \"UGX\") + \" before discount\")])], 5)\n$quantity = 4\n$price = 80000\n$discount = 10\n"
+  },
+  "images": {
+    "question": "Can you show me the tallest buildings pictures",
+    "prose": "Compare these photographs of Burj Khalifa, Merdeka 118 and Shanghai Tower.",
+    "code": "root = Col([Title(\"Tallest buildings\", \"xl\"), Carousel([burj, merdeka, shanghai], 240, 4), Caption(\"Swipe to compare the photographs.\")], 5)\nburj = Card([SearchImage(\"Burj Khalifa Dubai\", 0.85), Title(\"Burj Khalifa\", \"lg\"), Text(\"Dubai, United Arab Emirates\")])\nmerdeka = Card([SearchImage(\"Merdeka 118 Kuala Lumpur\", 0.85), Title(\"Merdeka 118\", \"lg\"), Text(\"Kuala Lumpur, Malaysia\")])\nshanghai = Card([SearchImage(\"Shanghai Tower\", 0.85), Title(\"Shanghai Tower\", \"lg\"), Text(\"Shanghai, China\")])\n"
+  },
+  "plan": {
+    "question": "Organise my afternoon: read the brief, make a draft, then review it.",
+    "prose": "Start with the brief, make a draft, then review it.",
+    "code": "root = Col([Title(\"Your afternoon\", \"xl\"), List([ListItem(\"Start\", \"Read the brief\", \"14:00\"), ListItem(\"Focus\", \"Make the first draft\", \"14:30\"), ListItem(\"Review\", \"Take a break and revise\", \"16:00\")], \"none\", true), Popover(\"Why this order?\", \"Start with understanding, then make something concrete.\"), Accordion(\"Checklist\", [Checkbox($read, \"Brief read\"), Checkbox($draft, \"Draft ready\"), Text($read && $draft ? \"Ready to review\" : \"Keep going\")])], 5)\n$read = false\n$draft = false\n"
+  },
+  "plain": {
+    "question": "Explain in two plain sentences why fuel costs vary with distance",
+    "text": "Driving farther uses more fuel because the engine works for longer. The cost also depends on fuel price, traffic and how efficiently the vehicle uses fuel."
+  }
+}

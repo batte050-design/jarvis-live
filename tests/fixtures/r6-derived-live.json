@@ -1,0 +1,18 @@
+{
+  "scope": "Actual answer recovered from staging history; original browser/wire artifacts lost",
+  "conv": "83aa3a7c077676f2a5e95248b085b386",
+  "question": "A journey is 46 km each way and my car uses 12 km per litre. Help me estimate fuel, then see what changes at different fuel prices.",
+  "answer": "At the original figures — 92 km round trip at 12 km/L — you need about 7.67 litres. Assuming $1.50 per litre (my placeholder, not a quoted price), that's roughly $11.50; the controls below let you change the fuel price and the trip details.\n\n```openui\n// jarvis-context: W3siaWQiOiAiZWRpdGFibGUtaW5wdXRzIiwgInJvd3MiOiBbXSwgImNyZWRpdCI6ICJDYWxjdWxhdGVkIGxvY2FsbHkgZnJvbSBlZGl0YWJsZSBpbnB1dHM7IGFueSB1bnN0YXRlZCBzdGFydGluZyB2YWx1ZXMgYXJlIGFzc3VtcHRpb25zLiBSZWNvcmRlZCB0aGlzIHR1cm46IDIwMjYtMTAtMjRUMTg6MTM6MzVaIn1d\n$oneWay = 46\n$economy = 12\n$price = 1.5\n$trip = \"Round trip\"\nroot = Col([Title(\"Fuel estimate\", \"lg\"), Text(\"Distance is one way; economy is in km per litre. Fuel price is an editable assumption, not a quoted price.\"), Form([Input($oneWay, \"Distance each way (km)\", \"number\"), Input($economy, \"Fuel economy (km per litre)\", \"number\"), SegmentedControl($trip, [\"One-way\", \"Round trip\"]), Slider($price, 0.5, 4, 0.05, \"Fuel price\", \"$/L\")]), Card([Text([Icon(\"fuel\", \"sm\"), \"  Fuel needed: \", Badge(@Format($litres, \"number\", 2) + \" L\", \"info\")]), Title(@Format($cost, \"currency\", 2, \"USD\"), \"2xl\"), Caption(@Format($km, \"number\", 1) + \" km driven at \" + @Format(@Clamp(@Default($economy, 12), 0.1, 100), \"number\", 1) + \" km/L\")], \"soft\")])\n$km = $trip == \"Round trip\" ? @Clamp(@Default($oneWay, 0), 0, 100000) * 2 : @Clamp(@Default($oneWay, 0), 0, 100000)\n$litres = $km / @Clamp(@Default($economy, 12), 0.1, 100)\n$cost = $litres * @Clamp(@Default($price, 0), 0, 100)\n```",
+  "program": {
+    "language": "openui",
+    "closed": true,
+    "code": "$oneWay = 46\n$economy = 12\n$price = 1.5\n$trip = \"Round trip\"\nroot = Col([Title(\"Fuel estimate\", \"lg\"), Text(\"Distance is one way; economy is in km per litre. Fuel price is an editable assumption, not a quoted price.\"), Form([Input($oneWay, \"Distance each way (km)\", \"number\"), Input($economy, \"Fuel economy (km per litre)\", \"number\"), SegmentedControl($trip, [\"One-way\", \"Round trip\"]), Slider($price, 0.5, 4, 0.05, \"Fuel price\", \"$/L\")]), Card([Text([Icon(\"fuel\", \"sm\"), \"  Fuel needed: \", Badge(@Format($litres, \"number\", 2) + \" L\", \"info\")]), Title(@Format($cost, \"currency\", 2, \"USD\"), \"2xl\"), Caption(@Format($km, \"number\", 1) + \" km driven at \" + @Format(@Clamp(@Default($economy, 12), 0.1, 100), \"number\", 1) + \" km/L\")], \"soft\")])\n$km = $trip == \"Round trip\" ? @Clamp(@Default($oneWay, 0), 0, 100000) * 2 : @Clamp(@Default($oneWay, 0), 0, 100000)\n$litres = $km / @Clamp(@Default($economy, 12), 0.1, 100)\n$cost = $litres * @Clamp(@Default($price, 0), 0, 100)\n",
+    "receipts": [
+      {
+        "id": "editable-inputs",
+        "rows": [],
+        "credit": "Calculated locally from editable inputs; any unstated starting values are assumptions. Recorded this turn: 2026-10-24T18:13:35Z"
+      }
+    ]
+  }
+}

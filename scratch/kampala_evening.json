@@ -1,0 +1,41 @@
+{
+  "title": "Four relaxed evening spots in Kampala",
+  "intro": "Checked tonight, 9 Oct 2026. Every place below is a sit-down, talk-easy room rather than a loud club.",
+  "sections": [
+    {"type": "cards", "items": [
+      {"title": "Cielo Lounge Rooftop",
+       "badge": "Kisementi, above Acacia Mall",
+       "description": "Fifth-floor open rooftop on The Cube. Skyline views, cocktails, light plates, DJ later on. Go just before sunset for a seat and the view. Relaxed early, fills up from about 10pm.",
+       "metadata": "Open from 4pm. Cocktails 12,000-25,000. Beer 5,000-8,000. Budget 80,000-200,000 each. RSVP 0742 891 326.",
+       "image": {"src": "https://evento.ug/xtz/2024-07/image_66a29179bbef6.jpg", "alt": "Cielo Lounge rooftop"},
+       "links": [{"label": "Cielo Lounge on Instagram", "href": "https://www.instagram.com/cieloloungeug/"}]},
+      {"title": "Jazzville Bugolobi",
+       "badge": "Bandali Rise, Bugolobi",
+       "description": "Kampala's first jazz club. Live jazz and soul sets, low lighting, garden seating, a crowd that came to listen. The quietest of the four and the best one for actual conversation.",
+       "metadata": "Open Mon-Sun, live sets usually midweek and Sunday. Cocktails about 10,000 and beer from 4,000 on old advertised nights, so treat as estimate. Entry usually free.",
+       "image": {"src": "https://ugandatourismcenter.com/wp-content/uploads/2019/08/Jazz-Ville.jpg", "alt": "Jazzville Bugolobi"},
+       "links": [{"label": "Jazz Ville on Find.ug", "href": "https://find.ug/listing/jazz-ville-kampala-uganda/"}]},
+      {"title": "The Local, Bugolobi",
+       "badge": "Spring Road, Bugolobi",
+       "description": "Ugandan-inspired bar and kitchen, courtyard seating, cocktails and small plates made for grabbing a table and staying. The most casual of the four, and the easiest on the pocket.",
+       "metadata": "Mon-Thu 9:00 AM to 11:00 PM, Fri-Sat to late, Sun 12:00 PM to 10:00 PM. Happy hour Mon-Thu 4:00 to 7:00 PM. 0776077093.",
+       "image": {"src": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900&q=70", "alt": "Bar table with drinks"},
+       "links": [{"label": "The Local menu and booking", "href": "https://wethelocal.co/menus"}]},
+      {"title": "Emin Pasha Hotel garden and bar",
+       "badge": "Plot 27, Akii Bua Road, Nakasero",
+       "description": "Boutique colonial hotel behind landscaped gardens, so it is quiet in a way no rooftop is. The calm drink-and-talk choice, and the only one here you can walk to dinner after.",
+       "metadata": "Grounds open daily, bar through the evening. Cocktails 12,000-25,000, beer 5,000-8,000, budget 80,000-150,000 each. Phone 031 2264712.",
+       "image": {"src": "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=900&q=70", "alt": "Garden terrace at dusk"},
+       "links": [{"label": "Emin Pasha Hotel", "href": "https://eminpasha.com/"}]}
+    ]},
+    {"type": "choices", "id": "pick", "prompt": "Which one do you want me to work up?",
+     "options": [
+       {"label": "Cielo rooftop, before sunset", "value": "Cielo"},
+       {"label": "Jazzville, live jazz night", "value": "Jazzville"},
+       {"label": "The Local, table and happy hour", "value": "The Local"},
+       {"label": "Emin Pasha garden, quiet", "value": "Emin Pasha"}
+     ]}
+  ],
+  "closing": "Prices are the July 2026 Kampala guide figures and the venues' own listings, so treat the shilling numbers as close estimates, not quoted.",
+  "followUpPrompt": "Plan the evening at:"
+}
