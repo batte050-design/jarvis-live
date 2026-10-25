@@ -6268,8 +6268,26 @@ async def api_route(request: Request):
                          "voice": format_directive(shape, "voice")})
 
 
+def _page_gate():
+    """Page work waits for recovery. Runs once, under a cross-process lock; a failure keeps
+    readiness false and returns a traceable id instead of serving the turn."""
+    try:
+        from page import recovery as _r
+        if _r.READY["ok"]:
+            return None
+        res=_r.recover(PAGE_TEXT.adapter, os.path.join(HERE,"ctx","page-recovery.lock"))
+        if res.get("ready"):
+            return None
+        reason=res.get("error_id") or "recovery_pending"
+    except Exception as exc:
+        reason="recovery_failed_"+type(exc).__name__
+    return JSONResponse({"error":reason,"reference":reason},status_code=503)
+
+
 @app.post("/api/agent/prestart/{conv}")
 async def agent_prestart(conv: str, request: Request):
+    _g=_page_gate()
+    if _g is not None: return _g
     if auth_scope(request) not in ("master", "full"):
         return JSONResponse({"ok": False, "error": "refused"}, status_code=403)
     if not same_origin(request):
@@ -6293,6 +6311,8 @@ async def stream(request: Request):
     and the cookie rode any cross-site navigation. Now the question arrives in a JSON body and
     the request has to say it came from this page.
     """
+    _g=_page_gate()
+    if _g is not None: return _g
     scope = auth_scope(request)
     if scope is None:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
