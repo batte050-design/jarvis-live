@@ -822,7 +822,7 @@ function tl(name){
     try {
       fetch('/timeline', { method: 'POST', keepalive: true,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marks: tlMarks }) });
+        body: JSON.stringify({ marks: tlMarks }) }).catch(function(error){console.warn("timeline upload unavailable",error);});
     } catch(e){}
     tlMarks = [];
   }
@@ -1046,7 +1046,7 @@ async function openStream(q, onEvent, signal){
 // it — a turn read from its first token and a turn re-attached halfway are the same turn.
 // This function runs inside the existing engine's applyEvent scope.
 function pagePresentationEvent(ev, d, ctx) {
-  if (!['presentation', 'failure', 'page_progress', 'approval_request'].includes(ev)) return {ev, d};
+  if (!['presentation', 'failure', 'page_progress', 'approval_request', 'tool_step'].includes(ev)) return {ev, d};
   if (String(d.conv || '') !== String(ctx.conv || '')) return null;
   const tid = String(d.tid || d.turn || '');
   if (!/^[0-9a-fA-F]{8,40}$/.test(tid)) return null;
@@ -1073,6 +1073,20 @@ function pagePresentationEvent(ev, d, ctx) {
   if (ctx.detached) return null;
   const anchor = document.querySelector('.turn[data-id="' + tid + '"]') || document.getElementById('content');
   if (!anchor) return null;
+  if (ev === 'tool_step') {
+    const key = String(d.call_id || '');
+    if (!key) return null;
+    let list = anchor.querySelector('[data-page-steps]');
+    if (!list) { list = document.createElement('ol'); list.dataset.pageSteps = ''; list.dataset.pageTurn = tid; anchor.append(list); }
+    ctx.pageStepRows = ctx.pageStepRows || {};
+    let row = ctx.pageStepRows[key];
+    if (!row || !row.isConnected) { row = document.createElement('li'); row.dataset.call = key; list.append(row); ctx.pageStepRows[key] = row; }
+    const status = String(d.status || 'running');
+    row.dataset.status = status;
+    const label = String(d.action || 'Working');
+    row.textContent = label + (status === 'completed' ? ' — done' : status === 'failed' ? ' — failed' : status === 'cancelled' ? ' — cancelled' : '…');
+    return null;
+  }
   if (ev === 'page_progress') {
     let status = anchor.querySelector('[data-page-progress]');
     if (!status) { status = document.createElement('p'); status.dataset.pageProgress = ''; status.dataset.pageTurn = tid; status.setAttribute('role', 'status'); anchor.append(status); }

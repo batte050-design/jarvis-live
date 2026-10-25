@@ -536,6 +536,7 @@ FISH_KEY = env("FISH_AUDIO_API_KEY") or env("FISH_API_KEY")
 app = FastAPI()
 from page.legacy import TextLane as _PageTextLane
 PAGE_TEXT = _PageTextLane(globals())
+_PAGE_RECOVERED = False
 
 
 # The console is a pair of files I keep refining. Browsers happily serve the old copy from
@@ -6296,7 +6297,14 @@ async def agent_prestart(conv: str, request: Request):
         return JSONResponse({"ok": False, "error": "conversation was deleted"}, status_code=410)
     if not rate_ok(request, "prestart"):
         return JSONResponse({"ok": False, "error": "too many requests"}, status_code=429)
-    started = warm_prewarm_for(agent_session_name(conv))
+    started = False  # legacy text warming removed: only the page harness is warmed
+    global _PAGE_RECOVERED
+    if not _PAGE_RECOVERED:
+        _PAGE_RECOVERED = True
+        try:
+            PAGE_TEXT.adapter.recover_interrupted()
+        except Exception as exc:
+            print("page recovery skipped:", type(exc).__name__, exc, flush=True)
     return JSONResponse({"ok": True, "started": started})
 
 

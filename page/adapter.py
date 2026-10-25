@@ -197,17 +197,21 @@ class Adapter:
                             steps=r.setdefault('steps',[])
                             hit=next((x for x in steps if x['call_id']==call_id),None)
                             r['rev']=r.get('rev',0)+1
-                            if hit is not None:
+                            if hit is None:
+                                if len(steps)>=64:
+                                    r['steps_omitted']=r.get('steps_omitted',0)+1
+                                else:
+                                    hit=dict(call_id=call_id,seq=len(steps)+1,action=label,status=status,
+                                             ts=round(time.time()*1000),rev=r['rev'])
+                                    steps.append(hit)
+                            else:
                                 hit['status']=status; hit['rev']=r['rev']
                             journal=r.setdefault('journal',[])
                             if len(journal)<128:
-                                journal.append(dict(call_id=call_id,seq=(hit or {}).get('seq',len(steps)),
-                                                    action=label,status=status,ts=round(time.time()*1000),rev=r['rev']))
-                            elif len(steps)<64:
-                                steps.append(dict(call_id=call_id,seq=len(steps)+1,action=label,
-                                                  status=status,ts=round(time.time()*1000),rev=r['rev']))
+                                journal.append(dict(call_id=call_id,seq=(hit or {}).get('seq',0),action=label,
+                                                    status=status,ts=round(time.time()*1000),rev=r['rev']))
                             else:
-                                r['steps_omitted']=r.get('steps_omitted',0)+1
+                                r['journal_omitted']=r.get('journal_omitted',0)+1
                             if r['timing']['first_progress_ms'] is None:
                                 r['timing']['first_progress_ms']=round((time.time()-r['created_at'])*1000)
                         self._update(owner,conv,turn,add_step)

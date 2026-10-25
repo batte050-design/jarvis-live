@@ -245,6 +245,7 @@ class WarmAgent:
             return message.get("result") or {}
 
     def _prompt(self, prompt, on_event, stop, reasoning) -> tuple[str, str]:
+        self._ops = {}   # per-turn operation cache: never shared across agents or turns
         self._apply_reasoning(reasoning)
         request_id = self._send("session/prompt", {
             "sessionId": self._session_id,
@@ -294,8 +295,7 @@ class WarmAgent:
             if message.get("method") == "session/update":
                 self._translate_update(message.get("params") or {}, text_parts, on_event)
 
-    @staticmethod
-    def _translate_update(params, text_parts, on_event) -> None:
+    def _translate_update(self, params, text_parts, on_event) -> None:
         update = params.get("update") or params.get("sessionUpdate") or params
         kind = update.get("sessionUpdate") or update.get("type")
         if kind in ("agent_message_chunk", "text"):
@@ -316,9 +316,9 @@ class WarmAgent:
             elif name.lower() not in ("read","edit","delete","move","search","execute","think","fetch","other"):
                 _TRACE["unmapped_operation"] = _TRACE.get("unmapped_operation", 0) + 1
             if name:
-                _OP_CACHE[call_id] = name
+                self._ops[call_id] = name
             else:
-                name = _OP_CACHE.get(call_id, "")
+                name = self._ops.get(call_id, "")
             _TRACE["start"] += 1
             if not call_id:
                 _TRACE["missing_id"] += 1
@@ -329,9 +329,9 @@ class WarmAgent:
             call_id = str(update.get("toolCallId") or update.get("tool_call_id") or update.get("id") or "")
             status = str(update.get("status") or "").lower()
             done = status in ("completed", "complete", "failed", "error", "cancelled")
-            name = str(update.get("toolName") or update.get("name") or _OP_CACHE.get(call_id, ""))
+            name = str(update.get("toolName") or update.get("name") or self._ops.get(call_id, ""))
             if name:
-                _OP_CACHE[call_id] = name
+                self._ops[call_id] = name
             _TRACE["update"] += 1
             if not call_id:
                 _TRACE["missing_id"] += 1
