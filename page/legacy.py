@@ -57,12 +57,17 @@ class TextLane:
         row=self.adapter.read(owner,conv,turn)
         async def events():
             yield self.frame('open',{'turn':token(conv,turn),'tid':turn,'conv':conv,'q':row['request']['question'],'attach':True})
-            last_progress=None;last_approval=0;last_steps=0
+            last_progress=None;last_approval=0;last_steps=0;last_omitted=0
             while True:
                 state=self.adapter.snapshot(owner,conv,turn)
                 if state['current_progress'] and state['current_progress']['ts']!=last_progress:
                     last_progress=state['current_progress']['ts'];yield self.frame('page_progress',{**state['current_progress'],'conv':conv,'tid':turn})
                 rev=state.get('rev') or 0
+                omitted=state.get('journal_omitted') or 0
+                if omitted>(last_omitted or 0):
+                    last_omitted=omitted
+                    for step in (state.get('steps') or []):
+                        yield self.frame('tool_step',{**step,'conv':conv,'tid':turn,'snapshot':True,'omitted':omitted})
                 if rev>last_steps:
                     for step in (state.get('journal') or []):
                         if step.get('rev',0)>last_steps:

@@ -337,8 +337,9 @@ class WarmAgent:
                 _TRACE["missing_id"] += 1
             if on_event:
                 on_event("tool_result", {"type": "tool_result", "call_id": call_id, "name": name,
-                                         "status": "done" if done and status not in ("failed", "error") else
-                                                   ("error" if status in ("failed", "error") else "running"),
+                                         "status": {"completed":"completed","complete":"completed","done":"completed",
+                                         "failed":"failed","error":"failed",
+                                         "cancelled":"cancelled","canceled":"cancelled"}.get(status,"running"),
                                          "is_error": status in ("failed", "error") or bool(update.get("isError")),
                                          "duration_ms": update.get("durationMs", update.get("duration_ms"))})
 

@@ -1054,7 +1054,7 @@ function pagePresentationEvent(ev, d, ctx) {
     if (ctx.pageTerminalId === d.id) return null;
     if (ctx.pageTerminalId) throw new Error('Conflicting page terminal event');
     ctx.pageTerminalId = d.id;
-    document.querySelectorAll('[data-page-turn="' + tid + '"]').forEach(n => n.remove());
+    document.querySelectorAll('[data-page-turn="' + tid + '"]').forEach(n => { if (!n.hasAttribute('data-page-steps')) n.remove(); });
     let text;
     if (ev === 'failure') { text = String(d.message || 'JARVIS could not complete this request.'); ctx.pageFailed = true; }
     else {

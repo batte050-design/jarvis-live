@@ -534,9 +534,29 @@ DS_KEY = env("DEEPSEEK_API_KEY")
 FISH_KEY = env("FISH_AUDIO_API_KEY") or env("FISH_API_KEY")
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+async def _page_startup_recovery():
+    __import__('threading').Thread(target=_page_recover_once,daemon=True).start()
 from page.legacy import TextLane as _PageTextLane
 PAGE_TEXT = _PageTextLane(globals())
 _PAGE_RECOVERED = False
+_PAGE_RECOVERY_LOCK = __import__('threading').Lock()
+
+
+def _page_recover_once():
+    """Startup ownership: run once per process, under a lock, retried until it succeeds.
+    Uncertain tool work is failed visibly by recover_interrupted; it is never rerun."""
+    global _PAGE_RECOVERED
+    if _PAGE_RECOVERED:return
+    with _PAGE_RECOVERY_LOCK:
+        if _PAGE_RECOVERED:return
+        try:
+            PAGE_TEXT.adapter.recover_interrupted()
+            _PAGE_RECOVERED=True
+        except Exception as exc:
+            print("page recovery retry pending:", type(exc).__name__, exc, flush=True)
 
 
 # The console is a pair of files I keep refining. Browsers happily serve the old copy from
@@ -4763,46 +4783,6 @@ _DEV_REPORTS = {"suites-report": "/tmp/dev-suites.json", "answers-report": "/tmp
                 "answers-md": "/tmp/dev-answers.answers.md"}
 
 
-@app.post("/api/dev/run")
-async def dev_run(request: Request):
-    key = os.environ.get("JARVIS_DEV_RUNNER_KEY") or ""
-    given = request.headers.get("x-dev-key") or ""
-    if not key or not hmac.compare_digest(key, given):
-        return JSONResponse({"error": "not enabled"}, status_code=403)
-    body = await request.json()
-    name = str((body or {}).get("name") or "")
-    if name in _DEV_REPORTS and name not in _DEV_COMMANDS:
-        path = _DEV_REPORTS[name]
-        if not os.path.exists(path):
-            return JSONResponse({"error": "no report yet", "name": name}, status_code=404)
-        return JSONResponse({"name": name, "content": pathlib.Path(path).read_text()[:400000]})
-    cmd = _DEV_COMMANDS.get(name)
-    if not cmd:
-        return JSONResponse({"error": "unknown command", "names": sorted(_DEV_COMMANDS)}, status_code=400)
-    argv = [c.format(py=sys.executable) for c in cmd]
-    try:
-        env = dict(os.environ)
-        env["PATH"] = "/home/ubuntu/.local/bin:" + env.get("PATH", "/usr/local/bin:/usr/bin:/bin")
-        env.setdefault("NODE_PATH", "/tmp/tui-tree/node_modules")
-        proc = subprocess.run(argv, cwd=os.path.dirname(os.path.abspath(__file__)),
-                              capture_output=True, text=True, timeout=1500, env=env)
-        out = (proc.stdout or "")[-20000:]
-        err = (proc.stderr or "")[-4000:]
-        return JSONResponse({"name": name, "exit": proc.returncode, "stdout": out, "stderr": err})
-    except subprocess.TimeoutExpired:
-        return JSONResponse({"name": name, "error": "timed out"}, status_code=504)
-
-
-# Vendor assets: Jakub Antalik's thinking-orbs engine (MIT, see vendor/LICENSE-*.txt).
-# Public read is deliberate — it is animation code, not a secret, and the page loads it
-# before any key check. Served from ./vendor so the JS never has to be inlined.
-app.mount("/vendor", StaticFiles(directory=os.path.join(HERE, "vendor")), name="vendor")
-
-# Icons and the web app manifest, public like the vendor code: a home screen shortcut fetches
-# these before it can carry a cookie, and an icon holds no secret.
-app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")), name="static")
-
-
 @app.get("/api/turns/events")
 def api_turn_events(request: Request):
     """What the machine recorded a turn doing, whether or not a page was open at the time."""
@@ -6298,13 +6278,7 @@ async def agent_prestart(conv: str, request: Request):
     if not rate_ok(request, "prestart"):
         return JSONResponse({"ok": False, "error": "too many requests"}, status_code=429)
     started = False  # legacy text warming removed: only the page harness is warmed
-    global _PAGE_RECOVERED
-    if not _PAGE_RECOVERED:
-        _PAGE_RECOVERED = True
-        try:
-            PAGE_TEXT.adapter.recover_interrupted()
-        except Exception as exc:
-            print("page recovery skipped:", type(exc).__name__, exc, flush=True)
+    _page_recover_once()
     return JSONResponse({"ok": True, "started": started})
 
 
