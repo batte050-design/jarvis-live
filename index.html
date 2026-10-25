@@ -1063,7 +1063,7 @@ function pagePresentationEvent(ev, d, ctx) {
       text = p.intro;
       if (p.kind === 'interface') {
         if (typeof p.program !== 'string' || !p.program.trim()) throw new Error('Empty interface');
-        const bytes = new TextEncoder().encode(JSON.stringify(p.receipts || []));
+        const bytes = new TextEncoder().encode(JSON.stringify({receipts:p.receipts || [],authority:'harness'}));
         let binary = ''; bytes.forEach(b => { binary += String.fromCharCode(b); });
         text += '\n\n```openui\n// jarvis-context: ' + btoa(binary) + '\n' + p.program + '\n```';
       }

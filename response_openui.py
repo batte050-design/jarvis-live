@@ -116,10 +116,10 @@ def system_prompt():
             "rather than only describing it or returning its initial total.")
 
 
-def validate(code, receipts):
+def validate(code, receipts, *, harness_authored=False):
     try:
         run = subprocess.run([validator_runtime(), '--max-old-space-size=128', str(ROOT/'openui/validate.cjs')],
-                             input=json.dumps({'code':code,'receipts':receipts}), text=True,
+                             input=json.dumps({'code':code,'receipts':receipts,'harnessAuthored':harness_authored}), text=True,
                              capture_output=True, timeout=8, cwd=ROOT)
     except OSError:raise ValidatorUnavailable('validator_launch_failed: configured Node executable could not start') from None
     if run.returncode:
@@ -503,7 +503,7 @@ def document(parent_origin):
     style=re.sub('</style',r'<\\/style',style,flags=re.I)
     sha=lambda value:base64.b64encode(hashlib.sha256(value.encode()).digest()).decode()
     html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+style+'</style></head><body><main id="openui-root"></main><script>'+script+'</script></body></html>'
-    policy="; ".join(["default-src 'none'","script-src 'sha256-"+sha(script)+"'","style-src 'unsafe-inline'","img-src https://upload.wikimedia.org https://thumb.wikimedia.org","font-src data:","connect-src 'none'","base-uri 'none'","form-action 'none'","frame-ancestors "+parent_origin,"sandbox allow-scripts"])
+    policy="; ".join(["default-src 'none'","script-src 'sha256-"+sha(script)+"'","style-src 'unsafe-inline'","img-src https:","font-src data:","connect-src 'none'","base-uri 'none'","form-action 'none'","frame-ancestors "+parent_origin,"sandbox allow-scripts"])
     return html,{'Content-Security-Policy':policy,'X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','Cache-Control':'private, max-age=3600','Permissions-Policy':'camera=(), microphone=(), geolocation=()'}
 
 

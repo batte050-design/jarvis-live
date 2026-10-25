@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {createRoot} from 'react-dom/client';
 import {Renderer, type ActionEvent} from '@openuidev/react-lang';
-import {library,setReceipts,setPhotoLookup,setPhotoStatus,type Receipt,type Photo} from './library';
+import {library,setHarnessImages,setReceipts,setPhotoLookup,setPhotoStatus,type Receipt,type Photo} from './library';
 import {validateProgram,formulaStates} from './guard';
 import './reference/components/theme.css';
 import './reference/components/components.css';
@@ -28,7 +28,7 @@ function Frame(){
       if(d.type==='images'){const p=pending.get(d.id);if(p){clearTimeout(p.timer);pending.delete(d.id);p.resolve(Array.isArray(d.photos)?d.photos:[]);}return;}
       if(d.type!=='render'||!Number.isSafeInteger(d.revision)||d.revision<=currentRevision||typeof d.code!=='string')return;
       currentRevision=d.revision;
-      try{setReceipts(Array.isArray(d.receipts)?d.receipts:[]);const parsed=validateProgram(d.code,!!d.final,d.receipts);window.JarvisOpenUIInspection={states:parsed.stateDeclarations,formulaStates:formulaStates(parsed)};setError(false);setAnswer({code:parsed.canonicalCode,final:!!d.final,receipts:d.receipts??[],numeric:Object.values(parsed.stateDeclarations).some(v=>typeof v==='number'),revision:d.revision});document.documentElement.dataset.theme=d.theme==='light'?'light':'dark';}
+      try{setHarnessImages(d.harnessAuthored===true);setReceipts(Array.isArray(d.receipts)?d.receipts:[]);const parsed=validateProgram(d.code,!!d.final,d.receipts,d.harnessAuthored===true);window.JarvisOpenUIInspection={states:parsed.stateDeclarations,formulaStates:formulaStates(parsed)};setError(false);setAnswer({code:parsed.canonicalCode,final:!!d.final,receipts:d.receipts??[],numeric:Object.values(parsed.stateDeclarations).some(v=>typeof v==='number'),revision:d.revision});document.documentElement.dataset.theme=d.theme==='light'?'light':'dark';}
       catch{if(d.final){setError(true);send('failed',{revision:currentRevision,diagnostic:{phase:'validation',code:'browser_validation_failed',message:'The interactive answer did not pass browser validation.'}});}}
     };
     const link=(event:MouseEvent)=>{const anchor=(event.target as Element)?.closest('a');if(anchor){event.preventDefault();if(event.isTrusted)send('link',{url:anchor.href});}};

@@ -13,7 +13,7 @@
 <link rel="icon" href="/static/icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="manifest" href="/static/manifest.webmanifest">
-<meta name="jl-build" content="ed362e86f3|159e5556db|">
+<meta name="jl-build" content="ed362e86f3|ba812b1587|">
 <link rel="stylesheet" href="/static/v1.css?v=ed362e86f3">
 <link rel="stylesheet" href="/static/response-parent.css?v=c8c3930707">
 </head>
@@ -1332,7 +1332,7 @@ function pagePresentationEvent(ev, d, ctx) {
       text = p.intro;
       if (p.kind === 'interface') {
         if (typeof p.program !== 'string' || !p.program.trim()) throw new Error('Empty interface');
-        const bytes = new TextEncoder().encode(JSON.stringify(p.receipts || []));
+        const bytes = new TextEncoder().encode(JSON.stringify({receipts:p.receipts || [],authority:'harness'}));
         let binary = ''; bytes.forEach(b => { binary += String.fromCharCode(b); });
         text += '\n\n```openui\n// jarvis-context: ' + btoa(binary) + '\n' + p.program + '\n```';
       }
@@ -2339,9 +2339,9 @@ if (window.navigator && navigator.serviceWorker) {
 <script src="/static/response-core.js?v=be28945c2a"></script>
 <script src="/static/response-store.js?v=9e5c2fce21"></script>
 <script src="/static/response-parent.js?v=40473f1156"></script>
-<script src="/static/openui-config.js?v=0a0d6c96ff"></script>
-<script src="/static/openui-parent.js?v=1a563328ee"></script>
-<script src="/static/v1.js?v=159e5556db"></script>
+<script src="/static/openui-config.js?v=40daefa3e1"></script>
+<script src="/static/openui-parent.js?v=9d92d998bb"></script>
+<script src="/static/v1.js?v=ba812b1587"></script>
 <script src="/static/approvals-ui.js?v=d4a3607b21" defer></script>
 </body>
 </html>

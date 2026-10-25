@@ -3,15 +3,15 @@
   var doc=host.document,held=new WeakMap(),records=new Set();
   function split(text){var out=[],last=0,re=/^(`{3,}|~{3,})([^\n]*)\n/gm,m;
     while((m=re.exec(text))){var marker=m[1],tag=m[2].trim(),start=re.lastIndex,closer=new RegExp('^'+marker[0]+'{'+marker.length+',}[ \\t]*(?:\\n|$)','gm');closer.lastIndex=start;var end=closer.exec(text),stop=end?closer.lastIndex:text.length;
-      if(tag==='openui'||tag==='openui-lang'){out.push({text:text.slice(last,m.index)});var code=text.slice(start,end?end.index:text.length),receipts=[];
-        var meta=/^\/\/ jarvis-context: ([A-Za-z0-9+/=]+)\n/.exec(code);if(meta){try{receipts=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(meta[1]),c=>c.charCodeAt(0))));}catch(_){}code=code.slice(meta[0].length);}
-        out.push({code:code,closed:!!end,receipts:receipts});last=stop;}
+      if(tag==='openui'||tag==='openui-lang'){out.push({text:text.slice(last,m.index)});var code=text.slice(start,end?end.index:text.length),receipts=[],harnessAuthored=false;
+        var meta=/^\/\/ jarvis-context: ([A-Za-z0-9+/=]+)\n/.exec(code);if(meta){try{receipts=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(meta[1]),c=>c.charCodeAt(0))));}catch(_){}if(receipts&&!Array.isArray(receipts)){harnessAuthored=receipts.authority==='harness';receipts=Array.isArray(receipts.receipts)?receipts.receipts:[];}code=code.slice(meta[0].length);}
+        out.push({code:code,closed:!!end,receipts:receipts,harnessAuthored:harnessAuthored});last=stop;}
       re.lastIndex=stop;
     }if(out.length)out.push({text:text.slice(last)});return out;
   }
   function active(r){return r.node.isConnected&&(!host.__jarvisModes||host.__jarvisModes().mode==='text')&&(!host.__jarvisConvId||String(host.__jarvisConvId())===r.conv);}
   function post(r,value){if(r.ready&&r.frame&&active(r))r.frame.contentWindow.postMessage(Object.assign({channel:'jarvis-openui',nonce:r.nonce},value),'*');}
-  function update(r){post(r,{type:'render',code:r.code,final:r.final,receipts:r.receipts,revision:++r.revision,theme:doc.documentElement.dataset.theme||(host.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')});}
+  function update(r){post(r,{type:'render',code:r.code,final:r.final,receipts:r.receipts,harnessAuthored:r.harnessAuthored===true,revision:++r.revision,theme:doc.documentElement.dataset.theme||(host.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')});}
   function status(r){var turn=r.node.closest('.turn');if(!turn)return;var siblings=Array.from(records).filter(v=>v.node.closest('.turn')===turn),state=siblings.some(v=>v.failed||v.mediaFailed)?'partial':siblings.some(v=>!v.mounted||v.mediaPending)?'pending':'';
     turn.dataset.openuiPartial=state==='partial'?'true':'false';turn.dataset.openuiStatus=state;
     host.dispatchEvent(new CustomEvent('jarvis:openui-status',{detail:{turn:turn.dataset.id,status:state}}));}
@@ -62,7 +62,7 @@
     parts.forEach(function(part,i){var kind=Object.prototype.hasOwnProperty.call(part,'code')?'ui':'text',slot=state[i];
       if(!slot||slot.kind!==kind){if(slot&&slot.record)dispose(slot.record);var node=doc.createElement('div');node.className=kind==='ui'?'jr-openui':'jr-openui-prose';if(slot)slot.node.replaceWith(node);else el.append(node);slot={node:node,kind:kind};state[i]=slot;if(kind==='ui')slot.record=mount(node);}
       if(kind==='text'){if(slot.text!==part.text){plain(slot.node,part.text);slot.text=part.text;}}
-      else{var r=slot.record,isFinal=!!final;if(r.code!==part.code||r.final!==isFinal){r.code=part.code;r.final=isFinal;r.receipts=part.receipts;update(r);}}
+      else{var r=slot.record,isFinal=!!final;if(r.code!==part.code||r.final!==isFinal||r.harnessAuthored!==part.harnessAuthored){r.code=part.code;r.final=isFinal;r.receipts=part.receipts;r.harnessAuthored=part.harnessAuthored;update(r);}}
     });while(state.length>parts.length){var old=state.pop();if(old.record)dispose(old.record);old.node.remove();}
   },records:records};
   new MutationObserver(function(){records.forEach(r=>{if(!r.node.isConnected&&r.ready)dispose(r);});}).observe(doc.documentElement,{childList:true,subtree:true});

@@ -1,11 +1,11 @@
 import {canonicalProgram} from './normalise';
 export {formulaStates} from './normalise';
 import {createParser} from '@openuidev/lang-core';
-import {library, type Receipt} from './library';
+import {library, publicImageURL, type Receipt} from './library';
 const parser=createParser(library.toJSONSchema());
 const INPUTS=new Set(['Input','Slider','Checkbox','TextArea','Select','RadioGroup','DatePicker','SegmentedControl','Timer']);
 const TRANSFORMS=new Set(['Filter','Sort','Take','Slice','Unique','Reverse','GroupBy','Pivot','Top','Between','Cumulative','MovingAvg']);
-export function validateProgram(code:string,final=true,receipts:Receipt[]=[]){
+export function validateProgram(code:string,final=true,receipts:Receipt[]=[],harnessAuthored=false){
   if(typeof code!=='string'||new TextEncoder().encode(code).length>65536)throw Error('Answer exceeds the visual response limit.');
   if(/\b(?:Query|Mutation)\s*\(/.test(code))throw Error('This answer requests an unavailable data operation.');
   const initial=parser.parse(code);if(initial.meta.statementCount>256)throw Error('Too many statements.');
@@ -22,6 +22,7 @@ export function validateProgram(code:string,final=true,receipts:Receipt[]=[]){
   function visit(v:any,depth=0){
     if(depth>64||++count>10000)throw Error('Answer is too complex.');
     if(!v||typeof v!=='object'||seen.has(v))return;seen.add(v);
+    if(harnessAuthored&&v.k==='Comp'&&v.name==='Receipt'&&v.args?.[0]?.k==='Str'&&!receipts.some(r=>r.id===v.args[0].v&&r.rows.length>0))throw Error('Referenced Receipt is unavailable. Use your grounded literal rows or an existing receipt; do not invent a receipt id.');
     if(v.type==='element'){
       if(!library.components[v.typeName])throw Error('Unsupported primitive.');
       const component=library.components[v.typeName];
@@ -33,9 +34,11 @@ export function validateProgram(code:string,final=true,receipts:Receipt[]=[]){
         if(value===null&&schema?.isOptional())continue;
         if(!dynamic(value)&&schema&&!schema.safeParse(value).success)throw Error('Invalid '+v.typeName+'.'+key+' property.');
       }
+      if(harnessAuthored&&v.typeName==='Image'&&typeof v.props.src==='string'&&!publicImageURL(v.props.src))throw Error('Image.src must be the exact public HTTPS image URL chosen by the harness; local addresses and credentials are not allowed.');
+      if(harnessAuthored&&v.typeName==='SearchImage')throw Error('SearchImage is unavailable for harness answers. Use Image(src, alt) with the exact public HTTPS image URL selected by your tools. Add source credits with Caption or Link.');
       if(v.typeName==='Chart'){
         // A receipt lookup (possibly transformed by @functions) is the only source of plotted data.
-        if(!sourced(v.props.data))throw Error('A dated data receipt is required for this chart.');
+        if(!harnessAuthored&&!sourced(v.props.data))throw Error('A dated data receipt is required for this chart.');
       }
     }
     for(const [key,child]of Object.entries(v)){if(['__proto__','prototype','constructor'].includes(key))throw Error('Invalid property.');visit(child,depth+1);}

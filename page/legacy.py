@@ -57,11 +57,23 @@ class TextLane:
         row=self.adapter.read(owner,conv,turn)
         async def events():
             yield self.frame('open',{'turn':token(conv,turn),'tid':turn,'conv':conv,'q':row['request']['question'],'attach':True})
-            last_progress=None;last_approval=0
+            last_progress=None;last_approval=0;last_steps=0;last_omitted=0
             while True:
                 state=self.adapter.snapshot(owner,conv,turn)
                 if state['current_progress'] and state['current_progress']['ts']!=last_progress:
                     last_progress=state['current_progress']['ts'];yield self.frame('page_progress',{**state['current_progress'],'conv':conv,'tid':turn})
+                rev=state.get('rev') or 0
+                omitted=state.get('journal_omitted') or 0
+                if omitted>(last_omitted or 0):
+                    last_omitted=omitted
+                    for step in (state.get('steps') or []):
+                        yield self.frame('tool_step',{**step,'conv':conv,'tid':turn,'snapshot':True,'omitted':omitted})
+                    last_steps=rev   # the snapshot is authoritative; never replay older transitions
+                if rev>last_steps:
+                    for step in (state.get('journal') or []):
+                        if step.get('rev',0)>last_steps:
+                            yield self.frame('tool_step',{**step,'conv':conv,'tid':turn})
+                    last_steps=rev
                 if state['approval'] and time.monotonic()-last_approval>2:
                     last_approval=time.monotonic();yield self.frame('approval_request',{**state['approval'],'conv':conv,'tid':turn})
                 if state['terminal']:
@@ -139,7 +151,7 @@ class TextLane:
     @staticmethod
     def answer(payload):
         if payload['kind']=='prose':return payload['intro']
-        receipt=base64.b64encode(json.dumps(payload.get('receipts',[]),ensure_ascii=False).encode()).decode()
+        receipt=base64.b64encode(json.dumps({'receipts':payload.get('receipts',[]),'authority':'harness'},ensure_ascii=False).encode()).decode()
         return payload['intro']+'\n\n```openui\n// jarvis-context: '+receipt+'\n'+payload['program']+'\n```'
     def overlay_history(self):
         # The durable turn records remain authoritative when a browser disappears.
@@ -148,11 +160,16 @@ class TextLane:
             for row in sorted(self.records(),key=lambda r:r['created_at']):
                 conv=row['conv']
                 if self.ns['tombstoned'](conv):continue
-                entry=self.ns['SESSIONS'].setdefault(conv,{'id':conv,'title':row['request']['question'][:64],'started':row['created_at'],'updated':row['created_at'],'turns':[]})
-                if row.get('status')!='ok':continue
-                terminal=row['terminal'];turns=entry.setdefault('turns',[])
-                item={'tid':row['turn'],'cid':conv,'q':row['request']['question'],'a':self.answer(terminal['payload']),
-                      't':row['created_at'],'startedAt':row['created_at'],'ms':row['timing']['complete_ms'],'srv':token(conv,row['turn'])}
+                entry=self.ns['SESSIONS'].setdefault(conv,{'id':conv,'title':((row.get('request') or {}).get('question') or '')[:64],'started':row['created_at'],'updated':row['created_at'],'turns':[]})
+                page_row = bool(row.get('steps') or row.get('journal') or row.get('version'))
+                if row.get('status')!='ok' and not page_row:continue
+                terminal=row.get('terminal') or {};turns=entry.setdefault('turns',[])
+                item={'tid':row['turn'],'cid':conv,'q':row['request']['question'],
+                      'a':self.answer(terminal['payload']) if (terminal.get('payload')) else (terminal.get('message') or ''),
+                      'status':row.get('status'),'errorId':(terminal or {}).get('id'),
+                      'steps':[{'call_id':s.get('call_id'),'action':s.get('action'),'status':s.get('status'),'seq':s.get('seq')} for s in (row.get('steps') or [])],
+                      'stepsOmitted':row.get('steps_omitted',0),
+                      't':row['created_at'],'startedAt':row['created_at'],'ms':(row.get('timing') or {}).get('complete_ms'),'srv':token(conv,row['turn'])}
                 existing=next((t for t in turns if t.get('tid')==row['turn']),None)
                 if existing:existing.update(item)
                 else:turns.append(item)

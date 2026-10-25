@@ -77,23 +77,39 @@ class ACPDriver:
         key=store.key(*(ctx[k] for k in ['owner','conv','session','turn','version']))
         seen=[None]
         def update(kind,data):
-            if kind=='tool_result':
-                marker=root()/('progress-'+key+'.json')
-                if marker.exists():
-                    ev=json.loads(marker.read_bytes())
-                    if ev['ts']!=seen[0]:
-                        seen[0]=ev['ts'];event('stored_progress',ev)
-            # Raw assistant text/tool traces are deliberately discarded.
+            # The page shows what the harness is doing. Forward only the call id, its lifecycle
+            # status and the operation name: never arguments, output, reasoning or free text.
+            if kind in ('tool_use','tool_result'):
+                d=data if isinstance(data,dict) else {}
+                op=str(d.get('name') or d.get('tool') or '')
+                call_id=str(d.get('id') or d.get('call_id') or d.get('tool_call_id') or '')
+                st=str(d.get('status') or ('running' if kind=='tool_use' else 'completed')).lower()
+                if st=='done': st='completed'
+                event('tool_step',{'op':op,'call_id':call_id,'status':st})
+                if kind=='tool_result':
+                    marker=root()/('progress-'+key+'.json')
+                    if marker.exists():
+                        ev=json.loads(marker.read_bytes())
+                        if ev['ts']!=seen[0]:
+                            seen[0]=ev['ts'];event('stored_progress',ev)
+            # Assistant text, reasoning and tool payloads are deliberately discarded.
         try:
             turn_prompt=[{"type":"text","text":question},
-                         {"type":"text","text":"<page_turn_context>Current UTC: "+datetime.now(timezone.utc).isoformat()+". This is runtime context, not supplied calculation data.</page_turn_context>"}]
+                         {"type":"text","text":"<page_turn_context>Current UTC: "+datetime.now(timezone.utc).isoformat()+". This is runtime context, not supplied calculation data.</page_turn_context><page_render_capabilities>Chart accepts your grounded literal rows or an existing Receipt; receipts are optional. You own data accuracy and source attribution. For photographs use Image(src, alt) with the exact public HTTPS image URL selected and inspected by your tools. The page displays that URL without searching or replacing it. SearchImage is unavailable in this channel. Use Caption and Link for source credits. Never invent URLs or claim a browser load succeeded before it did.</page_render_capabilities>"}]
             status,_=agent.ask(turn_prompt,on_event=update,stop=stop,retry=False)
-            if agent._session_id!=session['session']:return 'failed'
+            if status!='ok':return status
+            if agent._session_id!=session['session']:return 'session_changed'
             if session.get('completion_required'):
                 done=(agent.last_completion.get('_meta') or {}).get('jarvis_page') or {}
                 accepted=store.get(*(ctx[k] for k in ['owner','conv','session','turn','version']))
-                if done.get('session')!=session['session'] or done.get('turn')!=ctx['turn'] or done.get('ok') is not True or not accepted or done.get('payload_sha256')!=accepted['sha256']:
-                    return 'failed'
+                if done.get('session')!=session['session'] or done.get('turn')!=ctx['turn']:
+                    return 'completion_binding_mismatch'
+                if done.get('ok') is not True:
+                    allowed={'invalid_harness_result','harness_error','harness_api_error','harness_interrupted','harness_cancelled','harness_failed','turn_cancelled','presentation_missing','presentation_binding_mismatch','presentation_hash_mismatch'}
+                    reason=done.get('reason')
+                    return reason if isinstance(reason,str) and reason in allowed else 'completion_rejected'
+                if not accepted:return 'presentation_missing'
+                if done.get('payload_sha256')!=accepted['sha256']:return 'completion_hash_mismatch'
             return status
         finally:
             active.update(permission=None,stop=None)
