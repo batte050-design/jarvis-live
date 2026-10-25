@@ -455,6 +455,111 @@
   "sha256": "225add9d50bed02386bee09b8d2559074bd4e87c1432ee870b93dd98715c76cc"
  },
  {
+  "file": "harness/agent/anthropic_adapter.py",
+  "bytes": 47232,
+  "sha256": "731f8701c0df0fb4bea6bcd9c8e0320f496fb47f1244127e21404d2b910d4500"
+ },
+ {
+  "file": "harness/agent/conversation_loop.py",
+  "bytes": 90181,
+  "sha256": "f0fb4b2c8e8df4ff6aaaab91a3856adf7fcc438687de3cfb5db7d8956134cb3e"
+ },
+ {
+  "file": "harness/agent/message_metadata.py",
+  "bytes": 1516,
+  "sha256": "77fbe25c86f2ab524fcac61a83548768cffc82c476bb8a6ff83ebdf492a5479d"
+ },
+ {
+  "file": "harness/agent/session_persistence.py",
+  "bytes": 25074,
+  "sha256": "94defb56b339081e200bfbff6907e894596aa371839c5c8848dadecf1cc74e40"
+ },
+ {
+  "file": "harness/agent/transports/anthropic.py",
+  "bytes": 7414,
+  "sha256": "26099c12d701b14f0172b1335cd01e5dcec3468485161c8d7e281f31097382bf"
+ },
+ {
+  "file": "harness/agent/transports/codex.py",
+  "bytes": 46682,
+  "sha256": "70fbb76ab640a28075d587183659c40853eb1f567948e69b00ad4d862772b7b8"
+ },
+ {
+  "file": "harness/agent/turn_api_call.py",
+  "bytes": 13300,
+  "sha256": "5bdd9e1bc302a727a9744c59fce56f4026e2770ebf172fcb2a08d7f59a35ce7d"
+ },
+ {
+  "file": "harness/agent/turn_api_error.py",
+  "bytes": 22395,
+  "sha256": "695a29b8117678dc91bb9cf8234d9b2644123ff7f4e309b0cd80e0b3a20ca5d0"
+ },
+ {
+  "file": "harness/agent/turn_api_request.py",
+  "bytes": 8828,
+  "sha256": "e31386cb83cf551026e4df9b589173b54bc913b36fc1a09942a520e68033b59e"
+ },
+ {
+  "file": "harness/agent/turn_context.py",
+  "bytes": 67322,
+  "sha256": "85f857dc3c317366d918516bc8b37a022f1020b34da0c3966a31bd289b2942e1"
+ },
+ {
+  "file": "harness/agent/turn_facade.py",
+  "bytes": 11682,
+  "sha256": "09675cbc96c72d8f01a2a44712da2b508b2fda5d35c1b6f004edc781a588f38c"
+ },
+ {
+  "file": "harness/agent/turn_final_response.py",
+  "bytes": 15751,
+  "sha256": "23faa29c501cf069087f269533faeb893158bdea13441fad4317df34befb4ded"
+ },
+ {
+  "file": "harness/agent/turn_finalizer.py",
+  "bytes": 39534,
+  "sha256": "89b8b744c71bce9aed4275d0fe7427923cd2178f961cad63dd2e7601da9ec963"
+ },
+ {
+  "file": "harness/agent/turn_request_assembly.py",
+  "bytes": 13712,
+  "sha256": "13d696c214a2ed2712b1404b11e9e5239715e80f6415c9de057643c554b9363c"
+ },
+ {
+  "file": "harness/agent/turn_response_check.py",
+  "bytes": 18134,
+  "sha256": "8942e65c9f8f77de04163af625e833075e4e3b32d86826a689a15648316b1061"
+ },
+ {
+  "file": "harness/agent/turn_response_intake.py",
+  "bytes": 9469,
+  "sha256": "ff175a56283e807849da31e14416237b143c94f55a092e798c18a11479198e7b"
+ },
+ {
+  "file": "harness/agent/turn_tool_round.py",
+  "bytes": 14598,
+  "sha256": "da505e22e74ff59ef04cd5d66a2001043a305fc1a1db3d27c89cfe0898b3d21f"
+ },
+ {
+  "file": "harness/gateway/run_turn_runner.py",
+  "bytes": 120839,
+  "sha256": "4bf0f2560ea1c63f1bcfd48c234e664848258b57ed1c138080248809b95642a0"
+ },
+ {
+  "file": "harness/run_agent.py",
+  "bytes": 90983,
+  "sha256": "244da863d3c21591a3b5326dc14c2962d4e31131dda52df628502cd9fcbfea33"
+ },
+ {
+  "file": "harness/tui_gateway/prompt_turn.py",
+  "bytes": 61507,
+  "sha256": "6a578eff4acc589fafed92198f30ef3e0816389221a0970b457f9dbced3be7ba"
+ },
+ {
+  "file": "harness/tui_gateway/session_history.py",
+  "bytes": 22781,
+  "sha256": "d2496654eca7c6b9921de916607075fa6c033517e1c9f27165dcc25553c6bbf1"
+ },
+ {
   "file": "payload/identity-turn-transcripts.json",
   "bytes": 1720,
   "sha256": "400ed1beb50de8b6552038f18a8de4fd30714f80076a12bf2a8192be152dcca9"
