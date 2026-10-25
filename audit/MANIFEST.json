@@ -6,8 +6,8 @@
  },
  {
   "file": "FINDINGS.md",
-  "bytes": 6035,
-  "sha256": "38b40d40058ccd30dcc1c02b1972e6b68bac154ff6717951313b5086576c4d27"
+  "bytes": 6887,
+  "sha256": "babf8d5cbb492ff43fd5809c26c19d4f40d92d47012e98b901c26096e2895d3d"
  },
  {
   "file": "PATHMAP.md",
@@ -443,6 +443,21 @@
   "file": "app/widgets.py",
   "bytes": 16585,
   "sha256": "1bc6adb1e914bfe960349e03d6c72c81d96856489c9f526399ac5f4f7119eb82"
+ },
+ {
+  "file": "harness/acp_adapter/extract-run-conversation.py",
+  "bytes": 3802,
+  "sha256": "9726d6b9b6c4b4cb855622c0450c72cb75eb040629af3cf630b68d590d747871"
+ },
+ {
+  "file": "harness/acp_adapter/page_presentation.py",
+  "bytes": 8774,
+  "sha256": "225add9d50bed02386bee09b8d2559074bd4e87c1432ee870b93dd98715c76cc"
+ },
+ {
+  "file": "payload/identity-turn-transcripts.json",
+  "bytes": 1720,
+  "sha256": "400ed1beb50de8b6552038f18a8de4fd30714f80076a12bf2a8192be152dcca9"
  },
  {
   "file": "payload/presentation-8094761b64196a576c076d9da78e782ae74e3c67cc6f9ad5eb5eb94dfbe7167b.json",

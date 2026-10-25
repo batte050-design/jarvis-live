@@ -1,0 +1,58 @@
+{
+ "note": "two failed identity turns under presentation 1.3.0; transcripts read from state.db (messages) by bound session",
+ "turns": [
+  {
+   "turn": "ad888951b08748d7b4fd9b3fa3b8a816",
+   "conv": "d989c575a83e47609c73c228937448f6",
+   "session": "ce54651f-c860-44bb-9f4e-f737f3b09807",
+   "error_id": "3d206567b76440ada8be62f0cbd2cdab",
+   "code": "harness_presentation_missing",
+   "server_ms": 8027,
+   "messages": 2,
+   "assistant_final_text": "I'm JARVIS.",
+   "tools_invoked": [],
+   "page_turn_context_present": true,
+   "render_capabilities_present": false,
+   "result_flags": {
+    "error": null,
+    "api_error": null,
+    "interrupted": null,
+    "cancelled": null,
+    "failed": null
+   }
+  },
+  {
+   "turn": "408938d200c44125af5a97d15dade3d3",
+   "conv": "560c58f3d4bb4dd4a9c10f08ae87cea3",
+   "session": "68069c5b-51d4-4c25-ae83-4c2216f52267",
+   "error_id": "8de54ce6426d48adaa979ce2a6deabd9",
+   "code": "harness_presentation_missing",
+   "server_ms": 7186,
+   "messages": 2,
+   "assistant_final_text": "JARVIS.\n\nI'm the agent running this session \u2014 the same one on your WhatsApp line, the CLI, and this editor panel.",
+   "tools_invoked": [],
+   "page_turn_context_present": true,
+   "render_capabilities_present": false,
+   "result_flags": {
+    "error": null,
+    "api_error": null,
+    "interrupted": null,
+    "cancelled": null,
+    "failed": null
+   }
+  }
+ ],
+ "control_turn_same_install": {
+  "turn": "486026d0a3ed4897896370cbdf09315d",
+  "conv": "ab535415b82f45a7ab220e479c32a0b7",
+  "session": "fb8110f7-03da-46d9-9b87-a5408d8c9c68",
+  "status": "ok",
+  "messages": 6,
+  "tools_invoked": [
+   "emit_ui",
+   "emit_ui"
+  ],
+  "render_capabilities_present": true,
+  "server_ms": 14280
+ }
+}
