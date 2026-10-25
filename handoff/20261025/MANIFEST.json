@@ -1,0 +1,207 @@
+[
+ {
+  "file": "harness/LOCAL-MODIFICATIONS.patch",
+  "bytes": 48956,
+  "sha256_16": "ac76ad431afe134e"
+ },
+ {
+  "file": "harness/UPSTREAM-HEAD.txt",
+  "bytes": 41,
+  "sha256_16": "788a7397138ba6eb"
+ },
+ {
+  "file": "harness/acp_adapter/page_presentation.py",
+  "bytes": 8488,
+  "sha256_16": "27b4baefa360122f"
+ },
+ {
+  "file": "harness/acp_adapter/server.py",
+  "bytes": 62607,
+  "sha256_16": "fc269d4d18c044c2"
+ },
+ {
+  "file": "harness/acp_adapter/session.py",
+  "bytes": 29405,
+  "sha256_16": "4b491b6b66a85ac4"
+ },
+ {
+  "file": "harness/agent/prompt_builder.py",
+  "bytes": 108218,
+  "sha256_16": "fe0cee8d5521f951"
+ },
+ {
+  "file": "harness/agent/system_prompt.py",
+  "bytes": 47918,
+  "sha256_16": "abe412d0d0b0d5dd"
+ },
+ {
+  "file": "harness/plugins/page_presentation/__init__.py",
+  "bytes": 5496,
+  "sha256_16": "9fc15dc4089350cc"
+ },
+ {
+  "file": "harness/plugins/page_presentation/approvals.py",
+  "bytes": 2211,
+  "sha256_16": "88b25a27b387a67f"
+ },
+ {
+  "file": "harness/plugins/page_presentation/evaluate.cjs",
+  "bytes": 1375055,
+  "sha256_16": "d19dc1e738719f9c"
+ },
+ {
+  "file": "harness/plugins/page_presentation/evaluate.cjs.LEGAL.txt",
+  "bytes": 1145,
+  "sha256_16": "d1b3eab38df9ae92"
+ },
+ {
+  "file": "harness/plugins/page_presentation/locks.py",
+  "bytes": 1346,
+  "sha256_16": "3ff112398b7c792f"
+ },
+ {
+  "file": "harness/plugins/page_presentation/openui_validate_once.py",
+  "bytes": 1528,
+  "sha256_16": "487e4aa22c1e07e1"
+ },
+ {
+  "file": "harness/plugins/page_presentation/plugin.yaml",
+  "bytes": 483,
+  "sha256_16": "71884f482b71d7f2"
+ },
+ {
+  "file": "harness/plugins/page_presentation/progress.py",
+  "bytes": 1210,
+  "sha256_16": "d3415ba786c46e88"
+ },
+ {
+  "file": "harness/plugins/page_presentation/prompt.txt",
+  "bytes": 2946,
+  "sha256_16": "fb260be0921849d8"
+ },
+ {
+  "file": "harness/plugins/page_presentation/store.py",
+  "bytes": 2588,
+  "sha256_16": "9f2aff2fdbc50da3"
+ },
+ {
+  "file": "harness/plugins/page_presentation/version.json",
+  "bytes": 49,
+  "sha256_16": "65622947453230a5"
+ },
+ {
+  "file": "harness/tools/approval.py",
+  "bytes": 69587,
+  "sha256_16": "b41f99bc6de255a5"
+ },
+ {
+  "file": "harness/tools/mcp_schema_cache.py",
+  "bytes": 5815,
+  "sha256_16": "0c52d1f66c105813"
+ },
+ {
+  "file": "live/build_v1.py",
+  "bytes": 46838,
+  "sha256_16": "379be83a04a6d790"
+ },
+ {
+  "file": "live/index.html",
+  "bytes": 99973,
+  "sha256_16": "66b0fb7368680b11"
+ },
+ {
+  "file": "live/index_v1.html",
+  "bytes": 122846,
+  "sha256_16": "da255c5f048320fa"
+ },
+ {
+  "file": "live/page/adapter.py",
+  "bytes": 15236,
+  "sha256_16": "29c085aee8c05fd6"
+ },
+ {
+  "file": "live/page/bootstrap.py",
+  "bytes": 873,
+  "sha256_16": "cb9bb4074c797072"
+ },
+ {
+  "file": "live/page/driver.py",
+  "bytes": 6545,
+  "sha256_16": "1820dc8b7d3f39de"
+ },
+ {
+  "file": "live/page/http.py",
+  "bytes": 4281,
+  "sha256_16": "90a2ca1a026d5d13"
+ },
+ {
+  "file": "live/page/installed_hooks.py",
+  "bytes": 3144,
+  "sha256_16": "96253f53685bdf12"
+ },
+ {
+  "file": "live/page/legacy.py",
+  "bytes": 10641,
+  "sha256_16": "402f8c02c6f54b26"
+ },
+ {
+  "file": "live/page/profile.py",
+  "bytes": 969,
+  "sha256_16": "9fd8a339f7f87b3f"
+ },
+ {
+  "file": "live/page/recovery.py",
+  "bytes": 3924,
+  "sha256_16": "be83c96f066ecdc4"
+ },
+ {
+  "file": "live/page/warm_agent.py",
+  "bytes": 21424,
+  "sha256_16": "7974ed2127976b4a"
+ },
+ {
+  "file": "live/response_authoring.py",
+  "bytes": 62309,
+  "sha256_16": "694f0eec13c482c5"
+ },
+ {
+  "file": "live/response_images.py",
+  "bytes": 4427,
+  "sha256_16": "480c4b587c6e4326"
+ },
+ {
+  "file": "live/response_layer.py",
+  "bytes": 7212,
+  "sha256_16": "c2ac78bedf8ddb9a"
+ },
+ {
+  "file": "live/response_lookup.py",
+  "bytes": 5366,
+  "sha256_16": "08e588249db784f1"
+ },
+ {
+  "file": "live/response_openui.py",
+  "bytes": 34277,
+  "sha256_16": "3ee8a826e0b5432b"
+ },
+ {
+  "file": "live/response_sources.py",
+  "bytes": 20855,
+  "sha256_16": "342b47776da42d2e"
+ },
+ {
+  "file": "live/server.py",
+  "bytes": 468273,
+  "sha256_16": "a07c3edee54e647b"
+ },
+ {
+  "file": "live/v1.css",
+  "bytes": 202910,
+  "sha256_16": "ed362e86f380abf3"
+ },
+ {
+  "file": "live/v1.js",
+  "bytes": 591877,
+  "sha256_16": "69cb137933ddb872"
+ }
+]

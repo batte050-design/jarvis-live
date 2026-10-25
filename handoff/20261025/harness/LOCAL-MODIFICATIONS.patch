@@ -1,0 +1,829 @@
+diff --git a/acp_adapter/auth.py b/acp_adapter/auth.py
+index a56a76179b..c5948f7ad9 100644
+--- a/acp_adapter/auth.py
++++ b/acp_adapter/auth.py
+@@ -1,4 +1,4 @@
+-"""ACP auth helpers — detect and advertise Hermes authentication methods."""
++"""ACP auth helpers — detect and advertise JARVIS authentication methods."""
+ 
+ from __future__ import annotations
+ 
+@@ -9,7 +9,7 @@ TERMINAL_SETUP_AUTH_METHOD_ID = "hermes-setup"
+ 
+ 
+ def detect_provider() -> Optional[str]:
+-    """Resolve the active Hermes runtime provider, or None if unavailable.
++    """Resolve the active JARVIS runtime provider, or None if unavailable.
+ 
+     A callable ``api_key`` (Azure Foundry Entra ID bearer-token provider, see
+     :mod:`agent.azure_identity_adapter`) counts as a valid credential; otherwise
+@@ -28,10 +28,10 @@ def detect_provider() -> Optional[str]:
+ 
+ 
+ def build_auth_methods() -> list[Any]:
+-    """Return registry-compatible ACP auth methods for Hermes.
++    """Return registry-compatible ACP auth methods for JARVIS.
+ 
+     The ACP registry requires at least one usable auth method in the initial
+-    handshake. A fresh Zed install may have no Hermes credentials yet, so the
++    handshake. A fresh Zed install may have no JARVIS credentials yet, so the
+     terminal setup method is always advertised; when credentials resolve, the
+     provider is also advertised as the default agent-managed runtime method."""
+     from acp.schema import AuthMethodAgent, TerminalAuthMethod
+@@ -41,12 +41,12 @@ def build_auth_methods() -> list[Any]:
+     if provider:
+         methods.append(AuthMethodAgent(
+             id=provider, name=f"{provider} runtime credentials",
+-            description=f"Authenticate Hermes using the currently configured {provider} runtime credentials.",
++            description=f"Authenticate JARVIS using the currently configured {provider} runtime credentials.",
+         ))
+     methods.append(TerminalAuthMethod(
+-        id=TERMINAL_SETUP_AUTH_METHOD_ID, name="Configure Hermes provider", type="terminal", args=["--setup"],
+-        description=("Open Hermes' interactive model/provider setup in a terminal. "
+-                     "Use this when Hermes has not been configured on this machine yet."),
++        id=TERMINAL_SETUP_AUTH_METHOD_ID, name="Configure JARVIS provider", type="terminal", args=["--setup"],
++        description=("Open JARVIS' interactive model/provider setup in a terminal. "
++                     "Use this when JARVIS has not been configured on this machine yet."),
+     ))
+     return methods
+ 
+@@ -57,6 +57,6 @@ def build_auth_methods() -> list[Any]:
+ # The whole block is removed by reverting the commit that added it.
+ 
+ def has_provider() -> bool:
+-    """Return True if Hermes can resolve any runtime provider credentials."""
++    """Return True if JARVIS can resolve any runtime provider credentials."""
+     return detect_provider() is not None
+ # ---- END PLUGIN-COMPAT ----
+diff --git a/acp_adapter/commands.py b/acp_adapter/commands.py
+index 522140d7f7..9a966f99e8 100644
+--- a/acp_adapter/commands.py
++++ b/acp_adapter/commands.py
+@@ -71,7 +71,7 @@ class SlashCommandsMixin:
+             "Queue a prompt to run after the current turn finishes",
+             "prompt to run next",
+         ),
+-        "version": ("Show Hermes version", "Show Hermes version", None),
++        "version": ("Show JARVIS version", "Show JARVIS version", None),
+     }
+ 
+ 
+@@ -310,4 +310,4 @@ class SlashCommandsMixin:
+         return f"Queued for the next turn. ({_queue_prompt(state, queued_text)} queued)"
+ 
+     def _cmd_version(self, args: str, state: SessionState) -> str:
+-        return f"Hermes Agent v{HERMES_VERSION}"
++        return f"JARVIS Agent v{HERMES_VERSION}"
+diff --git a/acp_adapter/content.py b/acp_adapter/content.py
+index d2137ffd38..0236fa3d76 100644
+--- a/acp_adapter/content.py
++++ b/acp_adapter/content.py
+@@ -1,4 +1,4 @@
+-"""ACP prompt content blocks -> Hermes/OpenAI user-content payloads (text, images, resources)."""
++"""ACP prompt content blocks -> JARVIS/OpenAI user-content payloads (text, images, resources)."""
+ 
+ from __future__ import annotations
+ 
+@@ -150,7 +150,7 @@ def _resource_link_to_parts(block: ResourceContentBlock) -> list[dict[str, Any]]
+ 
+     if path is None:
+         return _text_parts(
+-            **ident, body="[Resource link only; Hermes cannot read non-file ACP resource URIs directly.]"
++            **ident, body="[Resource link only; JARVIS cannot read non-file ACP resource URIs directly.]"
+         )
+ 
+     image_mime = mime_type if _is_image_resource(mime_type) else _IMAGE_SUFFIX_MIME.get(path.suffix.lower())
+@@ -247,7 +247,7 @@ def _append_parts(parts: list, text_parts: list[str], new_parts: list[dict[str,
+ 
+ 
+ def _content_blocks_to_openai_user_content(prompt: list[PromptBlock]) -> str | list[dict[str, Any]]:
+-    """Convert ACP prompt blocks into a Hermes/OpenAI-compatible user content payload."""
++    """Convert ACP prompt blocks into a JARVIS/OpenAI-compatible user content payload."""
+     parts: list[dict[str, Any]] = []
+     text_parts: list[str] = []
+ 
+diff --git a/acp_adapter/entry.py b/acp_adapter/entry.py
+index fc3386f034..d212b38250 100644
+--- a/acp_adapter/entry.py
++++ b/acp_adapter/entry.py
+@@ -92,11 +92,11 @@ def _load_env() -> None:
+ 
+ 
+ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+-    parser = argparse.ArgumentParser(prog="hermes-acp", description="Run Hermes Agent as an ACP stdio server.")
+-    parser.add_argument("--version", action="store_true", help="Print Hermes version and exit")
++    parser = argparse.ArgumentParser(prog="hermes-acp", description="Run JARVIS Agent as an ACP stdio server.")
++    parser.add_argument("--version", action="store_true", help="Print JARVIS version and exit")
+     parser.add_argument("--check", action="store_true", help="Verify ACP dependencies and adapter imports, then exit")
+     parser.add_argument("--setup", action="store_true",
+-                        help="Run interactive Hermes provider/model setup for ACP terminal auth")
++                        help="Run interactive JARVIS provider/model setup for ACP terminal auth")
+     parser.add_argument("--setup-browser", action="store_true",
+                         help="Install agent-browser + Playwright Chromium into ~/.hermes/node/ "
+                              "for browser tool support. Idempotent.")
+@@ -116,7 +116,7 @@ def _run_check() -> None:
+     import acp  # noqa: F401
+     from acp_adapter.server import HermesACPAgent  # noqa: F401
+ 
+-    print("Hermes ACP check OK")
++    print("JARVIS ACP check OK")
+ 
+ 
+ def _run_setup() -> None:
+diff --git a/acp_adapter/events.py b/acp_adapter/events.py
+index ff1706eb22..199e0415e6 100644
+--- a/acp_adapter/events.py
++++ b/acp_adapter/events.py
+@@ -28,7 +28,7 @@ _PLAN_STATUS = {"pending": "pending", "in_progress": "in_progress", "completed":
+ 
+ 
+ def _build_plan_update_from_todo_result(result: Any) -> AgentPlanUpdate | None:
+-    """Translate Hermes' todo tool result into ACP's native plan update.
++    """Translate JARVIS' todo tool result into ACP's native plan update.
+ 
+     Zed renders ``sessionUpdate: plan`` as its first-class task panel, so the
+     todo state is exposed natively rather than only as a tool-call transcript."""
+diff --git a/acp_adapter/model_catalog.py b/acp_adapter/model_catalog.py
+index b2b036f51f..9c6f698890 100644
+--- a/acp_adapter/model_catalog.py
++++ b/acp_adapter/model_catalog.py
+@@ -1,4 +1,4 @@
+-"""ACP model picker: deduplicated ``provider:model`` rows from the Hermes inventory + named endpoints."""
++"""ACP model picker: deduplicated ``provider:model`` rows from the JARVIS inventory + named endpoints."""
+ 
+ from __future__ import annotations
+ 
+diff --git a/acp_adapter/permissions.py b/acp_adapter/permissions.py
+index 3bdbb7f290..05ef038359 100644
+--- a/acp_adapter/permissions.py
++++ b/acp_adapter/permissions.py
+@@ -1,4 +1,4 @@
+-"""ACP permission bridging for Hermes dangerous-command approvals."""
++"""ACP permission bridging for JARVIS dangerous-command approvals."""
+ 
+ from __future__ import annotations
+ 
+@@ -33,7 +33,7 @@ def _permission_option_supports_kind(kind: str) -> bool:
+ def _build_permission_options(
+     *, allow_permanent: bool, allow_session: bool = True, smart_denied: bool = False,
+ ) -> list[PermissionOption]:
+-    """Return ACP options that match Hermes approval semantics."""
++    """Return ACP options that match JARVIS approval semantics."""
+     # A gate that re-asks every time (allow_session=False, e.g. protected
+     # agent-instruction writes) collapses to the same two options as a Smart
+     # DENY override — offering a scope Hermes discards would re-prompt every write.
+@@ -65,7 +65,7 @@ def _build_permission_tool_call(command: str, description: str):
+ 
+ 
+ def _map_outcome_to_hermes(outcome: object, *, allowed_option_ids: set[str]) -> str:
+-    """Map an ACP permission outcome into Hermes approval strings."""
++    """Map an ACP permission outcome into JARVIS approval strings."""
+     if not isinstance(outcome, AllowedOutcome):
+         return "deny"
+     if outcome.option_id not in allowed_option_ids:
+@@ -117,7 +117,7 @@ def await_permission(
+ def resolve_permission_timeout(timeout: float | None) -> float:
+     """``None`` → the user's ``approvals.timeout`` (same knob as CLI/gateway prompts, default
+     300 s). The ACP bridges used to hardcode 60 s, so a host whose approval card was still
+-    waiting saw Hermes self-deny under it (#73403)."""
++    waiting saw JARVIS self-deny under it (#73403)."""
+     if timeout is not None:
+         return float(timeout)
+     from tools.approval_context import _get_approval_timeout
+@@ -128,7 +128,7 @@ def resolve_permission_timeout(timeout: float | None) -> float:
+ def make_approval_callback(request_permission_fn: Callable, loop: asyncio.AbstractEventLoop,
+                            session_id: str, timeout: float | None = None,
+                            send_update: Callable[[object], None] | None = None) -> Callable[..., str]:
+-    """Return a Hermes approval callback (``command, description, **kw`` as used by
++    """Return a JARVIS approval callback (``command, description, **kw`` as used by
+     ``tools.approval.prompt_dangerous_approval()``) that bridges to the ACP
+     connection's ``request_permission`` coroutine on ``loop``; auto-denies after ``timeout`` s
+     (``None`` → ``approvals.timeout``, read per request)."""
+diff --git a/acp_adapter/provenance.py b/acp_adapter/provenance.py
+index 56db28fb43..5f953dc068 100644
+--- a/acp_adapter/provenance.py
++++ b/acp_adapter/provenance.py
+@@ -1,12 +1,12 @@
+ """Derive ACP session-provenance metadata from the existing compression chain.
+ 
+-Additive Hermes extension under ACP ``_meta.hermes`` (unknown to other clients,
++Additive JARVIS extension under ACP ``_meta.hermes`` (unknown to other clients,
+ so ignored). No new persisted state: everything is derived from the ``sessions``
+ table (``parent_session_id`` / ``end_reason``), which already models
+ compression-continuation chains.
+ 
+ The ACP/editor ``session_id`` stays the stable public handle; when compression
+-rotates the internal Hermes head, ``build_session_provenance`` exposes the
++rotates the internal JARVIS head, ``build_session_provenance`` exposes the
+ previous/current internal ids and lineage root without parsing status text.
+ """
+ 
+diff --git a/acp_adapter/server.py b/acp_adapter/server.py
+index d23e358999..bbb23eed0b 100644
+--- a/acp_adapter/server.py
++++ b/acp_adapter/server.py
+@@ -1,4 +1,4 @@
+-"""ACP agent server — exposes Hermes Agent via the Agent Client Protocol."""
++"""ACP agent server — exposes JARVIS Agent via the Agent Client Protocol."""
+ 
+ from __future__ import annotations
+ 
+@@ -24,6 +24,7 @@ from acp.schema import (
+     SetSessionModeResponse, SetSessionModelResponse, TextContentBlock, Usage, UsageUpdate, UserMessageChunk,
+ )
+ 
++from acp_adapter import page_presentation as page_channel
+ from acp_adapter.auth import TERMINAL_SETUP_AUTH_METHOD_ID, build_auth_methods, detect_provider
+ from acp_adapter.commands import HERMES_VERSION, SlashCommandsMixin, _estimate_tokens
+ from acp_adapter.content import PromptBlock, _content_blocks_to_openai_user_content, _extract_text
+@@ -231,11 +232,14 @@ class _TurnCallbacks:
+ 
+ 
+ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+-    """ACP Agent implementation wrapping Hermes AIAgent."""
++    """ACP Agent implementation wrapping JARVIS AIAgent."""
+ 
+     _EDIT_APPROVAL_POLICY_CONFIG_ID = "edit_approval_policy"
+     _EDIT_APPROVAL_POLICY_DEFAULT = "ask"
+     _MODE_DEFAULT = "default"
++    # A client may ask for a thinking depth per session; the cold CLI path passes --reasoning on
++    # every turn, so a warm, reused session has to be able to match it.
++    _REASONING_CONFIG_IDS = ("reasoning_effort", "reasoning")
+     # mode id -> (edit approval policy, display name, description)
+     _MODES: dict[str, tuple[str, str, str]] = {
+         "default": ("ask", "Default", "Ask before edits."),
+@@ -296,7 +300,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+         return policy, state.cwd
+ 
+     def _build_model_state(self, state: SessionState) -> SessionModelState | None:
+-        """Authenticated providers + models, from the shared Hermes inventory (same substrate
++        """Authenticated providers + models, from the shared JARVIS inventory (same substrate
+         as ``hermes model``/TUI/dashboard) so the selector isn't just the current curated list."""
+         model = str(state.model or getattr(state.agent, "model", "") or "").strip()
+         provider = getattr(state.agent, "provider", None) or detect_provider() or "openrouter"
+@@ -322,6 +326,9 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+         — so ACP never hands the session a model no provider can serve. ``provider:model`` picker
+         ids become ``--provider``. ACP never persists. ``keep_endpoint`` carries base_url/api_mode
+         over when the provider is unchanged."""
++        if getattr(state.agent, "_page_binding", None):
++            raise ValueError("page_model_change_requires_new_session")
++
+         from hermes_cli.config import get_compatible_custom_providers, load_config
+         from hermes_cli.model_switch import switch_model
+         from hermes_cli.models import parse_model_input
+@@ -425,6 +432,8 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+         """Register ACP-provided MCP servers and refresh the agent tool surface."""
+         if not mcp_servers:
+             return
++        if getattr(state.agent, "_page_frozen", None):
++            raise ValueError("page_tools_frozen_requires_new_session")
+         try:
+             from agent.runtime_cwd import set_session_cwd
+             from tools.mcp_tool_discovery import register_mcp_servers
+@@ -476,6 +485,9 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+         frozen and late servers land via the between-turns prologue refresh
+         (``agent/turn_context.py``). No-op if discovery finished, join timed out, registry
+         unchanged, or session closed."""
++        if getattr(state.agent, "_page_binding", None):
++            return
++
+         try:
+             from hermes_cli.mcp_startup import mcp_discovery_in_flight
+         except Exception:
+@@ -529,6 +541,10 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+             "Initialize from %s (protocol v%s)", client_info.name if client_info else "unknown",
+             protocol_version if isinstance(protocol_version, int) else acp.PROTOCOL_VERSION,
+         )
++        self.session_manager.set_client_identity(
++            client_info.name if client_info else None,
++            client_info.version if client_info else None,
++        )
+ 
+         return InitializeResponse(
+             protocol_version=acp.PROTOCOL_VERSION,
+@@ -595,10 +611,20 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+                 )
+         self._schedule_available_commands_update(state.session_id)
+         self._schedule_soon(lambda: self._send_usage_update(state))
++        meta = dict(self._provenance_meta(state.session_id, getattr(state.agent, "session_id", state.session_id)) or {})
++        page_binding = await asyncio.to_thread(page_channel.attest, state)
++        if page_binding:
++            self.session_manager.save_session(state.session_id)
++            db = self.session_manager._get_db()
++            row = db.get_session(state.session_id) if db is not None else None
++            from acp_adapter.session import _parse_model_config
++            if not row or _parse_model_config(row.get("model_config")).get("page_presentation") != page_binding:
++                raise RuntimeError("page_session_persistence_not_confirmed")
++            meta["jarvis_page"] = page_binding
+         return {
+             "models": self._build_model_state(state),
+             "modes": self._session_modes(state),
+-            "field_meta": self._provenance_meta(state.session_id, getattr(state.agent, "session_id", state.session_id)),
++            "field_meta": meta,
+         }
+ 
+     async def _attach_session_mcp(self, state: SessionState, mcp_servers: list | None, log: str, *log_args) -> None:
+@@ -756,6 +782,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+         os.environ, so concurrent workers can't race a global flag onto the non-interactive
+         auto-approve path (GHSA-96vc-wcxf-jjff)."""
+         agent = state.agent
++        page_channel.begin(state)
+         with contextlib.ExitStack() as stack:
+             # HERMES_SESSION_KEY scopes per-session caches (interactive sudo password) to this
+             # session, not the reused thread. ``cwd`` pins what the system prompt reports as the
+@@ -809,7 +836,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+                 return {"final_response": f"Error: {e}", "messages": state.history}
+ 
+     async def prompt(self, prompt: list[PromptBlock], session_id: str, **kwargs: Any) -> PromptResponse:
+-        """Run Hermes on the user's prompt and stream events back to the editor."""
++        """Run JARVIS on the user's prompt and stream events back to the editor."""
+         state = await asyncio.to_thread(self.session_manager.get_session, session_id)
+         if state is None:
+             logger.error("prompt: session %s not found", session_id)
+@@ -824,7 +851,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+         user_text, user_content = self._rewrite_prompt_for_interrupt(state, user_text, user_content, text_only_prompt)
+ 
+         # Slash commands are text-only; a prompt with media goes to the agent even if it starts with "/".
+-        if text_only_prompt and isinstance(user_content, str) and user_text.startswith("/"):
++        if not getattr(state.agent, "_page_binding", None) and text_only_prompt and isinstance(user_content, str) and user_text.startswith("/"):
+             # Off the loop: /model validates through switch_model (network I/O) and /compress
+             # calls the LLM; handlers are sync and hold no loop-bound state.
+             response_text = await asyncio.to_thread(self._handle_slash_command, user_text, state)
+@@ -871,7 +898,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+             with state.runtime_lock:
+                 state.is_running = False
+                 state.current_prompt_text = ""
+-            return PromptResponse(stop_reason="end_turn")
++            return PromptResponse(stop_reason="refusal" if getattr(state.agent, "_page_binding", None) else "end_turn")
+ 
+         return await self._finish_turn(state, session_id, conn, result, pre_turn_hermes_id, cbs.streamed)
+ 
+@@ -919,12 +946,14 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+             cbs.stream_delta_cb = stream_delta_cb
+             # Closes the synthetic permission-request bubble once the user has answered.
+             send_update = lambda update: _send_update(conn, session_id, loop, update)  # noqa: E731
+-            cbs.approval_cb = make_approval_callback(conn.request_permission, loop, session_id, send_update=send_update)
++            request_permission = (page_channel.permission_request(conn, state, tool_call_ids, tool_call_meta)
++                                  if getattr(state.agent, "_page_binding", None) else conn.request_permission)
++            cbs.approval_cb = make_approval_callback(request_permission, loop, session_id, send_update=send_update)
+             try:
+                 from acp_adapter.edit_approval import make_acp_edit_approval_requester
+ 
+                 cbs.edit_approval_requester = make_acp_edit_approval_requester(
+-                    conn.request_permission, loop, session_id, auto_approve_getter=policy_getter,
++                    request_permission, loop, session_id, auto_approve_getter=policy_getter,
+                     send_update=send_update,
+                 )
+             except Exception:
+@@ -996,7 +1025,9 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+                 cached_read_tokens=result.get("cache_read_tokens"),
+             )
+         await self._send_usage_update(state)
+-        return PromptResponse(stop_reason="cancelled" if cancelled else "end_turn", usage=usage)
++        page_completion = page_channel.complete(state, result)
++        return PromptResponse(stop_reason="cancelled" if cancelled else "end_turn", usage=usage,
++                              **({"field_meta": {"jarvis_page": page_completion}} if page_completion is not None else {}))
+ 
+     async def _drain_queued_prompts(self, state: SessionState, session_id: str, conn: Any) -> None:
+         """Run queued prompts while the session is idle. Reached from ``_finish_turn`` and
+@@ -1067,7 +1098,7 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+     async def set_config_option(
+         self, config_id: str, session_id: str, value: str, **kwargs: Any
+     ) -> SetSessionConfigOptionResponse | None:
+-        """Accept ACP config option updates even when Hermes has no typed ACP config surface yet."""
++        """Accept ACP config option updates even when JARVIS has no typed ACP config surface yet."""
+         state = await asyncio.to_thread(self.session_manager.get_session, session_id)
+         if state is None:
+             logger.warning("Session %s: config update requested for missing session", session_id)
+@@ -1075,6 +1106,21 @@ class HermesACPAgent(SlashCommandsMixin, acp.Agent):
+ 
+         if str(config_id) == self._EDIT_APPROVAL_POLICY_CONFIG_ID:
+             state.mode = self._EDIT_APPROVAL_POLICY_TO_MODE.get(str(value), self._MODE_DEFAULT)
++        elif str(config_id) in self._REASONING_CONFIG_IDS:
++            # Apply it, do not just record it: a reused session otherwise keeps the config's
++            # default effort, which is deeper and dearer than the caller asked for. ``none`` must
++            # arrive as {"enabled": False} - that is how thinking is switched off on the wire.
++            from hermes_constants import parse_reasoning_effort
++
++            parsed = parse_reasoning_effort(value)
++            if parsed is None:
++                logger.warning("Session %s: unknown reasoning_effort %r ignored", session_id, value)
++            else:
++                state.reasoning_override = parsed
++                agent = getattr(state, "agent", None)
++                if agent is not None:
++                    agent.reasoning_config = parsed
++                logger.info("Session %s: reasoning_effort applied as %s", session_id, parsed)
+         else:
+             options = getattr(state, "config_options", None)
+             if not isinstance(options, dict):
+diff --git a/acp_adapter/session.py b/acp_adapter/session.py
+index 9598f18af6..572bdb8c04 100644
+--- a/acp_adapter/session.py
++++ b/acp_adapter/session.py
+@@ -1,4 +1,4 @@
+-"""ACP session manager — maps ACP sessions to Hermes AIAgent instances.
++"""ACP session manager — maps ACP sessions to JARVIS AIAgent instances.
+ 
+ Sessions are persisted to the shared SessionDB (``~/.hermes/state.db``) so they
+ survive process restarts and appear in ``session_search``; ``load_session`` /
+@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
+ 
+ def _translate_acp_cwd(cwd: str) -> str:
+     """Translate Windows ACP cwd values (``E:\\Projects``, ``\\\\wsl.localhost\\``) to POSIX form
+-    when Hermes runs in WSL so agents, tools, and persisted sessions agree; no-op elsewhere."""
++    when JARVIS runs in WSL so agents, tools, and persisted sessions agree; no-op elsewhere."""
+     return translate_cwd_for_wsl_backend(str(cwd))
+ 
+ 
+@@ -130,7 +130,7 @@ def _first_user_preview(history: List[Dict[str, Any]], default: str) -> str:
+ 
+ @dataclass
+ class SessionState:
+-    """Tracks per-session state for an ACP-managed Hermes agent."""
++    """Tracks per-session state for an ACP-managed JARVIS agent."""
+ 
+     session_id: str
+     agent: Any  # AIAgent instance
+@@ -154,7 +154,7 @@ class SessionState:
+ 
+ 
+ class SessionManager:
+-    """Thread-safe manager for ACP sessions backed by Hermes AIAgent instances.
++    """Thread-safe manager for ACP sessions backed by JARVIS AIAgent instances.
+ 
+     Sessions are held in-memory for fast access **and** persisted to the shared
+     SessionDB so they survive restarts and are searchable via ``session_search``."""
+@@ -170,6 +170,12 @@ class SessionManager:
+         self._agent_factory = agent_factory
+         self._db_instance = db  # None → lazy-init on first use
+         self._cwd_backfilled = False
++        self._client_identity: tuple[str, str] = ("", "")
++
++    def set_client_identity(self, name: str | None, version: str | None) -> None:
++        """Remember the ACP initialize identity for agents created by this server."""
++        with self._lock:
++            self._client_identity = (str(name or "").strip(), str(version or "").strip())
+ 
+     # ---- public API ---------------------------------------------------------
+ 
+@@ -320,6 +326,10 @@ class SessionManager:
+         # Ensure model is a plain string (not a MagicMock or other proxy).
+         model_str = str(state.model) if state.model else None
+         session_meta = {"cwd": state.cwd}
++        from acp_adapter.page_presentation import attest
++        page_binding = attest(state) if getattr(state.agent, "_page_frozen", None) else None
++        if page_binding:
++            session_meta["page_presentation"] = page_binding
+         for key in ("provider", "base_url", "api_mode"):
+             value = getattr(state.agent, key, None)
+             if isinstance(value, str) and value.strip():
+@@ -327,7 +337,7 @@ class SessionManager:
+ 
+         try:
+             if db.get_session(state.session_id) is None:
+-                if not state.history:
++                if not state.history and not page_binding:
+                     # Empty editor probes stay ephemeral; copied fork history persists.
+                     return
+                 db.create_session(session_id=state.session_id, source="acp", model=model_str,
+@@ -443,7 +453,8 @@ class SessionManager:
+             agent = self._make_agent(
+                 session_id=session_id, cwd=cwd, model=model, api_mode=meta.get("api_mode") or None,
+                 requested_provider=meta.get("provider") or row.get("billing_provider"),
+-                base_url=meta.get("base_url") or row.get("billing_base_url"))
++                base_url=meta.get("base_url") or row.get("billing_base_url"),
++                page_restore=bool(meta.get("page_presentation")), page_expected=meta.get("page_presentation"))
+         except Exception:
+             logger.warning("Failed to recreate agent for ACP session %s", session_id, exc_info=True)
+             return None
+@@ -456,11 +467,22 @@ class SessionManager:
+ 
+     def _make_agent(self, *, session_id: str, cwd: str, model: str | None = None,
+                     requested_provider: str | None = None, base_url: str | None = None, api_mode: str | None = None,
+-                    enabled_toolsets: list[str] | None = None, disabled_toolsets: list[str] | None = None):
++                    enabled_toolsets: list[str] | None = None, disabled_toolsets: list[str] | None = None,
++                    page_restore: bool = False, page_expected: dict | None = None):
+         """``enabled_toolsets``/``disabled_toolsets`` carry a live session's toolsets into a rebuild; ``None`` derives
+         them from config (fresh session)."""
++        with self._lock:
++            client_name, client_version = self._client_identity
++
++        def _attach_prompt_context(agent: Any) -> Any:
++            agent._acp_client_name = client_name
++            agent._acp_client_version = client_version
++            agent._acp_workspace_root = cwd
++            from acp_adapter.page_presentation import attach
++            return attach(agent, session_id, restoring=page_restore, expected=page_expected)
++
+         if self._agent_factory is not None:
+-            return self._agent_factory()
++            return _attach_prompt_context(self._agent_factory())
+ 
+         from run_agent import AIAgent
+         from agent.skill_utils import parse_config_string_list
+@@ -497,6 +519,8 @@ class SessionManager:
+             # models). Resolved against the session's model so per-model overrides apply.
+             "reasoning_config": resolve_reasoning_config(config, model or default_model),
+         }
++        if os.environ.get("PRESENT_PROFILE"):
++            kwargs["enabled_toolsets"] = list(dict.fromkeys(kwargs["enabled_toolsets"] + ["page_presentation"]))
+         resolve_error: Exception | None = None
+         try:
+             runtime = resolve_runtime_provider(
+@@ -537,7 +561,7 @@ class SessionManager:
+             raise
+         # ACP stdio: stdout is protocol-only JSON-RPC; agent chatter goes to stderr.
+         agent._print_fn = _acp_stderr_print
+-        return agent
++        return _attach_prompt_context(agent)
+ 
+ 
+ # ---- BEGIN PLUGIN-COMPAT (revert-scheduled; see COMPAT_MANIFEST.md) ----
+diff --git a/acp_adapter/tools.py b/acp_adapter/tools.py
+index e2cf2a9313..b507ef7c87 100644
+--- a/acp_adapter/tools.py
++++ b/acp_adapter/tools.py
+@@ -141,7 +141,7 @@ def _args_json(arguments: Any) -> str:
+ def _json_loads_maybe(value: Optional[str]) -> Any:
+     """Decode a JSON string; non-strings pass through, undecodable strings yield None.
+ 
+-    Some Hermes tools append a human hint after the payload (``{...}\\n\\n[Hint: ...]``),
++    Some JARVIS tools append a human hint after the payload (``{...}\\n\\n[Hint: ...]``),
+     so fall back to decoding the first JSON value to keep the structured rendering path."""
+     if not isinstance(value, str):
+         return value
+@@ -167,7 +167,7 @@ def _fenced_text(text: str, language: str = "") -> str:
+ 
+ 
+ def _tool_result_failed(result: Optional[str], tool_name: str | None = None) -> bool:
+-    """Return True when a structured Hermes tool result clearly failed.
++    """Return True when a structured JARVIS tool result clearly failed.
+ 
+     Deliberately conservative: plain text may legitimately contain "error", so
+     only structured tool-level failures map to ACP failed status."""
+@@ -192,7 +192,7 @@ def _tool_result_failed(result: Optional[str], tool_name: str | None = None) ->
+ 
+ def build_tool_title(tool_name: str, args: Args) -> str:
+     """``<tool_name>: <preview>`` using the same per-tool preview (and argument redaction) as
+-    every other Hermes surface, so ACP clients never show a different summary than the CLI/TUI;
++    every other JARVIS surface, so ACP clients never show a different summary than the CLI/TUI;
+     bare tool name when the arguments yield no preview."""
+     preview = build_tool_preview(tool_name, args, max_len=80)
+     return f"{tool_name}: {preview}" if preview else tool_name
+diff --git a/agent/prompt_builder.py b/agent/prompt_builder.py
+index 37bb56dc79..e0664320e1 100644
+--- a/agent/prompt_builder.py
++++ b/agent/prompt_builder.py
+@@ -158,7 +158,7 @@ def _strip_yaml_frontmatter(content: str) -> str:
+ DEFAULT_AGENT_IDENTITY = (
+     # A behavior spec (sizing rule, named prohibitions, earned-depth escape hatch), not a trait list — trait
+     # lists change nothing. Maintainer rule: models UNDER-explore by default; never re-add an exploration-thrift line.
+-    "You are Hermes Agent, built by Nous Research. Be direct: match the length of your reply to the weight of the ask "
++    "You are JARVIS. Be direct: match the length of your reply to the weight of the ask "
+     "— a one-line question gets a one-line answer, and finished work gets a short report of what changed, what's "
+     "verified, and what's left, never a replay of the process. No filler (\"Great question,\" \"I'd be happy to\"), no "
+     "restating the request back, no re-summarizing what you already said, no narrating tool calls the user can see. "
+@@ -169,19 +169,19 @@ DEFAULT_AGENT_IDENTITY = (
+ HERMES_AGENT_HELP_GUIDANCE = (
+     # Injected only when skill_view exists AND the hermes-agent skill is installed (system_prompt.py slot
+     # resolution). No "when the two differ" clause: docs-are-authoritative already carries the precedence.
+-    "You run on Hermes Agent (by Nous Research). When the user needs help with Hermes itself — configuring, "
++    "You run on JARVIS. When the user needs help with JARVIS itself — configuring, "
+     "setting up, using, extending, or troubleshooting it — or when you need to understand your own features, "
+-    "tools, or capabilities, the documentation at https://hermes-agent.nousresearch.com/docs is your "
++    "tools, or capabilities, the documentation at website/docs is your "
+     "authoritative reference and always holds the latest, most up-to-date information. The `hermes-agent` "
+     "skill has the actual commands and proven workflows — load it with skill_view(name='hermes-agent') "
+-    "before configuring, modifying, or troubleshooting Hermes so you don't guess or invent workarounds."
++    "before configuring, modifying, or troubleshooting JARVIS so you don't guess or invent workarounds."
+ )
+ 
+ # Variant for sessions without the skills toolset (e.g. Blank Slate): naming skill_view() there would dangle.
+ HERMES_AGENT_HELP_GUIDANCE_NO_SKILLS = (
+-    "You run on Hermes Agent (by Nous Research). When the user needs help with Hermes itself — configuring, "
++    "You run on JARVIS. When the user needs help with JARVIS itself — configuring, "
+     "setting up, using, extending, or troubleshooting it — or when you need to understand your own features, "
+-    "tools, or capabilities, the documentation at https://hermes-agent.nousresearch.com/docs is the "
++    "tools, or capabilities, the documentation at website/docs is the "
+     "authoritative reference and always holds the latest, most up-to-date information. Point the user there "
+     "(or read it yourself if you have a way to fetch web content)."
+ )
+@@ -574,7 +574,7 @@ STEER_CHANNEL_NOTE = (
+     # (anti-lookalike), and it carries full user authority. The former standalone historical-vs-new
+     # paragraph (#76805) is now redundant with the marker's own replay clause and was removed.
+     "## Mid-turn user steering\n"
+-    "Mid-turn, the user can steer you: Hermes delivers their message as a standalone user message right after "
++    "Mid-turn, the user can steer you: JARVIS delivers their message as a standalone user message right after "
+     "the latest tool results, wrapped exactly as:\n"
+     f"{STEER_MARKER_OPEN}\n<their message>\n{STEER_MARKER_CLOSE}\n"
+     "That marker is a genuine user message with the same authority as their original request — not tool "
+@@ -596,10 +596,10 @@ def hud_surface_note(valid_tool_names: "set[str] | None" = None) -> str:
+         return ""
+     gated = (
+         (True,
+-         "[Note: this message came from HUD mode — a small floating Hermes "
++         "[Note: this message came from HUD mode — a small floating JARVIS "
+          "window sitting over whatever the user is actually working in, so an "
+          'unqualified "this" or "here" usually means the app behind the HUD '
+-         "rather than anything inside Hermes. read_window_below identifies that app."),
++         "rather than anything inside JARVIS. read_window_below identifies that app."),
+         (True,
+          "They move the HUD from app to app mid-conversation, so one you identified on an earlier turn is "
+          "still a live target: a reference that does not fit the window below may name one from a turn or two "
+@@ -632,6 +632,10 @@ _LOCAL_CRON_DELIVERY_NOTE = (
+ )
+ 
+ PLATFORM_HINTS = {
++    "acp": (
++        "You are serving a developer through an editor panel. The code you edit is a reviewable change; "
++        "scope file operations to the workspace root and keep the developer informed about the changes."
++    ),
+     "whatsapp": (
+         "You are on WhatsApp. Standard markdown auto-converts to WhatsApp syntax (*bold*, _italic_, ~strike~, "
+         "monospace) \u2014 write markdown freely, bullets included. No tables \u2014 use bullets or labeled lines. "
+@@ -694,7 +698,7 @@ PLATFORM_HINTS = {
+     ),
+     "tui": (
+         # Same file-delivery reality as the CLI: no MEDIA: interception in tui/.
+-        "You are in the Hermes terminal UI (TUI). Files: there is no attachment channel and MEDIA:/path tags "
++        "You are in the JARVIS terminal UI (TUI). Files: there is no attachment channel and MEDIA:/path tags "
+         "are NOT intercepted here (they print as literal text) — deliver a file by stating its absolute path "
+         "or URL in plain text. "
+         f"{_LOCAL_CRON_DELIVERY_NOTE}"
+@@ -703,7 +707,7 @@ PLATFORM_HINTS = {
+         # Every claim verified against the shipping renderer (inline-preview-directive.tsx). Widget text is
+         # recipe-first: HOW (an inline widget IS a ::preview'd HTML file) and WHY (the frame injects the theme
+         # prelude first; width adopts the first measured span). setup_mcp is taught by its own tool schema.
+-        "You are chatting inside the Hermes desktop app, a graphical chat surface. Markdown renders with full GitHub "
++        "You are chatting inside the JARVIS desktop app, a graphical chat surface. Markdown renders with full GitHub "
+         "flavor (tables, syntax-highlighted code, math via $...$, task lists, callouts). Deliver files by writing "
+         "MEDIA:/absolute/path/to/file — any file type: images/audio/video render inline, everything else becomes a "
+         "card with Download and preview buttons. Remote image URLs render via ![alt](url); local files ONLY via MEDIA: "
+@@ -884,7 +888,7 @@ _WINDOWS_BASH_SHELL_HINT = (
+     "path conversion is disabled here, so `git -C /c/Users/x` or `node /tmp/a.js` fails with 'cannot change to'/'not "
+     "found' even though `cd /c/Users/x` (a bash builtin) works. Pass `C:/Users/x`-style forward-slash native paths to "
+     # no-tmp: ok — tells the model what NOT to use
+-    "native tools, and prefer `$LOCALAPPDATA/Temp` (or `$TMPDIR`, which Hermes points at its own scratch dir) for scratch files a native tool must read — never a bare `/tmp`. When "
++    "native tools, and prefer `$LOCALAPPDATA/Temp` (or `$TMPDIR`, which JARVIS points at its own scratch dir) for scratch files a native tool must read — never a bare `/tmp`. When "
+     "answering prompts in a pty background process, use process(submit) — never process(write) with a bare trailing "
+     "newline: Enter on a Windows PTY is a carriage return, and a lone `\\n"
+     "` is not delivered as a line terminator, so the child's prompt silently never returns. When a CLI offers a "
+@@ -1022,8 +1026,8 @@ def _remote_backend_hint(backend: str) -> str:
+     probe = _probe_remote_backend(backend)
+     if probe:
+         return lead + (
+-            f"this {backend} environment — NOT on the machine where Hermes itself is running. The host OS, "
+-            f"home, and cwd of the Hermes process are irrelevant; only the following backend state matters:\n{probe}\n"
++            f"this {backend} environment — NOT on the machine where JARVIS itself is running. The host OS, "
++            f"home, and cwd of the JARVIS process are irrelevant; only the following backend state matters:\n{probe}\n"
+             f"  The sandbox's current user, $HOME, and working directory are not listed here; if you need them, "
+             f"probe directly with a terminal call like `whoami && pwd`."
+         )
+@@ -1033,7 +1037,7 @@ def _remote_backend_hint(backend: str) -> str:
+         or f"a {backend} environment (likely Linux)"
+     )
+     return lead + (
+-        f"{description} — NOT on the machine where Hermes itself runs. The backend probe didn't respond at "
++        f"{description} — NOT on the machine where JARVIS itself runs. The backend probe didn't respond at "
+         f"prompt-build time, so the sandbox's OS, current user, $HOME, and working directory are unknown from here. "
+         f"If you need them, probe directly with a terminal call like `uname -a && whoami && pwd`."
+     )
+@@ -1068,8 +1072,8 @@ def build_environment_hints() -> str:
+ 
+ 
+ # Marks the runtime block after project prose for persisted-prompt cwd validation.
+-RUNTIME_ENVIRONMENT_HEADING = "# Hermes runtime environment"
+-RUNTIME_ENVIRONMENT_END = "<!-- End Hermes runtime environment -->"
++RUNTIME_ENVIRONMENT_HEADING = "# JARVIS runtime environment"
++RUNTIME_ENVIRONMENT_END = "<!-- End JARVIS runtime environment -->"
+ 
+ CONTEXT_FILE_MAX_CHARS = 20_000
+ CONTEXT_TRUNCATE_HEAD_RATIO = 0.7
+@@ -1669,11 +1673,11 @@ def discover_context_files(cwd_path: Path) -> list[tuple[str, str, Path, str]]:
+ 
+ 
+ def _project_context_suppressed(cwd: Optional[str], cwd_path: Path, allow_install_tree_fallback: bool) -> bool:
+-    """A FALLBACK-picked cwd inside the Hermes install tree must not gain system-prompt authority (the desktop
++    """A FALLBACK-picked cwd inside the JARVIS install tree must not gain system-prompt authority (the desktop
+     default would load this repo's contributor AGENTS.md). An explicitly configured cwd is honored verbatim —
+-    the Hermes tree is a legitimate workspace when the user deliberately points a session at it — and
++    the JARVIS tree is a legitimate workspace when the user deliberately points a session at it — and
+     CLI-style surfaces pass allow_install_tree_fallback=True because their launch dir IS the user's shell cwd
+-    (developing Hermes in-tree). See #64590."""
++    (developing JARVIS in-tree). See #64590."""
+     from agent.runtime_cwd import _is_install_tree
+     return cwd is None and not allow_install_tree_fallback and _is_install_tree(cwd_path)
+ 
+@@ -1743,7 +1747,7 @@ def build_context_files_prompt(
+     cwd_path = Path(cwd if cwd is not None else os.getcwd()).resolve()
+     if _project_context_suppressed(cwd, cwd_path, allow_install_tree_fallback):
+         logger.warning(
+-            "skipping project-context discovery: working-directory resolution fell back to the Hermes "
++            "skipping project-context discovery: working-directory resolution fell back to the JARVIS "
+             "install tree (%s) — set terminal.cwd to your project directory", cwd_path,
+         )
+         sections = []
+diff --git a/agent/system_prompt.py b/agent/system_prompt.py
+index 853462571c..07bdf30358 100644
+--- a/agent/system_prompt.py
++++ b/agent/system_prompt.py
+@@ -382,7 +382,7 @@ def _active_profile_line(agent: Any) -> str:
+         # Without one, keep the ambient (patchable) resolution byte-identical.
+         _root_str = str(get_default_hermes_root() if _agent_home_path is not None else get_hermes_home())
+         return (
+-            "Active Hermes profile: default. Other profiles (if any) live "
++            "Active JARVIS profile: default. Other profiles (if any) live "
+             "under " + _root_str + "/profiles/<name>/. Each profile has its own "
+             "skills/, plugins/, cron/, and memories/ that affect a different "
+             "session than this one. Do not modify another profile's "
+@@ -399,7 +399,7 @@ def _active_profile_line(agent: Any) -> str:
+     # NOT get_hermes_home().
+     default_root = get_default_hermes_root()
+     return (
+-        f"Active Hermes profile: {active_profile}. This session reads "
++        f"Active JARVIS profile: {active_profile}. This session reads "
+         f"and writes {profile_home}/. The default "
+         f"profile's data lives at {default_root}/skills/, {default_root}/plugins/, "
+         f"{default_root}/cron/, {default_root}/memories/ — those belong to a "
+@@ -424,6 +424,21 @@ def _default_platform_hint(platform_key: str) -> str:
+     return hint
+ 
+ 
++def _acp_hint_context(agent: Any, hint: str) -> str:
++    """Add the ACP handshake identity and session workspace to the static editor hint."""
++    if not hint:
++        return hint
++    editor = str(getattr(agent, "_acp_client_name", "") or "").strip()
++    version = str(getattr(agent, "_acp_client_version", "") or "").strip()
++    workspace = str(getattr(agent, "_acp_workspace_root", "") or "").strip()
++    if editor:
++        label = f"{editor} {version}".strip() if version else editor
++        hint += f" Connected editor: {label}."
++    if workspace:
++        hint += f" Workspace root for this session: {workspace}."
++    return hint
++
++
+ def _cron_delivery_hint(agent: Any) -> str:
+     """The destination channel's hint (default + its ``platform_hints`` override) for a cron agent.
+ 
+@@ -446,6 +461,8 @@ def platform_hint(agent: Any) -> str:
+     override + desktop TUI clarifier; cron agents also carry their delivery channel's hint."""
+     platform_key = (agent.platform or "").lower().strip()
+     _effective_hint = _resolve_platform_hint(agent, platform_key, _default_platform_hint(platform_key))
++    if platform_key == "acp":
++        _effective_hint = _acp_hint_context(agent, _effective_hint)
+     if platform_key == "tui" and _effective_hint:
+         _effective_hint = _tui_embedded_pane_clarifier(_effective_hint)
+     if platform_key == "cron":
+@@ -710,7 +727,7 @@ def _context_files_part(agent: Any, ctx_len: Optional[int], soul_loaded: bool) -
+     when set (gateway); None lets discovery fall back to the launch dir.  The
+     install-tree fallback is only legitimate for cli/tui where the launch dir
+     IS the user's shell cwd; desktop-pinned launch dirs are treated as the
+-    fallback they really are so the guard can reject Hermes's bundled AGENTS.md."""
++    fallback they really are so the guard can reject JARVIS's bundled AGENTS.md."""
+     if agent.skip_context_files:
+         return []
+     launch_artifact = getattr(agent, "_context_cwd_is_launch_artifact", False)
+diff --git a/tools/approval.py b/tools/approval.py
+index 627c7c92c2..420f1785c3 100644
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ -253,7 +253,7 @@ def approve_session(session_key: str, pattern_key: str):
+ 
+ 
+ def _release_permission_mode_dependents(session_key: str) -> None:
+-    """Drop resources whose immutable mode derives from Hermes YOLO. Lazy import so approval-only
++    """Drop resources whose immutable mode derives from JARVIS YOLO. Lazy import so approval-only
+     sessions never load computer-use; releasing on BOTH edges makes enabling YOLO replace a
+     standard backend and disabling it revoke a private unrestricted daemon immediately."""
+     try:
+diff --git a/tools/mcp_schema_cache.py b/tools/mcp_schema_cache.py
+index 98e150edb1..04c730a3fd 100644
+--- a/tools/mcp_schema_cache.py
++++ b/tools/mcp_schema_cache.py
+@@ -1,5 +1,5 @@
+ """Persistent MCP tool-schema cache for lazy server startup: per-server tool manifests on
+-disk so Hermes can register MCP tools into the agent snapshot without spawning the stdio
++disk so JARVIS can register MCP tools into the agent snapshot without spawning the stdio
+ child at idle dashboard startup. Entries are keyed by server name + a fingerprint of the
+ connection config (command/args/url/tools filters)."""
+ 
+@@ -67,8 +67,15 @@ def get_cached_entry(server_name: str, fingerprint: str) -> Optional[dict]:
+         return None
+     ttl_ms = entry.get("ttl_ms")
+     written_at = entry.get("written_at")
++    # A server that advertises ttlMs=0 means "no freshness promise", not "re-probe on every
++    # process start" — but read literally it expires the entry the instant it is written, so the
++    # catalogue is never used and every cold turn pays a live handshake to every server. A floor
++    # keeps the promise's intent (do not serve an old manifest forever) without turning each start
++    # into a full reconnect: at most one re-probe per floor window, and a config change still
++    # invalidates immediately through the fingerprint.
++    floor_ms = 21_600_000.0          # six hours: a manifest is a catalogue, not a price
+     expired = (isinstance(ttl_ms, (int, float)) and isinstance(written_at, (int, float))
+-               and (time.time() - written_at) * 1000.0 >= float(ttl_ms))
++               and (time.time() - written_at) * 1000.0 >= max(float(ttl_ms), floor_ms))
+     return None if expired else entry
+ 
+ 
