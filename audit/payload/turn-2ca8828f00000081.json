@@ -1,0 +1,708 @@
+{
+ "turn": "2ca8828f00000081",
+ "conv": "0b1dccd066138994773966feb047fc26",
+ "session": "e3c4463e-da6a-4186-be93-c7608a23b089",
+ "status": "ok",
+ "version": "1.2.0",
+ "rev": 54,
+ "created_at": 1792941008.633076,
+ "timing": {
+  "complete_ms": 109410,
+  "first_content_ms": 109410,
+  "first_progress_ms": 7700
+ },
+ "terminal": {
+  "conv": "0b1dccd066138994773966feb047fc26",
+  "event": "presentation",
+  "id": "2ca8828f00000081:terminal",
+  "payload": {
+   "components": [
+    "Caption",
+    "Card",
+    "Carousel",
+    "Chart",
+    "Col",
+    "Image",
+    "Link",
+    "Row",
+    "Table",
+    "Text",
+    "Title"
+   ],
+   "intro": "The world's ten tallest completed buildings, by height to architectural top. The Burj Khalifa still leads by 149 m — a gap wider than the difference between numbers 2 and 6 combined. Merdeka 118 in Kuala Lumpur is the newest entrant and the only building to reach second place since 2015.\n\nHeights are CTBUH figures to architectural top, as listed by Wikipedia. Photos are Wikimedia Commons images, each URL load-checked today.",
+   "kind": "interface",
+   "program": "root = Col([header, galleryTitle, gallery, chartBlock, tableBlock, sourceNote], 4, \"stretch\")\n\nheader = Col([Title(\"The Ten Tallest Buildings in the World\", \"xl\"), Caption(\"Height to architectural top · verified 25 October 2026\")], 1)\n\ngalleryTitle = Title(\"Photographs\", \"sm\")\ngallery = Carousel([b1card, b2card, b3card, b4card, b5card, b6card, b7card, b8card, b9card, b10card], 260, 3)\n\nb1card = Card([b1img, b1name, b1meta], \"outline\", 0, 1)\nb1img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/Burj_Khalifa_%28worlds_tallest_building%29_and_the_Dubai_skyline_%2825781049892%29.jpg/960px-Burj_Khalifa_%28worlds_tallest_building%29_and_the_Dubai_skyline_%2825781049892%29.jpg\", \"Burj Khalifa rising above the Dubai skyline\", 1.0, \"md\", \"cover\")\nb1name = Text(\"1 · Burj Khalifa\", \"sm\", null, \"semibold\")\nb1meta = Caption(\"828 m · Dubai, UAE · 2010\")\n\nb2card = Card([b2img, b2name, b2meta], \"outline\", 0, 1)\nb2img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Merdeka_Tower_20241022_-_full_2_%28Cropped%29.jpg/960px-Merdeka_Tower_20241022_-_full_2_%28Cropped%29.jpg\", \"Merdeka 118 tower in Kuala Lumpur\", 1.0, \"md\", \"cover\")\nb2name = Text(\"2 · Merdeka Maybank Tower\", \"sm\", null, \"semibold\")\nb2meta = Caption(\"678.9 m · Kuala Lumpur, Malaysia · 2024\")\n\nb3card = Card([b3img, b3name, b3meta], \"outline\", 0, 1)\nb3img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/20191114_Shanghai_Tower_%282%29.jpg/960px-20191114_Shanghai_Tower_%282%29.jpg\", \"Shanghai Tower seen from street level\", 1.0, \"md\", \"cover\")\nb3name = Text(\"3 · Shanghai Tower\", \"sm\", null, \"semibold\")\nb3meta = Caption(\"632 m · Shanghai, China · 2015\")\n\nb4card = Card([b4img, b4name, b4meta], \"outline\", 0, 1)\nb4img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Abraj-al-Bait-Towers.JPG/960px-Abraj-al-Bait-Towers.JPG\", \"Abraj Al Bait clock tower complex in Mecca\", 1.0, \"md\", \"cover\")\nb4name = Text(\"4 · Mecca Royal Clock Tower\", \"sm\", null, \"semibold\")\nb4meta = Caption(\"601 m · Mecca, Saudi Arabia · 2012\")\n\nb5card = Card([b5img, b5name, b5meta], \"outline\", 0, 1)\nb5img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Pingan_International_Finance_Center2020.jpg/960px-Pingan_International_Finance_Center2020.jpg\", \"Ping An Finance Centre in Shenzhen\", 1.0, \"md\", \"cover\")\nb5name = Text(\"5 · Ping An Finance Centre\", \"sm\", null, \"semibold\")\nb5meta = Caption(\"599.1 m · Shenzhen, China · 2017\")\n\nb6card = Card([b6img, b6name, b6meta], \"outline\", 0, 1)\nb6img = Image(\"https://thumb.wikimedia.org/wikipedia/en/thumb/2/28/Lotte_World_Tower_day_view_10.jpg/960px-Lotte_World_Tower_day_view_10.jpg\", \"Lotte World Tower in Seoul by day\", 1.0, \"md\", \"cover\")\nb6name = Text(\"6 · Lotte World Tower\", \"sm\", null, \"semibold\")\nb6meta = Caption(\"554.5 m · Seoul, South Korea · 2017\")\n\nb7card = Card([b7img, b7name, b7meta], \"outline\", 0, 1)\nb7img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/One_World_Trade_Center%2C_Financial_District%2C_Manhattan%2C_New_York.jpg/960px-One_World_Trade_Center%2C_Financial_District%2C_Manhattan%2C_New_York.jpg\", \"One World Trade Center in Lower Manhattan\", 1.0, \"md\", \"cover\")\nb7name = Text(\"7 · One World Trade Center\", \"sm\", null, \"semibold\")\nb7meta = Caption(\"541.3 m · New York City, USA · 2014\")\n\nb8card = Card([b8img, b8name, b8meta], \"outline\", 0, 1)\nb8img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/2/23/Taipei_101_from_Xiangshan_20260927_%28cropped%29.jpg/960px-Taipei_101_from_Xiangshan_20260927_%28cropped%29.jpg\", \"Taipei 101 seen from Xiangshan\", 1.0, \"md\", \"cover\")\nb8name = Text(\"8 · Taipei 101\", \"sm\", null, \"semibold\")\nb8meta = Caption(\"508 m · Taipei, Taiwan · 2004\")\n\nb9card = Card([b9img, b9name, b9meta], \"outline\", 0, 1)\nb9img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Shanghai_World_Financial_Center_%28March_9th_2024%29_%28cropped2%29.jpg/960px-Shanghai_World_Financial_Center_%28March_9th_2024%29_%28cropped2%29.jpg\", \"Shanghai World Financial Center with its trapezoid opening\", 1.0, \"md\", \"cover\")\nb9name = Text(\"9 · Shanghai World Financial Center\", \"sm\", null, \"semibold\")\nb9meta = Caption(\"492 m · Shanghai, China · 2008\")\n\nb10card = Card([b10img, b10name, b10meta], \"outline\", 0, 1)\nb10img = Image(\"https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Central_Park_Tower_April_2021.jpg/960px-Central_Park_Tower_April_2021.jpg\", \"Central Park Tower on Billionaires Row, New York\", 1.0, \"md\", \"cover\")\nb10name = Text(\"10 · Central Park Tower\", \"sm\", null, \"semibold\")\nb10meta = Caption(\"472.4 m · New York City, USA · 2021\")\n\nchartBlock = Col([Title(\"Height comparison\", \"sm\"), Caption(\"Metres, height to architectural top\"), Chart(\"bar\", chartData, \"building\", [\"metres\"], \"number\", null, false, 380)], 1)\n\nchartData = [\n {\"building\": \"Burj Khalifa\", \"metres\": 828.0},\n {\"building\": \"Merdeka 118\", \"metres\": 678.9},\n {\"building\": \"Shanghai Tower\", \"metres\": 632.0},\n {\"building\": \"Mecca Clock Tower\", \"metres\": 601.0},\n {\"building\": \"Ping An Finance Centre\", \"metres\": 599.1},\n {\"building\": \"Lotte World Tower\", \"metres\": 554.5},\n {\"building\": \"One World Trade Center\", \"metres\": 541.3},\n {\"building\": \"Taipei 101\", \"metres\": 508.0},\n {\"building\": \"Shanghai WFC\", \"metres\": 492.0},\n {\"building\": \"Central Park Tower\", \"metres\": 472.4}\n]\n\ntableBlock = Col([Title(\"Full ranking\", \"sm\"), Table([\"#\", \"Building\", \"City\", \"Country\", \"Metres\", \"Feet\", \"Floors\", \"Completed\"], tableRows)], 1)\n\ntableRows = [\n [\"1\", \"Burj Khalifa\", \"Dubai\", \"UAE\", \"828\", \"2,717\", \"163\", \"2010\"],\n [\"2\", \"Merdeka Maybank Tower\", \"Kuala Lumpur\", \"Malaysia\", \"678.9\", \"2,227\", \"118\", \"2024\"],\n [\"3\", \"Shanghai Tower\", \"Shanghai\", \"China\", \"632\", \"2,073\", \"128\", \"2015\"],\n [\"4\", \"Mecca Royal Clock Tower\", \"Mecca\", \"Saudi Arabia\", \"601\", \"1,972\", \"120\", \"2012\"],\n [\"5\", \"Ping An Finance Centre\", \"Shenzhen\", \"China\", \"599.1\", \"1,966\", \"115\", \"2017\"],\n [\"6\", \"Lotte World Tower\", \"Seoul\", \"South Korea\", \"554.5\", \"1,819\", \"123\", \"2017\"],\n [\"7\", \"One World Trade Center\", \"New York City\", \"United States\", \"541.3\", \"1,776\", \"104\", \"2014\"],\n [\"8\", \"Taipei 101\", \"Taipei\", \"Taiwan\", \"508\", \"1,667\", \"101\", \"2004\"],\n [\"9\", \"Shanghai World Financial Center\", \"Shanghai\", \"China\", \"492\", \"1,614\", \"101\", \"2008\"],\n [\"10\", \"Central Park Tower\", \"New York City\", \"United States\", \"472.4\", \"1,550\", \"98\", \"2021\"]\n]\n\nsourceNote = Col([\n Caption(\"Heights and rankings: CTBUH values as tabulated in Wikipedia, List of tallest buildings (read 25 Oct 2026).\"),\n Row([Link(\"Source table\", \"https://en.wikipedia.org/wiki/List_of_tallest_buildings\"), Caption(\"·\"), Link(\"CTBUH official list\", \"https://www.ctbuh.org/buildings\")], 2),\n Caption(\"Photographs: Wikimedia Commons thumbnails, one per building, each URL checked for a 200 response today. Licences vary by file and rest with their uploaders.\")\n], 1)",
+   "receipts": [],
+   "required": [],
+   "version": "1.2.0"
+  },
+  "payload_sha256": "284f9384ccbdb73e72126c4851b638add1990d7177a24f140323b651ef02df00",
+  "session": "e3c4463e-da6a-4186-be93-c7608a23b089",
+  "turn": "2ca8828f00000081",
+  "version": "1.2.0"
+ },
+ "steps": [
+  {
+   "action": "Working",
+   "call_id": "tc-a6b85054ae9b",
+   "rev": 2,
+   "seq": 1,
+   "status": "completed",
+   "ts": 1792941016333
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4d64b3da4d18",
+   "rev": 4,
+   "seq": 2,
+   "status": "completed",
+   "ts": 1792941016352
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-edf4faf55e01",
+   "rev": 6,
+   "seq": 3,
+   "status": "failed",
+   "ts": 1792941022281
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-2226987b61c5",
+   "rev": 8,
+   "seq": 4,
+   "status": "completed",
+   "ts": 1792941023880
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-581ef30b14ef",
+   "rev": 10,
+   "seq": 5,
+   "status": "completed",
+   "ts": 1792941026175
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-823edb31d95d",
+   "rev": 12,
+   "seq": 6,
+   "status": "completed",
+   "ts": 1792941034501
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d5848ce95b90",
+   "rev": 14,
+   "seq": 7,
+   "status": "completed",
+   "ts": 1792941036378
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-1a907e563d02",
+   "rev": 16,
+   "seq": 8,
+   "status": "completed",
+   "ts": 1792941038902
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-b38108bbc3b0",
+   "rev": 18,
+   "seq": 9,
+   "status": "completed",
+   "ts": 1792941041662
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-48754b3ed344",
+   "rev": 20,
+   "seq": 10,
+   "status": "completed",
+   "ts": 1792941043598
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-cab3b81528fa",
+   "rev": 22,
+   "seq": 11,
+   "status": "failed",
+   "ts": 1792941046704
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-ff693e5fd359",
+   "rev": 24,
+   "seq": 12,
+   "status": "completed",
+   "ts": 1792941049244
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-5b67f89273f1",
+   "rev": 26,
+   "seq": 13,
+   "status": "failed",
+   "ts": 1792941052216
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-c71d63292d4f",
+   "rev": 28,
+   "seq": 14,
+   "status": "completed",
+   "ts": 1792941055346
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e2394bbc1981",
+   "rev": 30,
+   "seq": 15,
+   "status": "completed",
+   "ts": 1792941058053
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-5b296743077f",
+   "rev": 32,
+   "seq": 16,
+   "status": "completed",
+   "ts": 1792941060724
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4815b3f2dc42",
+   "rev": 34,
+   "seq": 17,
+   "status": "completed",
+   "ts": 1792941063465
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e2d96ba40441",
+   "rev": 36,
+   "seq": 18,
+   "status": "completed",
+   "ts": 1792941067923
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d6bc72dd84b6",
+   "rev": 38,
+   "seq": 19,
+   "status": "completed",
+   "ts": 1792941071666
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e4254824d3be",
+   "rev": 40,
+   "seq": 20,
+   "status": "completed",
+   "ts": 1792941075273
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4156b0c9d592",
+   "rev": 42,
+   "seq": 21,
+   "status": "completed",
+   "ts": 1792941079270
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e993582195aa",
+   "rev": 44,
+   "seq": 22,
+   "status": "completed",
+   "ts": 1792941081977
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e53c9ac221c1",
+   "rev": 46,
+   "seq": 23,
+   "status": "completed",
+   "ts": 1792941085247
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d4a765efcfea",
+   "rev": 48,
+   "seq": 24,
+   "status": "completed",
+   "ts": 1792941089884
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-983c5fff06f5",
+   "rev": 50,
+   "seq": 25,
+   "status": "completed",
+   "ts": 1792941092478
+  },
+  {
+   "action": "Working",
+   "call_id": "tc-c4864872c0ec",
+   "rev": 52,
+   "seq": 26,
+   "status": "completed",
+   "ts": 1792941102849
+  },
+  {
+   "action": "Working",
+   "call_id": "tc-fc2b50550fa8",
+   "rev": 54,
+   "seq": 27,
+   "status": "completed",
+   "ts": 1792941113978
+  }
+ ],
+ "journal": [
+  {
+   "action": "Working",
+   "call_id": "tc-a6b85054ae9b",
+   "rev": 1,
+   "seq": 1,
+   "status": "running",
+   "ts": 1792941016333
+  },
+  {
+   "action": "Working",
+   "call_id": "tc-a6b85054ae9b",
+   "rev": 2,
+   "seq": 1,
+   "status": "completed",
+   "ts": 1792941016344
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4d64b3da4d18",
+   "rev": 3,
+   "seq": 2,
+   "status": "running",
+   "ts": 1792941016352
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4d64b3da4d18",
+   "rev": 4,
+   "seq": 2,
+   "status": "completed",
+   "ts": 1792941020580
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-edf4faf55e01",
+   "rev": 5,
+   "seq": 3,
+   "status": "running",
+   "ts": 1792941022281
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-edf4faf55e01",
+   "rev": 6,
+   "seq": 3,
+   "status": "failed",
+   "ts": 1792941022299
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-2226987b61c5",
+   "rev": 7,
+   "seq": 4,
+   "status": "running",
+   "ts": 1792941023880
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-2226987b61c5",
+   "rev": 8,
+   "seq": 4,
+   "status": "completed",
+   "ts": 1792941023893
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-581ef30b14ef",
+   "rev": 9,
+   "seq": 5,
+   "status": "running",
+   "ts": 1792941026175
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-581ef30b14ef",
+   "rev": 10,
+   "seq": 5,
+   "status": "completed",
+   "ts": 1792941032629
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-823edb31d95d",
+   "rev": 11,
+   "seq": 6,
+   "status": "running",
+   "ts": 1792941034501
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-823edb31d95d",
+   "rev": 12,
+   "seq": 6,
+   "status": "completed",
+   "ts": 1792941034529
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d5848ce95b90",
+   "rev": 13,
+   "seq": 7,
+   "status": "running",
+   "ts": 1792941036378
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d5848ce95b90",
+   "rev": 14,
+   "seq": 7,
+   "status": "completed",
+   "ts": 1792941036410
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-1a907e563d02",
+   "rev": 15,
+   "seq": 8,
+   "status": "running",
+   "ts": 1792941038902
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-1a907e563d02",
+   "rev": 16,
+   "seq": 8,
+   "status": "completed",
+   "ts": 1792941038942
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-b38108bbc3b0",
+   "rev": 17,
+   "seq": 9,
+   "status": "running",
+   "ts": 1792941041662
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-b38108bbc3b0",
+   "rev": 18,
+   "seq": 9,
+   "status": "completed",
+   "ts": 1792941041697
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-48754b3ed344",
+   "rev": 19,
+   "seq": 10,
+   "status": "running",
+   "ts": 1792941043598
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-48754b3ed344",
+   "rev": 20,
+   "seq": 10,
+   "status": "completed",
+   "ts": 1792941043627
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-cab3b81528fa",
+   "rev": 21,
+   "seq": 11,
+   "status": "running",
+   "ts": 1792941046704
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-cab3b81528fa",
+   "rev": 22,
+   "seq": 11,
+   "status": "failed",
+   "ts": 1792941046728
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-ff693e5fd359",
+   "rev": 23,
+   "seq": 12,
+   "status": "running",
+   "ts": 1792941049244
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-ff693e5fd359",
+   "rev": 24,
+   "seq": 12,
+   "status": "completed",
+   "ts": 1792941049277
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-5b67f89273f1",
+   "rev": 25,
+   "seq": 13,
+   "status": "running",
+   "ts": 1792941052216
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-5b67f89273f1",
+   "rev": 26,
+   "seq": 13,
+   "status": "failed",
+   "ts": 1792941052242
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-c71d63292d4f",
+   "rev": 27,
+   "seq": 14,
+   "status": "running",
+   "ts": 1792941055346
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-c71d63292d4f",
+   "rev": 28,
+   "seq": 14,
+   "status": "completed",
+   "ts": 1792941055377
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e2394bbc1981",
+   "rev": 29,
+   "seq": 15,
+   "status": "running",
+   "ts": 1792941058053
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e2394bbc1981",
+   "rev": 30,
+   "seq": 15,
+   "status": "completed",
+   "ts": 1792941058084
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-5b296743077f",
+   "rev": 31,
+   "seq": 16,
+   "status": "running",
+   "ts": 1792941060724
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-5b296743077f",
+   "rev": 32,
+   "seq": 16,
+   "status": "completed",
+   "ts": 1792941060757
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4815b3f2dc42",
+   "rev": 33,
+   "seq": 17,
+   "status": "running",
+   "ts": 1792941063465
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4815b3f2dc42",
+   "rev": 34,
+   "seq": 17,
+   "status": "completed",
+   "ts": 1792941065192
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e2d96ba40441",
+   "rev": 35,
+   "seq": 18,
+   "status": "running",
+   "ts": 1792941067923
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e2d96ba40441",
+   "rev": 36,
+   "seq": 18,
+   "status": "completed",
+   "ts": 1792941068715
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d6bc72dd84b6",
+   "rev": 37,
+   "seq": 19,
+   "status": "running",
+   "ts": 1792941071666
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d6bc72dd84b6",
+   "rev": 38,
+   "seq": 19,
+   "status": "completed",
+   "ts": 1792941072360
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e4254824d3be",
+   "rev": 39,
+   "seq": 20,
+   "status": "running",
+   "ts": 1792941075273
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e4254824d3be",
+   "rev": 40,
+   "seq": 20,
+   "status": "completed",
+   "ts": 1792941076170
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4156b0c9d592",
+   "rev": 41,
+   "seq": 21,
+   "status": "running",
+   "ts": 1792941079270
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-4156b0c9d592",
+   "rev": 42,
+   "seq": 21,
+   "status": "completed",
+   "ts": 1792941079563
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e993582195aa",
+   "rev": 43,
+   "seq": 22,
+   "status": "running",
+   "ts": 1792941081977
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e993582195aa",
+   "rev": 44,
+   "seq": 22,
+   "status": "completed",
+   "ts": 1792941082495
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e53c9ac221c1",
+   "rev": 45,
+   "seq": 23,
+   "status": "running",
+   "ts": 1792941085247
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-e53c9ac221c1",
+   "rev": 46,
+   "seq": 23,
+   "status": "completed",
+   "ts": 1792941087791
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d4a765efcfea",
+   "rev": 47,
+   "seq": 24,
+   "status": "running",
+   "ts": 1792941089884
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-d4a765efcfea",
+   "rev": 48,
+   "seq": 24,
+   "status": "completed",
+   "ts": 1792941090202
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-983c5fff06f5",
+   "rev": 49,
+   "seq": 25,
+   "status": "running",
+   "ts": 1792941092478
+  },
+  {
+   "action": "Running a command",
+   "call_id": "tc-983c5fff06f5",
+   "rev": 50,
+   "seq": 25,
+   "status": "completed",
+   "ts": 1792941092487
+  },
+  {
+   "action": "Working",
+   "call_id": "tc-c4864872c0ec",
+   "rev": 51,
+   "seq": 26,
+   "status": "running",
+   "ts": 1792941102849
+  },
+  {
+   "action": "Working",
+   "call_id": "tc-c4864872c0ec",
+   "rev": 52,
+   "seq": 26,
+   "status": "completed",
+   "ts": 1792941103710
+  },
+  {
+   "action": "Working",
+   "call_id": "tc-fc2b50550fa8",
+   "rev": 53,
+   "seq": 27,
+   "status": "running",
+   "ts": 1792941113978
+  },
+  {
+   "action": "Working",
+   "call_id": "tc-fc2b50550fa8",
+   "rev": 54,
+   "seq": 27,
+   "status": "completed",
+   "ts": 1792941115724
+  }
+ ],
+ "request": {
+  "allowed_kinds": [
+   "prose",
+   "interface"
+  ],
+  "question": "Show me the world’s tallest buildings with photographs and a height comparison chart.",
+  "receipts": [],
+  "required": []
+ },
+ "current_progress": null,
+ "approval": null,
+ "cancelled": false
+}
