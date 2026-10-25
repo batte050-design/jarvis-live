@@ -1,0 +1,6 @@
+{
+ "intro": "UGX 120,000 across four people is UGX 30,000 each. Both figures below are yours to change.",
+ "program": "root = Col([headline, controls, splitCard, note], \"l\", \"stretch\")\nheadline = Title(\"Split the money\", \"lg\")\ncontrols = Card([amountField, peopleField], \"soft\", 16, 14)\namount = 120000\namountField = Input($amount, \"Total amount (UGX)\", \"number\")\npeople = 4\npeopleField = Slider($people, 1, 12, 1, \"Number of people\", \"people\")\neach = $amount / $people\neachCard = Card([Caption(\"Each person gets\"), Title(@Format(each, \"currency\", 0, \"UGX\"), \"2xl\"), Text([\"Total \", @Format($amount, \"currency\", 0, \"UGX\"), \" · \", @Plural($people, \"person\")], \"sm\")], \"outline\", 16, 8)\nexact = @Format(each, \"number\", 2)\nsplitCard = Col([eachCard, Caption([\"Exact figure: \", exact, \" each\"])], \"s\")\nnote = Caption(\"Figures recalculate as you move either control.\")",
+ "kind": "interface",
+ "required": []
+}

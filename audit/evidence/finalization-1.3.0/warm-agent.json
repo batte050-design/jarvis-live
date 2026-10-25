@@ -1,0 +1,52 @@
+{
+ "effective_value": {
+  "JARVIS_WARM_AGENT": "0",
+  "observed_from": "systemctl --user show jarvis-live -p Environment",
+  "dropins": {
+   "/home/ubuntu/.config/systemd/user/jarvis-live.service.d/guard.conf": "Environment=JARVIS_WARM_AGENT=1",
+   "/home/ubuntu/.config/systemd/user/jarvis-live.service.d/warm.conf": "Environment=JARVIS_WARM_AGENT=0"
+  },
+  "note": "warm.conf wins; the effective value is 0"
+ },
+ "readers": [
+  {
+   "file": "server.py",
+   "line": 2284,
+   "code": "WARM_ENABLED = os.environ.get(\"JARVIS_WARM_AGENT\", \"1\") != \"0\""
+  },
+  {
+   "file": "server.py",
+   "line": 2292,
+   "context": "def warm_agent(session_name): if not WARM_ENABLED or WarmAgent is None: return None"
+  },
+  {
+   "file": "server.py",
+   "line": 2356,
+   "context": "def warm_prewarm_for(name=None): if not WARM_ENABLED or WarmAgent is None: return False"
+  }
+ ],
+ "readers_elsewhere": {
+  "engine": "none \u2014 grep JARVIS_WARM_AGENT in /home/ubuntu/.hermes/hermes-agent returns nothing",
+  "app page package": "none \u2014 grep in page/*.py returns nothing"
+ },
+ "page_lane": {
+  "entry": "server.py:6326  return await PAGE_TEXT.start(request, _peek)",
+  "prewarm_endpoint": "server.py:9464  @app.post('/api/page/prewarm') -> await PAGE_TEXT.prewarm(request)",
+  "prewarm_impl": "page/adapter.py:154  def prewarm(self, owner, conv): ... self._session(owner, conv)",
+  "prestart": "server.py:6287  /api/agent/prestart/{conv} sets started = False  (comment: 'legacy text warming removed: only the page harness is warmed')"
+ },
+ "verdict": "JARVIS_WARM_AGENT does not control PAGE_TEXT. It gates only the legacy warm agent, whose prewarm calls at server.py:6334 and server.py:6405 are skipped while it is 0. The page lane is warmed solely by POST /api/page/prewarm, which the page never calls before /stream in the runs observed.",
+ "measured": {
+  "live_first_page_turn_after_restart_ms": 45322,
+  "live_page_turn_after_page_prewarm_ms": [
+   7890,
+   8491,
+   8541
+  ],
+  "live_page_turns_observed_long_ms": [
+   331959,
+   326921,
+   113406
+  ]
+ }
+}

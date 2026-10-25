@@ -1,0 +1,43 @@
+# Version and session handling — browser and page adapter (read-only excerpt, exact lines)
+
+## static/v1.js — conversation identity held in the browser
+
+v1.js:50:   var RKEY = "jarvis.v1.reset";                // when the conversation was last started over
+v1.js:51:   var SKEY = "jarvis.v1.textscale";
+v1.js:52:   var TKEY = "jarvis.v1.theme";                // device | light | dark
+v1.js:1035:     try { return Number(localStorage.getItem(RKEY) || 0) || 0; } catch (e) { return 0; }
+v1.js:1036:   }
+v1.js:1037:   function markReset() {
+v1.js:1038:     try { localStorage.setItem(RKEY, String(Date.now())); } catch (e) {}
+
+## static/v1.js — no page prewarm call exists
+
+v1.js:9425: // Inline text does not prewarm a task agent; actual handoffs prepare their agent.
+
+## page/adapter.py — session identity is keyed by presentation version
+
+page/adapter.py:139:     def _session(self,owner,conv):
+page/adapter.py:140:         name=digest([owner,conv,self.profile.version])
+page/adapter.py:141:         path=root()/'sessions'/(name+'.json')
+page/adapter.py:142:         previous=json.loads(path.read_bytes()) if path.exists() else None
+page/adapter.py:143:         if previous and previous['prefix_sha256']!=self.profile.sha256:
+page/adapter.py:144:             raise ValueError('profile_changed_without_version_change')
+page/adapter.py:145:         spec=dict(owner=owner,conv=conv,version=self.profile.version,prefix=self.profile.prefix,prefix_sha256=self.profile.sha256)
+page/adapter.py:146:         session=self.driver.open(spec,previous)
+page/adapter.py:147:         if not isinstance(session,dict) or not session.get('session') or session.get('prefix_sha256')!=self.profile.sha256 or session.get('version')!=self.profile.version:
+page/adapter.py:148:             raise ValueError('harness_profile_not_attested')
+page/adapter.py:149:         if previous and session['session']!=previous['session']:
+page/adapter.py:150:             raise ValueError('harness_session_resume_mismatch')
+page/adapter.py:151:         store.atomic(path,session)
+
+## page/adapter.py — profile binding
+
+page/adapter.py:44:     def __init__(self, driver, profile, *, timeout=480):
+page/adapter.py:45:         self.driver, self.profile, self.timeout = driver, profile, timeout
+page/adapter.py:46:         if profile.version != VERSION or not profile.prefix:
+page/adapter.py:47:             raise ValueError('invalid_frozen_profile')
+page/adapter.py:48:         self.workers = set()
+page/adapter.py:49:         self.guard = threading.Lock()
+page/adapter.py:50: 
+page/adapter.py:51:     def _path(self, owner, conv, turn):
+page/adapter.py:52:         store.key(owner,conv,'page',turn,self.profile.version)

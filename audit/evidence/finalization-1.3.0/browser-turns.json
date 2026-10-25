@@ -1,0 +1,50 @@
+{
+ "944f1d05dd8e891ab511a83081382b3b": {
+  "turn": "92dc827e0000006e",
+  "session": "e631ec01-8e1a-4edc-8531-d365db8a49bb",
+  "version": "1.2.0",
+  "status": "ok",
+  "timing": {
+   "complete_ms": 113406,
+   "first_content_ms": 113406,
+   "first_progress_ms": 108007
+  },
+  "terminal_event": "presentation",
+  "terminal_status": null,
+  "error_id": null,
+  "kind": "interface",
+  "program_chars": 365
+ },
+ "4289de2e24343006722dcfffe4c52a51": {
+  "turn": "e9f2b15c0000006e",
+  "session": "f74d2b1b-0880-4ed1-80d2-1a7d4510cf8a",
+  "version": "1.2.0",
+  "status": "ok",
+  "timing": {
+   "complete_ms": 331959,
+   "first_content_ms": 331959,
+   "first_progress_ms": 324254
+  },
+  "terminal_event": "presentation",
+  "terminal_status": null,
+  "error_id": null,
+  "kind": "interface",
+  "program_chars": 777
+ },
+ "8c068f62bea0cecb2f13d07dd0d62532": {
+  "turn": "905d13cf0000006e",
+  "session": "e2039075-e0bc-4335-99e8-fa94c7dbe104",
+  "version": "1.2.0",
+  "status": "failed",
+  "timing": {
+   "complete_ms": 326921,
+   "first_content_ms": null,
+   "first_progress_ms": 317777
+  },
+  "terminal_event": "failure",
+  "terminal_status": "failed",
+  "error_id": "f57e6db63d1a4de3b29bb7cf90713517",
+  "kind": null,
+  "program_chars": 0
+ }
+}

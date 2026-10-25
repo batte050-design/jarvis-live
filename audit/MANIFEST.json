@@ -445,6 +445,56 @@
   "sha256": "1bc6adb1e914bfe960349e03d6c72c81d96856489c9f526399ac5f4f7119eb82"
  },
  {
+  "file": "evidence/finalization-1.3.0/browser-turns.json",
+  "bytes": 1230,
+  "sha256": "ed142ee8d0e05477217e7bcf9c7e8bb9b00c331c49dbf63903a4281c3e8be032"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/emit-programs/emit-1.arguments.json",
+  "bytes": 967,
+  "sha256": "6025d2144402b50b0fd83b857a2bb6a90d7170518102006cb632a90e6911fc42"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/emit-programs/emit-1.result.txt",
+  "bytes": 938,
+  "sha256": "0bc4bc0d75597eb618dc3dfba12c781e224d37cf12893b688c990f0fb891c8b5"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/emit-programs/emit-2.arguments.json",
+  "bytes": 933,
+  "sha256": "0333b9809eed4f0722b10c85a8f2d1835fe44aaf575ca06de52cc5c5fc9da721"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/emit-programs/emit-2.result.txt",
+  "bytes": 115,
+  "sha256": "b0cacec6a4754fc55dea9e1896c5d8dfbc62afc6973195e9f8e820905e7f184b"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/emit-programs/emit-3.arguments.json",
+  "bytes": 933,
+  "sha256": "4b027b6e8fbc5266508bf4e290992b34638bbf0925d14f91790538f01278e6fd"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/emit-programs/emit-3.result.txt",
+  "bytes": 92,
+  "sha256": "77d165ee0ce542b0e3470c06e207f30f7ecbef8c216973087ae7dafdabb96e43"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/emit-programs/index.json",
+  "bytes": 992,
+  "sha256": "30e7f5f08fbf25a1f3c2b38e8d2d133b4cb0f809d77b4500cdde72d657f74e7a"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/session-handling.txt",
+  "bytes": 2690,
+  "sha256": "4a92bd01b7e0aab91360b576c8bfdc535cfa89230c43df4fcdd307668b17eeb7"
+ },
+ {
+  "file": "evidence/finalization-1.3.0/warm-agent.json",
+  "bytes": 2055,
+  "sha256": "7fe51938b5b028b8d9db1ac436dad4eddb13a77ba8c8bf1bb137474c922d4b28"
+ },
+ {
   "file": "harness/acp_adapter/extract-run-conversation.py",
   "bytes": 3802,
   "sha256": "9726d6b9b6c4b4cb855622c0450c72cb75eb040629af3cf630b68d590d747871"

@@ -1,0 +1,45 @@
+{
+ "session": "873d210f-6eeb-44db-93dc-2fb594add5a6",
+ "turn": "943e185fd6484e698e5653f47b75b2d5",
+ "calls": [
+  {
+   "call": 1,
+   "tool_call_id": "call_00_DIldpH1eubmPcn33DMVW7898",
+   "arg_keys": [
+    "intro",
+    "kind",
+    "program",
+    "required"
+   ],
+   "program_chars": 744,
+   "program_sha256": "b550d87eab283866ddbf4900a383e736e98b3047ccf8980957bfcd4dda1f9bea",
+   "result_chars": 938
+  },
+  {
+   "call": 2,
+   "tool_call_id": "call_00_Q1b0HKyBkFuQdrqzTkD12036",
+   "arg_keys": [
+    "intro",
+    "kind",
+    "program",
+    "required"
+   ],
+   "program_chars": 717,
+   "program_sha256": "2b8f26adfc3d9cfd37b086772adb2d84071475a2363a00f5bcbfcc96c546d09d",
+   "result_chars": 115
+  },
+  {
+   "call": 3,
+   "tool_call_id": "call_00_m3u2vxCbQARyLr28YjFO9862",
+   "arg_keys": [
+    "intro",
+    "kind",
+    "program",
+    "required"
+   ],
+   "program_chars": 717,
+   "program_sha256": "db9877525b50829c38aadb10c8db60a3a839b2dcdbf29e4dc5b5ef29ee9ebbdc",
+   "result_chars": 92
+  }
+ ]
+}

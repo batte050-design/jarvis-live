@@ -1,0 +1,1 @@
+{"accepted": false, "stage": "validate", "diagnostics": ["Division or remainder by zero in an initial expression"]}
