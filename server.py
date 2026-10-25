@@ -534,6 +534,9 @@ DS_KEY = env("DEEPSEEK_API_KEY")
 FISH_KEY = env("FISH_AUDIO_API_KEY") or env("FISH_API_KEY")
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory=os.path.join(HERE, "static")), name="static")
+if os.path.isdir(os.path.join(HERE, "vendor")):
+    app.mount("/vendor", StaticFiles(directory=os.path.join(HERE, "vendor")), name="vendor")
 
 
 @app.on_event("startup")

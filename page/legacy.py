@@ -68,6 +68,7 @@ class TextLane:
                     last_omitted=omitted
                     for step in (state.get('steps') or []):
                         yield self.frame('tool_step',{**step,'conv':conv,'tid':turn,'snapshot':True,'omitted':omitted})
+                    last_steps=rev   # the snapshot is authoritative; never replay older transitions
                 if rev>last_steps:
                     for step in (state.get('journal') or []):
                         if step.get('rev',0)>last_steps:
@@ -160,9 +161,14 @@ class TextLane:
                 conv=row['conv']
                 if self.ns['tombstoned'](conv):continue
                 entry=self.ns['SESSIONS'].setdefault(conv,{'id':conv,'title':row['request']['question'][:64],'started':row['created_at'],'updated':row['created_at'],'turns':[]})
-                if row.get('status')!='ok':continue
+                page_row = bool(row.get('steps') or row.get('journal') or row.get('version'))
+                if row.get('status')!='ok' and not page_row:continue
                 terminal=row['terminal'];turns=entry.setdefault('turns',[])
-                item={'tid':row['turn'],'cid':conv,'q':row['request']['question'],'a':self.answer(terminal['payload']),
+                item={'tid':row['turn'],'cid':conv,'q':row['request']['question'],
+                      'a':self.answer(terminal['payload']) if (terminal.get('payload')) else (terminal.get('message') or ''),
+                      'status':row.get('status'),'errorId':(terminal or {}).get('id'),
+                      'steps':[{'call_id':s.get('call_id'),'action':s.get('action'),'status':s.get('status'),'seq':s.get('seq')} for s in (row.get('steps') or [])],
+                      'stepsOmitted':row.get('steps_omitted',0),
                       't':row['created_at'],'startedAt':row['created_at'],'ms':row['timing']['complete_ms'],'srv':token(conv,row['turn'])}
                 existing=next((t for t in turns if t.get('tid')==row['turn']),None)
                 if existing:existing.update(item)
