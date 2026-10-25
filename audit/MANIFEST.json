@@ -1,5 +1,20 @@
 [
  {
+  "file": "DIFF-VS-DEPLOYED.md",
+  "bytes": 1553,
+  "sha256": "d648a7dad56e393f28a6151e42d15b2dc9aa058b9fc2dc9d8ef0e6e55350afc5"
+ },
+ {
+  "file": "FINDINGS.md",
+  "bytes": 6035,
+  "sha256": "38b40d40058ccd30dcc1c02b1972e6b68bac154ff6717951313b5086576c4d27"
+ },
+ {
+  "file": "PATHMAP.md",
+  "bytes": 3121,
+  "sha256": "bfb9c26325415809754d92df7b2a17aecf9c1cecd5081c88d3339771c00ab862"
+ },
+ {
   "file": "app/approvals.py",
   "bytes": 6808,
   "sha256": "77c3b5fca6c20d25142ca6efc2f563c8d26d377d5d26f6388c549e23312bc5e6"
@@ -25,6 +40,26 @@
   "sha256": "543da4ac5bb4fdea8ffad4ec58a4fff8a0aad06a5442d01bd55ce09a613a6ffe"
  },
  {
+  "file": "app/openui/package-lock.json",
+  "bytes": 20829,
+  "sha256": "0dc2bde292a45a73d077853d8c0f0bcfc2b4a274576ebcd1dc4a776959dd22c2"
+ },
+ {
+  "file": "app/openui/package.json",
+  "bytes": 404,
+  "sha256": "10b86edc72ac6d359aed31cef12eea10e43b9aa3767582b0e6e3375b2bf33ddf"
+ },
+ {
+  "file": "app/openui/presentation-policy.txt",
+  "bytes": 5637,
+  "sha256": "f4567b133affd7ce766a513941de371b991c4e6c6511520911e32536359d0523"
+ },
+ {
+  "file": "app/openui/src/frame.css",
+  "bytes": 2673,
+  "sha256": "655590031ec1606736308ad7ca7e834a49f69cf99a566309952c4c05a91188ea"
+ },
+ {
   "file": "app/openui/src/frame.tsx",
   "bytes": 6883,
   "sha256": "d5c5b357cdecf65a71a0b13cc8e47010fc62ad1e328248b63845c7f19218a892"
@@ -45,9 +80,129 @@
   "sha256": "4f65c7bb4c7b999810c9dc675098e1dce77708daebf189b7e0bf89ae15e42ca8"
  },
  {
+  "file": "app/openui/src/reference/actions.ts",
+  "bytes": 1349,
+  "sha256": "ef3eb0b2f4f5ac1eeac8ad8f89452c33b73351708ebffb0b827fa25ea5c46f0c"
+ },
+ {
+  "file": "app/openui/src/reference/components/chart.tsx",
+  "bytes": 15839,
+  "sha256": "61a270bc9aa80ead37631c90ea525052f60482ff904544b7d32cbd2d0e60bef3"
+ },
+ {
+  "file": "app/openui/src/reference/components/components.css",
+  "bytes": 35750,
+  "sha256": "8af6f161130ee3f70b0be7afd6b523a2a09eeb6b3c5a87d10f73a3c143789e04"
+ },
+ {
+  "file": "app/openui/src/reference/components/controls.tsx",
+  "bytes": 20609,
+  "sha256": "d70091925a54c5dd6fc4dd5b9f0656f5fbb83e66ee5e76fc339b0493a2b7bdbd"
+ },
+ {
+  "file": "app/openui/src/reference/components/extra.tsx",
+  "bytes": 11082,
+  "sha256": "586d1a898eb6405fea4fab136b3ca0a4db626b559a17ee9125b4232de312ae1d"
+ },
+ {
+  "file": "app/openui/src/reference/components/glyph.tsx",
+  "bytes": 1066,
+  "sha256": "26e5da3a93b67856d54fcd3d94903282332b869f7a8296a2f36192b47f78fc12"
+ },
+ {
+  "file": "app/openui/src/reference/components/layout.tsx",
+  "bytes": 5956,
+  "sha256": "3707aa0745b61887d74692a37b9c787d15d0d7c9b5c38dfb6c9ecfbdce0beb4f"
+ },
+ {
+  "file": "app/openui/src/reference/components/lucide-dynamic.d.ts",
+  "bytes": 351,
+  "sha256": "bcc19f6fb1b45c7763b1e12d4e822ae806e7b33cb79901350ed3dac37cd1206c"
+ },
+ {
+  "file": "app/openui/src/reference/components/markdown.tsx",
+  "bytes": 6066,
+  "sha256": "3040ec84df4fb5925fa5087df1cca52cd536777b0d3c76aa4e0a636d9d62bb56"
+ },
+ {
+  "file": "app/openui/src/reference/components/scheme.ts",
+  "bytes": 847,
+  "sha256": "5468f1b12c57e3564787fc81b7ea16fa1fd1dab6babab3840c0f292057bdb373"
+ },
+ {
+  "file": "app/openui/src/reference/components/style.ts",
+  "bytes": 5501,
+  "sha256": "422f53214a21f66a0a2bd4844fb9cdf5ec238a428681994569cf76340a54da1d"
+ },
+ {
+  "file": "app/openui/src/reference/components/svg.tsx",
+  "bytes": 6898,
+  "sha256": "b4607d3889eea6566ab489b60b845a1c70c5c4a29f62b5d5db5dd72f057006fa"
+ },
+ {
+  "file": "app/openui/src/reference/components/table.tsx",
+  "bytes": 2215,
+  "sha256": "d6713d6f0330c760d5c5feb491b4a7bc79a205b15961e9ef8673c0a90e90e492"
+ },
+ {
+  "file": "app/openui/src/reference/components/text.tsx",
+  "bytes": 7522,
+  "sha256": "4ab931f3801d1bd433ac59249d6217e59b091263a1eb1e09138d4d1d2f3e8770"
+ },
+ {
+  "file": "app/openui/src/reference/components/theme.css",
+  "bytes": 5128,
+  "sha256": "ed324d7b3238bf2692caf3a5f805d24f259ded61dbbfdf175b353da6a284efde"
+ },
+ {
+  "file": "app/openui/src/reference/functions/colors.ts",
+  "bytes": 1002,
+  "sha256": "11d4871fc13fa97eadbed764aa63c204228231db3ce8d961d37e0daa0caa232d"
+ },
+ {
+  "file": "app/openui/src/reference/functions/data.ts",
+  "bytes": 10074,
+  "sha256": "afe35f0b519d401f6db193133cdafe338afc5b4084b9d1bfbeb58536f968419a"
+ },
+ {
+  "file": "app/openui/src/reference/functions/dates.ts",
+  "bytes": 5555,
+  "sha256": "5b3c634f418f6337dfeb6703677206394b8dd327a5614ec79d66c1063174854b"
+ },
+ {
+  "file": "app/openui/src/reference/functions/index.ts",
+  "bytes": 697,
+  "sha256": "029bd8884836ef20469f6ff91ed8de7bc26686b907e5d28b3efc20c5b1b8d33f"
+ },
+ {
+  "file": "app/openui/src/reference/functions/lists.ts",
+  "bytes": 7690,
+  "sha256": "59f44d73b9afbd14227d269cea1eb8cf91984701ce3b86a52c0fce6a44d5a6a2"
+ },
+ {
+  "file": "app/openui/src/reference/functions/numbers.ts",
+  "bytes": 6148,
+  "sha256": "a165969fc08879e326fb04041f377c1bb38fcf0d5a4570b8bf3291e8d36ae515"
+ },
+ {
+  "file": "app/openui/src/reference/functions/shared.ts",
+  "bytes": 3183,
+  "sha256": "480202aecc2e893be42d995caa028bbb4607a9d806ab565a0a5158d184e38ba8"
+ },
+ {
+  "file": "app/openui/src/reference/functions/text.ts",
+  "bytes": 6760,
+  "sha256": "bb07529302d391b27670a651f45383cc2fb77a1d3bcf6965ac37664257c39dcb"
+ },
+ {
   "file": "app/openui/src/validate-cli.ts",
   "bytes": 806,
   "sha256": "c76d833bfa90831f94996276bbd45b116c439240df89418f62e15e4a6fe26ef3"
+ },
+ {
+  "file": "app/openui/system-prompt.txt",
+  "bytes": 20525,
+  "sha256": "33d57d51b25657296569fa8ae82735c8e984a92db7c5e60f5727ea09badbc78c"
  },
  {
   "file": "app/openui/validate.cjs",
@@ -83,6 +238,61 @@
   "file": "app/page/legacy.py",
   "bytes": 10676,
   "sha256": "bd97b0d2dbc3b48cda439cd13cf488a485bbcca3c84795fc5801ae4b16017950"
+ },
+ {
+  "file": "app/page/plugin/__init__.py",
+  "bytes": 5496,
+  "sha256": "9fc15dc4089350ccf88835797b9a84e420e26193e2992d52bdeaa8744fb4bcdd"
+ },
+ {
+  "file": "app/page/plugin/approvals.py",
+  "bytes": 2211,
+  "sha256": "88b25a27b387a67f1d2b9153856d399cab8a5ce0251dad429fb37da4d713a699"
+ },
+ {
+  "file": "app/page/plugin/evaluate.cjs",
+  "bytes": 1375072,
+  "sha256": "b53f0077a7afa4704fd6ff39c0cb85f68f0b115b35b94ebade5a5facbe4ceb64"
+ },
+ {
+  "file": "app/page/plugin/evaluate.cjs.LEGAL.txt",
+  "bytes": 1145,
+  "sha256": "d1b3eab38df9ae921e02566650006c91c7ced2a6a0464247e1ca4da1f6b4e42f"
+ },
+ {
+  "file": "app/page/plugin/locks.py",
+  "bytes": 1346,
+  "sha256": "3ff112398b7c792ff8dcb479da2372c9d3bc6f5fa9af33b185b3cf4819e18819"
+ },
+ {
+  "file": "app/page/plugin/openui_validate_once.py",
+  "bytes": 1528,
+  "sha256": "487e4aa22c1e07e106a54b9d2cdbcf460ca3a75d74405e4c7f5f414b4444c59a"
+ },
+ {
+  "file": "app/page/plugin/plugin.yaml",
+  "bytes": 483,
+  "sha256": "71884f482b71d7f2eeade6e77ccc0fa481407817bb6ef7b334fd4dd6e8771c18"
+ },
+ {
+  "file": "app/page/plugin/progress.py",
+  "bytes": 1210,
+  "sha256": "d3415ba786c46e886ddabeeb2560c200fbb1f2c2cf00d0c50a7bc9623c02ee98"
+ },
+ {
+  "file": "app/page/plugin/prompt.txt",
+  "bytes": 1646,
+  "sha256": "798298d9494d8238806bca0a4fc553844e8ef18dc3b365c5ee8f4ddbb2328d5d"
+ },
+ {
+  "file": "app/page/plugin/store.py",
+  "bytes": 2588,
+  "sha256": "9f2aff2fdbc50da3fdb843f4092d4c4aaded2dca34db858527868c5f3d290576"
+ },
+ {
+  "file": "app/page/plugin/version.json",
+  "bytes": 49,
+  "sha256": "65622947453230a5f0a6efa366def53916b5fcd8462db7b32afb6e4b6c9c08c9"
  },
  {
   "file": "app/page/profile.py",
@@ -141,8 +351,8 @@
  },
  {
   "file": "app/server.py",
-  "bytes": 468321,
-  "sha256": "9216843ab44aa1658977284024d1670886fbff148185e0d0e3dfb7c300b74c89"
+  "bytes": 468320,
+  "sha256": "885c9e14d6b5c063a361bfac14d44157f6d44d0daf182c060ffd547ec6fe98e1"
  },
  {
   "file": "app/static/approvals-ui.js",

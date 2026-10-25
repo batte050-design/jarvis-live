@@ -47,3 +47,16 @@ Nothing in the renderer substitutes a chosen image or rewrites an answer; the ru
 3. **Receipt writer vs repair value**: the positional signature added to help repair is cut at 800 characters, losing the tail of the `Chart` contract it exists to communicate.
 4. **Installer README vs route**: the runtime example uses the wrong variable (build stamp instead of asset stamp) and returns 404 by design.
 5. **Page broker vs harness lane**: `/api/openui/images` still searches server-side, while the lane instructs the harness to supply exact URLs. Harmless while the harness supplies URLs, but it is a second image path that can produce different pictures.
+
+## E. Page-tree plugin copy (added on request)
+
+`page/plugin/` is a second, complete copy of the presentation plugin that lives inside the
+application tree. It is **not** the copy that serves the live page: its `__init__.py` is
+5,496 bytes with sha256 `9fc15dc4089350cc…`, which is the **preimage** of the receipts patch,
+while the installed harness plugin at `/home/ubuntu/.hermes/plugins/page_presentation/__init__.py`
+is 6,814 bytes with sha256 `9cc5a555f9aab084…` (postimage, receipts writer present).
+
+Observation: the app tree carries a stale plugin. Assumption, not verified: `page/bootstrap.py`
+resolves the plugin from the harness home rather than from `page/plugin/`, which is why the
+receipts writer is live despite this copy being older. If anything imports `page/plugin/`
+directly, it would run the version without emission receipts.
