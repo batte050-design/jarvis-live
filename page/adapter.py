@@ -16,6 +16,7 @@ from .plugin import VERSION
 from .plugin import approvals, store, progress
 
 # Fixed table: an operation the page can name, everything else is a generic step.
+_COUNT={}
 TOOL_LABELS={'web_search':'Searching the web','web_extract':'Reading a page',
  'browser_exec':'Using the browser','browser':'Using the browser','read_file':'Reading a file',
  'search_files':'Looking through files','terminal':'Running a command',
@@ -96,7 +97,7 @@ class Adapter:
 
     @staticmethod
     def public(row):
-        return {k:row.get(k) for k in ['conv','turn','status','version','session','terminal','current_progress','approval','timing','steps','steps_omitted','rev']}
+        return {k:row.get(k) for k in ['conv','turn','status','version','session','terminal','current_progress','approval','timing','steps','steps_omitted','rev','journal']}
 
     def snapshot(self,owner,conv,turn):
         return self.public(self.read(owner,conv,turn))
@@ -180,8 +181,17 @@ class Adapter:
                     if kind=='tool_step':
                         d=data if isinstance(data,dict) else {}
                         label=TOOL_LABELS.get(str(d.get('op') or '').lower()) or 'Tool action'
-                        call_id=(str(d.get('call_id') or '')or ('call-%d'%int(time.time()*1000)))[:64]
-                        status='done' if d.get('status')=='done' else 'running'
+                        call_id=str(d.get('call_id') or '')
+                        if not call_id:
+                            _COUNT['missing_id']=_COUNT.get('missing_id',0)+1
+                            return
+                        if len(call_id)>64:
+                            _COUNT['oversized_id']=_COUNT.get('oversized_id',0)+1
+                            return
+                        status=str(d.get('status') or 'running').lower()
+                        if status=='done': status='completed'
+                        if status not in ('running','completed','failed','cancelled'):
+                            status='running'
                         def add_step(r):
                             if r['terminal']:return
                             steps=r.setdefault('steps',[])
@@ -189,6 +199,10 @@ class Adapter:
                             r['rev']=r.get('rev',0)+1
                             if hit is not None:
                                 hit['status']=status; hit['rev']=r['rev']
+                            journal=r.setdefault('journal',[])
+                            if len(journal)<128:
+                                journal.append(dict(call_id=call_id,seq=(hit or {}).get('seq',len(steps)),
+                                                    action=label,status=status,ts=round(time.time()*1000),rev=r['rev']))
                             elif len(steps)<64:
                                 steps.append(dict(call_id=call_id,seq=len(steps)+1,action=label,
                                                   status=status,ts=round(time.time()*1000),rev=r['rev']))

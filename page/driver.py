@@ -83,8 +83,9 @@ class ACPDriver:
                 d=data if isinstance(data,dict) else {}
                 op=str(d.get('name') or d.get('tool') or '')
                 call_id=str(d.get('id') or d.get('call_id') or d.get('tool_call_id') or '')
-                event('tool_step',{'op':op,'call_id':call_id,
-                                   'status':'running' if kind=='tool_use' else 'done'})
+                st=str(d.get('status') or ('running' if kind=='tool_use' else 'completed')).lower()
+                if st=='done': st='completed'
+                event('tool_step',{'op':op,'call_id':call_id,'status':st})
                 if kind=='tool_result':
                     marker=root()/('progress-'+key+'.json')
                     if marker.exists():

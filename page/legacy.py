@@ -62,10 +62,9 @@ class TextLane:
                 state=self.adapter.snapshot(owner,conv,turn)
                 if state['current_progress'] and state['current_progress']['ts']!=last_progress:
                     last_progress=state['current_progress']['ts'];yield self.frame('page_progress',{**state['current_progress'],'conv':conv,'tid':turn})
-                steps=state.get('steps') or []
                 rev=state.get('rev') or 0
                 if rev>last_steps:
-                    for step in steps:
+                    for step in (state.get('journal') or []):
                         if step.get('rev',0)>last_steps:
                             yield self.frame('tool_step',{**step,'conv':conv,'tid':turn})
                     last_steps=rev

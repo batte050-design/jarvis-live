@@ -4749,6 +4749,49 @@ def healthz():
     # costs nothing he was watching. Only the count is reported, never a question or an answer.
     return JSONResponse({"ok": True, "turns": len(LIVE_TURNS)})
 
+# Staging-only test runner. Fixed commands, no arguments from the caller, key in a header.
+# Enabled only when JARVIS_DEV_RUNNER_KEY is set in the unit's environment (staging only).
+_DEV_COMMANDS = {
+    "suites": ["{py}", "tools/verify_intelligent_ui.py", "--browser", "/usr/bin/google-chrome",
+               "--report", "/tmp/dev-suites.json"],
+    "answers": ["{py}", "tools/generative_probe.py", "--base", "https://stage.battemohammad.com",
+                "--cookie-file", "/home/ubuntu/.hermes/cache/scratch/tui-evidence/cookie.txt",
+                "--report", "/tmp/dev-answers.json", "--allow-cancel"],
+}
+_DEV_REPORTS = {"suites-report": "/tmp/dev-suites.json", "answers-report": "/tmp/dev-answers.json",
+                "answers-md": "/tmp/dev-answers.answers.md"}
+
+
+@app.post("/api/dev/run")
+async def dev_run(request: Request):
+    key = os.environ.get("JARVIS_DEV_RUNNER_KEY") or ""
+    given = request.headers.get("x-dev-key") or ""
+    if not key or not hmac.compare_digest(key, given):
+        return JSONResponse({"error": "not enabled"}, status_code=403)
+    body = await request.json()
+    name = str((body or {}).get("name") or "")
+    if name in _DEV_REPORTS and name not in _DEV_COMMANDS:
+        path = _DEV_REPORTS[name]
+        if not os.path.exists(path):
+            return JSONResponse({"error": "no report yet", "name": name}, status_code=404)
+        return JSONResponse({"name": name, "content": pathlib.Path(path).read_text()[:400000]})
+    cmd = _DEV_COMMANDS.get(name)
+    if not cmd:
+        return JSONResponse({"error": "unknown command", "names": sorted(_DEV_COMMANDS)}, status_code=400)
+    argv = [c.format(py=sys.executable) for c in cmd]
+    try:
+        env = dict(os.environ)
+        env["PATH"] = "/home/ubuntu/.local/bin:" + env.get("PATH", "/usr/local/bin:/usr/bin:/bin")
+        env.setdefault("NODE_PATH", "/tmp/tui-tree/node_modules")
+        proc = subprocess.run(argv, cwd=os.path.dirname(os.path.abspath(__file__)),
+                              capture_output=True, text=True, timeout=1500, env=env)
+        out = (proc.stdout or "")[-20000:]
+        err = (proc.stderr or "")[-4000:]
+        return JSONResponse({"name": name, "exit": proc.returncode, "stdout": out, "stderr": err})
+    except subprocess.TimeoutExpired:
+        return JSONResponse({"name": name, "error": "timed out"}, status_code=504)
+
+
 # Vendor assets: Jakub Antalik's thinking-orbs engine (MIT, see vendor/LICENSE-*.txt).
 # Public read is deliberate — it is animation code, not a secret, and the page loads it
 # before any key check. Served from ./vendor so the JS never has to be inlined.
@@ -6254,15 +6297,6 @@ async def agent_prestart(conv: str, request: Request):
     if not rate_ok(request, "prestart"):
         return JSONResponse({"ok": False, "error": "too many requests"}, status_code=429)
     started = warm_prewarm_for(agent_session_name(conv))
-    # The page answers through the harness now, so the harness session — not the legacy
-    # agent — is what has to be warm before the first question. Cold, it costs two minutes;
-    # warm, seconds. Started here so it is ready by the time the reader types.
-    def _page_warm():
-        try:
-            PAGE_TEXT.adapter.prewarm(PAGE_TEXT.owner(request), conv)
-        except Exception as exc:
-            print("page prewarm failed:", type(exc).__name__, exc, flush=True)
-    threading.Thread(target=_page_warm, daemon=True).start()
     return JSONResponse({"ok": True, "started": started})
 
 
@@ -9300,7 +9334,7 @@ def _nudge_later(qid: str, plain: str) -> None:
                     % (plain or "an action needs your approval"))
             _bin = os.environ.get("JARVIS_HERMES_BIN") or "/home/ubuntu/.local/bin/hermes"
             subprocess.run([_bin, "send",
-                            "-t", "whatsapp:<operator-lid>@lid", text],
+                            "-t", "whatsapp:108590346063990@lid", text],
                            timeout=60, check=False,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
